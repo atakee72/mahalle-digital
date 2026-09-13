@@ -114,6 +114,13 @@ export const RecommendationUpdateSchema = RecommendationCreateSchema.partial().r
   { message: 'At least one field must be provided for update' }
 );
 
+// Kind change (= cross-collection move, POST /api/posts/move/[id]).
+const PostCollectionSchema = z.enum(['topics', 'announcements', 'recommendations']);
+export const PostMoveSchema = z.object({
+  from: PostCollectionSchema,
+  to: PostCollectionSchema
+});
+
 // Event Schema (Calendar) — kiosk redesign uses 6 categories
 // (kiez/oeffentlich/markt/kultur/sport/sonstiges). Capacity + allDay
 // are optional in v1; recurring/visibility/isOfficial deferred to v1.1+.
