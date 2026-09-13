@@ -116,6 +116,8 @@ Four pieces shipped the same afternoon (`9d28b90b`, `e6f7ed9c`, `ddc8ff49`, `b43
 
 ## Event description linkify (2026-08-30)
 
+**2026-09-13 (`65ff7c2a`):** anchor text is `displayUrl()` (short label, full URL in `href` + `title`, `↗` marker, `break-words`); `AgendaRow` runs `ev.body` through `shortenUrlsInText()` since it renders plain text. Details under „Display labels" in `src/components/forum/kiosk/CLAUDE.md`.
+
 `EventDetailModal` renders `event.body` through `linkifySegments()` (`src/lib/linkify.ts`) — same XSS-safe segment pattern as `ForumPostDetail`, teal hover accent. AgendaRow's 2-line teaser stays plain text (row itself is the click target). Same commit fixed the helper's paren edge: `…wiki/Foo_(Bar).` now keeps the closing `)` (restore loop counts paren balance instead of requiring the raw match to end with `)`).
 
 ## Dev-seed caveat #2: legacy category labels blank out whole months
