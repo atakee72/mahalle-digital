@@ -259,7 +259,7 @@ Complex React components use a wrapper pattern:
 - `ForumWrapper.tsx` → `ForumContainer.tsx`
 
 ### Forum patterns (List/Pagination, Performance/SSR, Post Images, Save/Bookmark, Search & Tag Filtering, Card Interactions)
-See `src/components/forum/kiosk/CLAUDE.md` — full notes load when working in that subtree. The forum spans dirs (`src/pages/api/topics/*`, `src/lib/topicsQuery.ts`, `src/lib/forumQueryOptions.ts`); read the area file directly when working on those server-side pieces.
+See `src/components/forum/kiosk/CLAUDE.md` — full notes load when working in that subtree. Since 2026-09-13 an author can change a post's kind from edit mode (cross-collection move, `src/lib/forum/movePost.ts` + `POST /api/posts/move/[id]`; old URLs 302) — details under „Kind change in edit mode" there. The forum spans dirs (`src/pages/api/topics/*`, `src/lib/topicsQuery.ts`, `src/lib/forumQueryOptions.ts`); read the area file directly when working on those server-side pieces.
 
 ### Calendar (kiosk) patterns (live ticker, saved events, attendee profiles, moderation parity, ghosting, edit-path moderation, compose toast, report flow)
 See `src/components/calendar/kiosk/CLAUDE.md` — full notes load when working in that subtree. Spans `src/lib/calendar/*`, `src/lib/savedEventsQueries.ts`, `src/lib/userProfilesQueries.ts`, `src/pages/api/events/*`; read the area file directly when working on those.
