@@ -10,6 +10,8 @@ import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { buildModerationFilter, fetchRelatedForDetail, populateAuthors } from '../../lib/topicsQuery';
+import { locatePost } from '../../lib/forum/movePost';
+import { hrefForPost } from '../../lib/forum/postKind';
 
 const { id } = Astro.params;
 
@@ -32,6 +34,9 @@ const filter: Record<string, any> = {
 const doc = await collection.findOne(filter);
 
 if (!doc) {
+  // See topics/[id].astro — moved post → 302 to its new collection.
+  const elsewhere = await locatePost(db, id, 'recommendations');
+  if (elsewhere) return Astro.redirect(hrefForPost(elsewhere, id), 302);
   return new Response('Not found', { status: 404 });
 }
 
