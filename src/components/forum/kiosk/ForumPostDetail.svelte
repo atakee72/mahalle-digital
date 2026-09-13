@@ -16,6 +16,7 @@
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { relTime as relTimeFor } from '../../../lib/relTime';
   import { linkifySegments } from '../../../lib/linkify';
+  import { collectionForKind, type PostKind } from '../../../lib/forum/postKind';
   import KioskAvatar from './KioskAvatar.svelte';
   import KioskBtn from './KioskBtn.svelte';
   import TranslateControl from './TranslateControl.svelte';
@@ -119,6 +120,20 @@
     kind === 'announcement' ? 'bg-teal' : kind === 'recommendation' ? 'bg-moss' : 'bg-wine'
   );
   const chipLabel = $derived(($t[`chip.${kind}` as const] as string).toUpperCase());
+
+  // Kind cards for edit mode — same three as the compose screen's type
+  // selector (ComposeForm.svelte `types`), same i18n keys, same colour vars.
+  const EDIT_KINDS: {
+    k: PostKind;
+    labelKey: 'compose.type.discussion' | 'compose.type.recommendation' | 'compose.type.announcement';
+    colorVar: string;
+  }[] = [
+    { k: 'discussion',     labelKey: 'compose.type.discussion',     colorVar: '--k-wine' },
+    { k: 'recommendation', labelKey: 'compose.type.recommendation', colorVar: '--k-moss' },
+    { k: 'announcement',   labelKey: 'compose.type.announcement',   colorVar: '--k-teal' }
+  ];
+  // Official announcements never change kind (admin dashboard + pin lifecycle).
+  const canChangeKind = $derived(!(kind === 'announcement' && isOfficial));
 
   let now = $state(new Date());
   $effect(() => {
@@ -299,17 +314,22 @@
   let deleteOpen = $state(false);
   let editTitle = $state('');
   let editBody = $state('');
+  let editKind = $state<PostKind>('discussion');
   let saving = $state(false);
   let deleting = $state(false);
   let editError = $state<string | null>(null);
 
   const isDirty = $derived(
-    editing && (editTitle !== topic.title || editBody !== (topic.body ?? topic.description ?? ''))
+    editing &&
+      (editTitle !== topic.title ||
+        editBody !== (topic.body ?? topic.description ?? '') ||
+        editKind !== kind)
   );
 
   function enterEdit() {
     editTitle = topic.title;
     editBody = topic.body ?? topic.description ?? '';
+    editKind = kind;
     editError = null;
     editing = true;
   }
@@ -342,31 +362,64 @@
       editError = 'Titel mind. 5, Text mind. 10 Zeichen.';
       return;
     }
+    const textDirty =
+      editTitle !== topic.title || editBody !== (topic.body ?? topic.description ?? '');
+    const kindDirty = editKind !== kind;
     saving = true;
     editError = null;
+    let navigating = false;
     try {
-      const res = await fetch(`/api/${collectionType}/edit/${topic._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: editTitle.trim(),
-          body: editBody.trim(),
-          tags: topic.tags ?? [],
-          images: topic.images ?? []
-        })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || err.message || 'Speichern fehlgeschlagen.');
+      // 1. Text first, against the CURRENT collection (the edit endpoint is
+      //    per collection and the post is still there).
+      if (textDirty) {
+        const res = await fetch(`/api/${collectionType}/edit/${topic._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            title: editTitle.trim(),
+            body: editBody.trim(),
+            tags: topic.tags ?? [],
+            images: topic.images ?? []
+          })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || err.message || 'Speichern fehlgeschlagen.');
+        }
+        const json = await res.json();
+        topic = { ...topic, ...json.topic };
       }
-      const json = await res.json();
-      topic = { ...topic, ...json.topic };
+      // 2. Kind change = cross-collection move; the post gets a new URL, so
+      //    this island (fetch URLs keyed on collectionType) hands over via a
+      //    hard navigation instead of re-keying itself in place.
+      if (kindDirty) {
+        const res = await fetch(`/api/posts/move/${topic._id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ from: collectionType, to: collectionForKind(editKind) })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          // An edit that just went back to `pending` (AI flag) locks the
+          // move — the text IS saved, say so instead of a bare error.
+          throw new Error(
+            err.error === 'edit_blocked_by_moderation'
+              ? ($t['edit.kind.blocked'] as string)
+              : err.error || ($t['edit.kind.failed'] as string)
+          );
+        }
+        const json = await res.json();
+        navigating = true;
+        if (typeof window !== 'undefined') window.location.href = json.href;
+        return;
+      }
       editing = false;
     } catch (err) {
       editError = err instanceof Error ? err.message : 'Speichern fehlgeschlagen.';
     } finally {
-      saving = false;
+      if (!navigating) saving = false; // keep the buttons locked while the new page loads
     }
   }
 
@@ -615,6 +668,36 @@
         >
           {displayTitle}
         </h1>
+      {/if}
+
+      {#if editing && canChangeKind}
+        <div class="mb-4">
+          <p class="font-dmmono text-[10px] uppercase tracking-[0.1em] text-ink-mute mb-1.5">
+            {$t['edit.kind.label']}
+          </p>
+          <div class="flex flex-wrap gap-2">
+            {#each EDIT_KINDS as opt (opt.k)}
+              {@const active = editKind === opt.k}
+              <button
+                type="button"
+                aria-pressed={active}
+                disabled={saving}
+                onclick={() => (editKind = opt.k)}
+                class={`min-h-[44px] px-3.5 py-2 rounded-md border-[1.5px] font-bricolage font-bold text-[13px] tracking-tight transition-colors duration-[180ms] ease-out ${
+                  active ? 'text-paper border-transparent' : 'bg-paper-warm text-ink border-ink hover:bg-paper-soft'
+                }`}
+                style={active ? `background:var(${opt.colorVar});border-color:var(${opt.colorVar});` : ''}
+              >
+                {$t[opt.labelKey]}
+              </button>
+            {/each}
+          </div>
+          {#if editKind !== kind}
+            <p class="font-dmmono text-[10px] leading-[1.6] text-ink-mute mt-1.5 max-w-prose">
+              {$t['edit.kind.hint']}
+            </p>
+          {/if}
+        </div>
       {/if}
 
       <!-- Author byline + optional verified badge -->

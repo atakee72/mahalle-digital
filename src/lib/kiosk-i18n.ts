@@ -408,6 +408,12 @@ const de = {
   'edit.cta.delete': 'post löschen…',
   'edit.confirm.discard': 'Änderungen verwerfen?',
 
+  // Kind change inside edit mode (type cards like the compose screen).
+  'edit.kind.label': 'ART',
+  'edit.kind.hint': 'Beim Speichern wandert der Post in die neue Rubrik – die Adresse ändert sich, der alte Link leitet weiter.',
+  'edit.kind.blocked': 'Text gespeichert. Die Art lässt sich erst ändern, wenn die Prüfung abgeschlossen ist.',
+  'edit.kind.failed': 'Art ändern fehlgeschlagen.',
+
   // Delete-confirm card with type-to-confirm friction.
   'delete.kicker': 'POST LÖSCHEN?',
   'delete.title.prefix': 'Wirklich',
@@ -2336,6 +2342,11 @@ const en: Dict = {
   'edit.cta.cancel': 'cancel',
   'edit.cta.delete': 'delete post…',
   'edit.confirm.discard': 'Discard changes?',
+
+  'edit.kind.label': 'TYPE',
+  'edit.kind.hint': 'Saving moves the post to its new section – the address changes, the old link redirects.',
+  'edit.kind.blocked': 'Text saved. The type can be changed once the review is done.',
+  'edit.kind.failed': 'Changing the type failed.',
 
   'delete.kicker': 'DELETE POST?',
   'delete.title.prefix': 'Really',
