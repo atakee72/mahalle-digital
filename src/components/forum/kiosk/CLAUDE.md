@@ -45,6 +45,12 @@ paths were dead because the compute lived in onMount.)
 - All three post edit endpoints (`/api/topics/edit/[id].ts`, `/api/announcements/edit/[id].ts`, `/api/recommendations/edit/[id].ts`) return `403 'edit_blocked_by_moderation'` when `existingTopic.moderationStatus !== 'approved' || existingTopic.hasWarningLabel`. Mirrors the comment-edit gate at `/api/comments/edit/[commentId].ts:71-76`.
 - **UI mirror**: `ForumPostDetail.svelte` has a `canEdit` derived (same predicate). Edit button stays VISIBLE but `disabled` with strikethrough + cursor-not-allowed + tooltip when not editable. Visible disabled state is a clearer signal to the author than hiding the button.
 
+### Kind change in edit mode (2026-09-13)
+- Edit mode shows the compose screen's three type cards (`EDIT_KINDS` in `ForumPostDetail.svelte`, same `compose.type.*` keys). Save = text edit against the current collection, then `POST /api/posts/move/[id]` `{ from, to }`, then a HARD navigation to the returned `href` — the island's fetch URLs are keyed on `collectionType`, so it does not re-key itself in place.
+- A kind is a collection, so a kind change is a cross-collection move: `src/lib/forum/movePost.ts` (copy-first, delete-last, idempotent — no transactions on the free tier) re-keys `flaggedContent.contentType` (and `flaggedContent.parentCollection` on flagged comments of the post), `notifications.target.{contentType,href}` (href is stored) and drops `translationCache` rows; comments/likes/views/savedPosts need nothing. Naming lives in the dependency-pure `src/lib/forum/postKind.ts` (`buildMovedDoc` strips `isOfficial`/`pinnedUntil`/`editCount`/`category`, gives a recommendation `category: 'other'`, stamps `movedFrom`/`movedAt`).
+- Gate = the edit gate (author, approved, no warning label) + admin; `isOfficial` announcements are refused (`403 official_announcement`).
+- Old URLs keep working: all three detail pages call `locatePost()` on a miss and `302` (never 301 — a cached 301 loops if the post moves back). `/bookmarks` joins all three collections since the same day (each item carries `collection`; `BookmarksPage` builds href + chip from it), so a saved post follows its kind change.
+
 ### Official admin announcements
 - New fields on the `announcements` collection (server-controlled, not in `AnnouncementCreateSchema`):
   - `isOfficial?: boolean` — settable only via `/api/admin/announcements/create` (admin-gated).
