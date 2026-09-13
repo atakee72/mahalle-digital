@@ -14,7 +14,7 @@
   import { format, differenceInMinutes } from 'date-fns';
   import { de as deLocale, enUS } from 'date-fns/locale';
 
-  import { linkifySegments } from '../../../lib/linkify';
+  import { linkifySegments, displayUrl } from '../../../lib/linkify';
   import { lockPageScroll } from '../../../lib/scrollLock';
   import TranslateControl from '../../forum/kiosk/TranslateControl.svelte';
   import RsvpButtons from './RsvpButtons.svelte';
@@ -479,7 +479,7 @@
         {#if displayEventBody}
           <div
             class="font-instrument text-[15px] leading-[1.6] text-ink pt-3 border-t border-dashed border-rule whitespace-pre-line"
-          >{#each linkifySegments(displayEventBody) as seg}{#if seg.type === 'link'}<a href={seg.value} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 decoration-[1.5px] break-all hover:text-teal">{seg.value}</a>{:else}{seg.value}{/if}{/each}</div>
+          >{#each linkifySegments(displayEventBody) as seg}{#if seg.type === 'link'}<a href={seg.value} title={seg.value} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 decoration-[1.5px] break-words hover:text-teal">{displayUrl(seg.value)}<span aria-hidden="true" class="text-[0.8em] ml-0.5">↗</span></a>{:else}{seg.value}{/if}{/each}</div>
         {/if}
 
         <div class="mt-2">

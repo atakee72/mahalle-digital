@@ -17,6 +17,7 @@
   //     labelled (admin-set; editing around moderation is blocked).
   // Trash is visible whenever the viewer is the author (no time window).
 
+  import { linkifySegments, displayUrl } from '../../../lib/linkify';
   import KioskAvatar from './KioskAvatar.svelte';
   import TranslateControl from './TranslateControl.svelte';
   import KioskReportModal from './KioskReportModal.svelte';
@@ -323,9 +324,8 @@
         </button>
       </div>
     {:else}
-      <p class="font-bricolage text-sm text-ink leading-relaxed whitespace-pre-line">
-        {body}
-      </p>
+      <p class="font-bricolage text-sm text-ink leading-relaxed whitespace-pre-line"
+      >{#each linkifySegments(body) as seg}{#if seg.type === 'link'}<a href={seg.value} title={seg.value} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 decoration-[1.5px] break-words hover:text-wine">{displayUrl(seg.value)}<span aria-hidden="true" class="text-[0.8em] ml-0.5">↗</span></a>{:else}{seg.value}{/if}{/each}</p>
       <div class="mt-1.5">
         <TranslateControl
           contentType="comment"

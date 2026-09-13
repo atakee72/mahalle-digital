@@ -39,3 +39,32 @@ export function linkifySegments(text: string): LinkifySegment[] {
   if (last < text.length) segments.push({ type: 'text', value: text.slice(last) });
   return segments;
 }
+
+// ─── Display shortening ──────────────────────────────────────────────
+// A pasted URL stays the href in full; only the visible label is
+// trimmed so a 120-char tracking link doesn't wrap across three lines.
+// Rules: drop scheme + "www.", drop a trailing "/", then cut to `max`
+// chars at the last "/" before the limit (falls back to a hard cut) and
+// append "…". The full URL belongs in the anchor's title attribute.
+
+export const DISPLAY_URL_MAX = 40;
+
+export function displayUrl(url: string, max = DISPLAY_URL_MAX): string {
+  let s = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+  if (s.endsWith('/')) s = s.slice(0, -1);
+  if (s.length <= max) return s;
+  // Prefer a path-segment boundary, but never collapse to the bare host
+  // (maps.app.goo.gl/abc?… must keep its one path segment).
+  const cut = s.lastIndexOf('/', max);
+  const hostEnd = s.indexOf('/');
+  const head = cut > hostEnd ? s.slice(0, cut) : s.slice(0, max);
+  return `${head}…`;
+}
+
+// Plain-text variant for card excerpts and search snippets, where the
+// body is rendered as text (no anchors): every URL becomes its label.
+export function shortenUrlsInText(text: string, max = DISPLAY_URL_MAX): string {
+  return linkifySegments(text)
+    .map((seg) => (seg.type === 'link' ? displayUrl(seg.value, max) : seg.value))
+    .join('');
+}

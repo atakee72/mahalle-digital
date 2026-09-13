@@ -9,6 +9,7 @@
   import { eventSpanDays, isLiveNow } from '../../../lib/calendar/eventTime';
   import { now } from '../../../lib/calendar/nowTicker';
   import { t, locale } from '../../../lib/kiosk-i18n';
+  import { shortenUrlsInText } from '../../../lib/linkify';
   import { rsvpMutation } from '../../../lib/calendarMutations';
   import { showError } from '../../../utils/toast';
   import StatusBadge from '../../forum/kiosk/StatusBadge.svelte';
@@ -300,7 +301,7 @@
 
       {#if ev.body}
         <p class={`font-bricolage text-[13px] text-ink-soft leading-[1.4] mb-1.5 line-clamp-2 [text-wrap:pretty] ${ghostBodyOpacity}`}>
-          {ev.body}
+          {shortenUrlsInText(ev.body)}
         </p>
       {/if}
 

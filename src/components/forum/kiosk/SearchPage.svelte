@@ -12,6 +12,7 @@
   // `↪ KOMMENTAR` mono kicker, and prepend the parent topic title on a
   // small line above the body excerpt.
 
+  import { shortenUrlsInText } from '../../../lib/linkify';
   import { onMount } from 'svelte';
   import PostTypeChip from './PostTypeChip.svelte';
   import { locale } from '../../../lib/kiosk-i18n';
@@ -110,7 +111,8 @@
 
   function excerpt(body?: string): string {
     if (!body) return '';
-    return body.length > 100 ? body.slice(0, 100) + '…' : body;
+    const short = shortenUrlsInText(body);
+    return short.length > 100 ? short.slice(0, 100) + '…' : short;
   }
 
   // ─── Time / kicker copy ──────────────────────────────────────────

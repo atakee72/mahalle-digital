@@ -32,6 +32,7 @@
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { relTime as relTimeFor } from '../../../lib/relTime';
   import { optimizeCloudinary } from '../../../utils/cloudinary';
+  import { shortenUrlsInText } from '../../../lib/linkify';
 
   let {
     topic,
@@ -189,7 +190,7 @@
   // the design source's English variants are locked in.
   const relTime = (iso?: string) => relTimeFor(iso, $locale);
 
-  const body = $derived((topic.body ?? topic.description ?? '').trim());
+  const body = $derived(shortenUrlsInText((topic.body ?? topic.description ?? '').trim()));
   const commentCount = $derived(topic.comments?.length ?? 0);
   const likeCount = $derived(topic.likes ?? 0);
   const savedCount = $derived(topic.savedCount ?? 0);
