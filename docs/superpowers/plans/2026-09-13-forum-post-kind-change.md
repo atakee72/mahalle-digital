@@ -37,6 +37,7 @@
 | `src/pages/topics/[id].astro`, `src/pages/announcements/[id].astro`, `src/pages/recommendations/[id].astro` | Not-found fallback: `locatePost` → 302 to the new href. |
 | `src/components/forum/kiosk/ForumPostDetail.svelte` | Edit mode: kind chips under the title input, `editKind` state, save = edit → move → navigate. |
 | `src/lib/kiosk-i18n.ts` | 4 new keys `edit.kind.*` (DE + EN). |
+| `src/pages/bookmarks.astro`, `src/components/forum/kiosk/BookmarksPage.svelte` | Bookmarks join all three collections; item carries `collection` → href + chip. |
 | `src/components/forum/kiosk/CLAUDE.md`, root `CLAUDE.md` | Docs. |
 
 ---
@@ -845,13 +846,12 @@ Directly after the title `{#if editing} <input … bind:value={editTitle} … />
           <p class="font-dmmono text-[10px] uppercase tracking-[0.1em] text-ink-mute mb-1.5">
             {$t['edit.kind.label']}
           </p>
-          <div class="flex flex-wrap gap-2" role="radiogroup" aria-label={$t['edit.kind.label']}>
+          <div class="flex flex-wrap gap-2">
             {#each EDIT_KINDS as opt (opt.k)}
               {@const active = editKind === opt.k}
               <button
                 type="button"
-                role="radio"
-                aria-checked={active}
+                aria-pressed={active}
                 disabled={saving}
                 onclick={() => (editKind = opt.k)}
                 class={`min-h-[44px] px-3.5 py-2 rounded-md border-[1.5px] font-bricolage font-bold text-[13px] tracking-tight transition-colors duration-[180ms] ease-out ${
@@ -892,9 +892,9 @@ const { chromium } = require('playwright'); const fs = require('fs');
   const id = (await c.json()).topic?._id; console.log('create', c.status(), id);
   await page.goto(`${BASE}/topics/${id}`);
   await page.getByRole('button', { name: /Bearbeiten/ }).click();
-  const radios = page.getByRole('radio');
-  console.log('kind cards', await radios.count(), 'checked', await page.getByRole('radio', { checked: true }).textContent());
-  await page.getByRole('radio', { name: /Ankündigung|Announcement/ }).click();
+  const cards = page.locator('main button[aria-pressed]');
+  console.log('kind cards', await cards.count(), 'pressed', (await page.locator('main button[aria-pressed="true"]').textContent()).trim());
+  await cards.filter({ hasText: /Ankündigung|Announcement/ }).click();
   await page.screenshot({ path: 'scratchpad/move-kind-edit.png' });
   const save = page.locator('aside').getByRole('button', { name: /^speichern$|^save$/ });
   await Promise.all([page.waitForURL(`**/announcements/${id}`, { timeout: 15000 }), save.click()]);
@@ -908,7 +908,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   const m = await browser.newPage({ viewport: { width: 390, height: 844 }, storageState: await page.context().storageState() });
   await m.goto(`${BASE}/announcements/${id}`);
   await m.getByRole('button', { name: /Bearbeiten/ }).click();
-  const box = await m.getByRole('radio').first().boundingBox();
+  const box = await m.locator('main button[aria-pressed]').first().boundingBox();
   console.log('mobile chip height', box && Math.round(box.height));
   await m.screenshot({ path: 'scratchpad/move-kind-mobile.png' });
   const del = await page.request.delete(`${BASE}/api/announcements/delete/${id}`); console.log('cleanup', del.status());
@@ -916,7 +916,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
 })().catch((e) => { console.error(e.message.split('\n')[0]); process.exit(1); });
 ```
 
-Expected: `kind cards 3 checked Diskussion`; `after save http://localhost:4655/announcements/<id>`; `chip ANKÜNDIGUNG`; `old url 302 /announcements/<id>`; `mobile chip height ≥ 44`; `cleanup 200`. Screenshots in `scratchpad/` for the user to look at before merge. Stop the server: `fuser -k 4655/tcp`.
+Expected: `kind cards 3 pressed Diskussion`; `after save http://localhost:4655/announcements/<id>`; `chip ANKÜNDIGUNG`; `old url 302 /announcements/<id>`; `mobile chip height ≥ 44`; `cleanup 200`. Screenshots in `scratchpad/` for the user to look at before merge. Stop the server: `fuser -k 4655/tcp`.
 
 - [ ] **Step 5: Gates + commit**
 
@@ -929,7 +929,93 @@ git commit -m "feat(forum): change a post's kind from edit mode (type cards, mov
 
 ---
 
-### Task 6: Docs
+### Task 6: Bookmarks follow the post across collections
+
+**Files:**
+- Modify: `src/pages/bookmarks.astro` (scope comment lines 10-13; the `topics` query block ≈ lines 59-64)
+- Modify: `src/components/forum/kiosk/BookmarksPage.svelte` (imports ≈ line 8-10; list item ≈ lines 93-103)
+
+**Interfaces:**
+- Consumes (Task 1): `POST_COLLECTIONS`, `isPostCollection`, `hrefForPost`, `kindForCollection`.
+- Produces: each bookmarks item carries `collection: PostCollection`.
+
+Why: `savedPosts` stores only the post id, so a save survives a kind change — but the Bookmarks page joined `topics` only (pre-existing v1 scope note) and hardcoded `/topics/` + the discussion chip, so a saved discussion that became an announcement vanished from the list.
+
+- [ ] **Step 1: bookmarks.astro — query all three collections**
+
+Add the import:
+
+```ts
+import { POST_COLLECTIONS } from '../lib/forum/postKind';
+```
+
+Replace the scope note (the paragraph starting `// Scope note (v1): only `topics` are joined here.`) with:
+
+```ts
+// All three forum collections are joined (2026-09-13): a saved post keeps
+// its id when the author changes its kind (cross-collection move,
+// src/lib/forum/movePost.ts), so we look everywhere and tag each hit with
+// its `collection` for the card's href + kind chip.
+```
+
+Replace
+
+```ts
+    const topics = await db
+      .collection('topics')
+      .find({ $and: [{ _id: { $in: objectIds } }, moderationFilter] })
+      .toArray();
+    const populated = await populateAuthors(topics);
+```
+
+with
+
+```ts
+    const perCollection = await Promise.all(
+      POST_COLLECTIONS.map(async (collection) => {
+        const docs = await db
+          .collection(collection)
+          .find({ $and: [{ _id: { $in: objectIds } }, moderationFilter] })
+          .toArray();
+        return docs.map((d) => ({ ...d, collection }));
+      })
+    );
+    const populated = await populateAuthors(perCollection.flat());
+```
+
+- [ ] **Step 2: BookmarksPage.svelte — href + chip from the collection**
+
+Add the import next to the other lib import:
+
+```ts
+  import { hrefForPost, isPostCollection, kindForCollection } from '../../../lib/forum/postKind';
+```
+
+After `const items = $derived(initialItems as any[]);` add:
+
+```ts
+  // Items are tagged server-side; anything untagged (legacy) is a discussion.
+  const collectionOf = (t: any) => (isPostCollection(t.collection) ? t.collection : 'topics');
+```
+
+In the list item replace `href={`/topics/${topic._id}`}` with `href={hrefForPost(collectionOf(topic), topic._id)}` and `<PostTypeChip kind="discussion" size="sm" />` with `<PostTypeChip kind={kindForCollection(collectionOf(topic))} size="sm" />`.
+
+- [ ] **Step 3: Verify**
+
+Start `pnpm dev --port 4655`. Append to a copy of `scratchpad/move-api.cjs` (after `create`, before the move): `console.log('save', (await page.request.post(`${BASE}/api/posts/save`, { data: { postId: id, action: 'save' } })).status());` and after the move: `const bm = await page.goto(`${BASE}/bookmarks`); await page.waitForSelector(`a[href="/announcements/${id}"]`, { timeout: 15000 }); console.log('bookmark href ok, chip', (await page.locator(`a[href="/announcements/${id}"]`).locator('span, div').first().textContent()).trim());` Expected: `save 200`, `bookmark href ok, chip ANKÜNDIGUNG` (or the chip's DE label as rendered). Cleanup deletes the announcement; the orphaned `savedPosts` row is harmless (the page's `$in` join simply skips it). Stop the server.
+
+- [ ] **Step 4: Gates + commit**
+
+tsc ≤ 26, svelte-check ≤ 92.
+
+```bash
+git add src/pages/bookmarks.astro src/components/forum/kiosk/BookmarksPage.svelte
+git commit -m "feat(forum): bookmarks list all three post kinds; saved posts follow a kind change"
+```
+
+---
+
+### Task 7: Docs
 
 **Files:**
 - Modify: `src/components/forum/kiosk/CLAUDE.md` (append a bullet under „### Edit lockout during moderation")
@@ -944,7 +1030,7 @@ Append after the `**UI mirror**` bullet of „### Edit lockout during moderation
 - Edit mode shows the compose screen's three type cards (`EDIT_KINDS` in `ForumPostDetail.svelte`, same `compose.type.*` keys). Save = text edit against the current collection, then `POST /api/posts/move/[id]` `{ from, to }`, then a HARD navigation to the returned `href` — the island's fetch URLs are keyed on `collectionType`, so it does not re-key itself in place.
 - A kind is a collection, so a kind change is a cross-collection move: `src/lib/forum/movePost.ts` (copy-first, delete-last, idempotent — no transactions on the free tier) re-keys `flaggedContent.contentType`, `notifications.target.{contentType,href}` (href is stored) and drops `translationCache` rows; comments/likes/views/savedPosts need nothing. Naming lives in the dependency-pure `src/lib/forum/postKind.ts` (`buildMovedDoc` strips `isOfficial`/`pinnedUntil`/`editCount`/`category`, gives a recommendation `category: 'other'`, stamps `movedFrom`/`movedAt`).
 - Gate = the edit gate (author, approved, no warning label) + admin; `isOfficial` announcements are refused (`403 official_announcement`).
-- Old URLs keep working: all three detail pages call `locatePost()` on a miss and `302` (never 301 — a cached 301 loops if the post moves back). Known gap: `/bookmarks` still joins only `topics`, so a saved discussion that becomes an announcement leaves the Bookmarks list (pre-existing scope note in `bookmarks.astro`).
+- Old URLs keep working: all three detail pages call `locatePost()` on a miss and `302` (never 301 — a cached 301 loops if the post moves back). `/bookmarks` joins all three collections since the same day (each item carries `collection`; `BookmarksPage` builds href + chip from it), so a saved post follows its kind change.
 ```
 
 - [ ] **Step 2: Root CLAUDE.md**
@@ -966,7 +1052,8 @@ git commit -m "docs(forum): kind change in edit mode (move, gate, redirect, book
 
 ## Self-review
 
-- **Coverage:** type cards in edit mode (T5), server move (T2), endpoint + gate (T3), old links (T4), officials excluded (T3 + `canChangeKind` in T5), naming in one place (T1), docs (T6). Bookmarks gap is documented, not fixed (ruled out of scope in chat).
+- **Coverage:** type cards in edit mode (T5), server move (T2), endpoint + gate (T3), old links (T4), officials excluded (T3 + `canChangeKind` in T5), naming in one place (T1), saves follow the move on the Bookmarks page (T6), docs (T7).
+- **Audit 2026-09-13 (pre-execution):** switched the kind cards from `role="radio"` to the repo's `aria-pressed` toggle convention (like/bookmark buttons, DE/EN pill) to avoid new svelte-check a11y noise; added T6 because the user tested likes/saves/comments on the real post — likes and comments needed nothing, saves needed the Bookmarks join. Verified: no `noUnusedLocals` in tsconfig (the `_`-prefixed destructure in `buildMovedDoc` is fine), `topics/create` responds `{ topic: { _id } }`, forum index `staleTime` is 5s so a moved post leaves its old kind on the next mount.
 - **Ordering:** T3's own `findOne` in `from` makes a second call after a completed move read as 404 at the API; the client calls once and hard-navigates, and `movePost` itself is idempotent for the crash-retry case. Documented in T3 Step 3.
-- **Type consistency:** `PostKind`/`PostCollection` names, `movePost(db, { id, from, to, now? })`, `locatePost(db, id, exclude)`, `hrefForPost(c, id)` used identically in T2–T5. i18n keys `edit.kind.label|hint|blocked|failed` in T5 only.
+- **Type consistency:** `PostKind`/`PostCollection` names, `movePost(db, { id, from, to, now? })`, `locatePost(db, id, exclude)`, `hrefForPost(c, id)`, `kindForCollection(c)`, `isPostCollection(x)` used identically in T2–T6. i18n keys `edit.kind.label|hint|blocked|failed` in T5 only.
 - **Placeholders:** none; every code step is complete.
