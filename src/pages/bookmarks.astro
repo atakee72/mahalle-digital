@@ -7,16 +7,17 @@
 // hidden from non-authors), and threads the hydrated list into a Svelte
 // island for display.
 //
-// Scope note (v1): only `topics` are joined here. Announcements and
-// recommendations may also live in `savedPosts` from the legacy UI, but
-// the kiosk forum currently surfaces only topics — adding the other two
-// collections is a follow-up once they migrate to kiosk.
+// All three forum collections are joined (2026-09-13): a saved post keeps
+// its id when the author changes its kind (cross-collection move,
+// src/lib/forum/movePost.ts), so we look everywhere and tag each hit with
+// its `collection` for the card's href + kind chip.
 
 import KioskLayout from '../layouts/KioskLayout.astro';
 import BookmarksPage from '../components/forum/kiosk/BookmarksPage.svelte';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../lib/mongodb';
 import { buildModerationFilter, populateAuthors } from '../lib/topicsQuery';
+import { POST_COLLECTIONS } from '../lib/forum/postKind';
 import { ObjectId } from 'mongodb';
 
 const session = await getSession(Astro.request);
@@ -55,11 +56,16 @@ try {
     // No `.sort({ date: -1 })` here — Mongo's `$in` doesn't preserve order
     // anyway, and we want savedAt-desc ordering. Re-order client-side
     // using `savedIds` (already savedAt-desc from the savedPosts sort).
-    const topics = await db
-      .collection('topics')
-      .find({ $and: [{ _id: { $in: objectIds } }, moderationFilter] })
-      .toArray();
-    const populated = await populateAuthors(topics);
+    const perCollection = await Promise.all(
+      POST_COLLECTIONS.map(async (collection) => {
+        const docs = await db
+          .collection(collection)
+          .find({ $and: [{ _id: { $in: objectIds } }, moderationFilter] })
+          .toArray();
+        return docs.map((d) => ({ ...d, collection }));
+      })
+    );
+    const populated = await populateAuthors(perCollection.flat());
 
     const populatedMap = new Map<string, any>();
     for (const t of populated) populatedMap.set(String(t._id), t);

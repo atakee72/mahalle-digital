@@ -8,6 +8,7 @@
   import PostTypeChip from './PostTypeChip.svelte';
   import KioskBtn from './KioskBtn.svelte';
   import { locale } from '../../../lib/kiosk-i18n';
+  import { hrefForPost, isPostCollection, kindForCollection } from '../../../lib/forum/postKind';
 
   let { initialItems = [], currentUserId = null } = $props<{
     initialItems?: (any & { savedAt?: string | null })[];
@@ -15,6 +16,9 @@
   }>();
 
   const items = $derived(initialItems as any[]);
+
+  // Items are tagged server-side; anything untagged (legacy) is a discussion.
+  const collectionOf = (t: any) => (isPostCollection(t.collection) ? t.collection : 'topics');
 
   // Day-grain savedAt label, distinct from the minute-grain `relTime`
   // used elsewhere on the kiosk forum. Calendar-day delta (zeroed to
@@ -92,7 +96,7 @@
     <div class="px-[18px] py-2.5 flex flex-col gap-2">
       {#each items as topic (topic._id)}
         <a
-          href={`/topics/${topic._id}`}
+          href={hrefForPost(collectionOf(topic), topic._id)}
           class="block focus:outline-none focus:ring-2 focus:ring-ink rounded-xl"
         >
           <article
@@ -100,7 +104,7 @@
           >
             <div class="min-w-0">
               <div class="flex items-center gap-1.5 mb-0.5">
-                <PostTypeChip kind="discussion" size="sm" />
+                <PostTypeChip kind={kindForCollection(collectionOf(topic))} size="sm" />
                 <span
                   class="font-dmmono text-[9px] text-ink-mute tracking-[0.05em] truncate"
                 >
