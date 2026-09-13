@@ -6,6 +6,10 @@
 // LAST and every step is idempotent: a re-run after a crash converges
 // (source gone + target present → alreadyMoved; source still present →
 // replaceOne/upsert overwrites the half-written copy and the delete lands).
+// Between the copy and the delete (four round-trips) the post exists in both
+// collections; accepted — the index keys cards by _id and the window is
+// milliseconds; a crash inside it is Sentry-captured by the endpoint so a
+// stuck duplicate is visible.
 //
 // What references a post by KIND and therefore needs re-keying:
 //   flaggedContent.contentType        (singular, contentId is the string id)
@@ -66,17 +70,23 @@ export async function movePost(
   return { ok: true, doc: moved, alreadyMoved: false };
 }
 
-/** Which OTHER forum collection holds this id, if any (detail-page redirect after a move). */
+/**
+ * Which OTHER forum collection holds this id, if any (detail-page redirect
+ * after a move). `filter` is the caller's moderation-visibility filter — pass
+ * it so a hidden (pending/rejected/warning-labelled to this viewer) post
+ * never produces a redirect.
+ */
 export async function locatePost(
   db: MoveDb,
   id: string,
   exclude: PostCollection,
+  filter: Record<string, unknown> = {},
 ): Promise<PostCollection | null> {
   if (!ObjectId.isValid(id)) return null;
   const _id = new ObjectId(id);
   for (const c of POST_COLLECTIONS) {
     if (c === exclude) continue;
-    const hit = await db.collection(c).findOne({ _id }, { projection: { _id: 1 } });
+    const hit = await db.collection(c).findOne({ _id, ...filter }, { projection: { _id: 1 } });
     if (hit) return c;
   }
   return null;

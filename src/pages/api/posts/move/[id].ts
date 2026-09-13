@@ -6,6 +6,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { ObjectId } from 'mongodb';
+import * as Sentry from '@sentry/astro';
 import { connectDB } from '../../../../lib/mongodb';
 import { invalidateKiezKontext } from '../../../../lib/kiez/kontext';
 import { rejectIfBanned } from '../../../../lib/auth/banGuard';
@@ -59,6 +60,11 @@ export const POST: APIRoute = async ({ request, params }) => {
     return json({ collection: to, href: hrefForPost(to, id) });
   } catch (error) {
     console.error('Post move error:', error);
+    // Vercel freezes the function the instant the response leaves, eating
+    // the SDK's async event POST — flush here, inside the request window,
+    // or a crash mid-move (post stuck in both collections) goes unseen.
+    Sentry.captureException(error, { extra: { id: params.id, route: 'posts/move' } });
+    await Sentry.flush(2000);
     return json({ error: 'Internal server error' }, 500);
   }
 };

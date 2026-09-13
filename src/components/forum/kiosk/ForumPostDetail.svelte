@@ -403,11 +403,15 @@
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           // An edit that just went back to `pending` (AI flag) locks the
-          // move — the text IS saved, say so instead of a bare error.
+          // move — say whether the text WAS saved (this edit re-triggered
+          // moderation) or the post was already locked before this save.
+          console.error('move failed', err);
           throw new Error(
             err.error === 'edit_blocked_by_moderation'
-              ? ($t['edit.kind.blocked'] as string)
-              : err.error || ($t['edit.kind.failed'] as string)
+              ? textDirty
+                ? ($t['edit.kind.blocked'] as string)
+                : ($t['edit.kind.locked'] as string)
+              : ($t['edit.kind.failed'] as string)
           );
         }
         const json = await res.json();
@@ -447,6 +451,7 @@
     if (!editing) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (saving) return;
         e.preventDefault();
         cancelEdit();
       }
@@ -672,10 +677,10 @@
 
       {#if editing && canChangeKind}
         <div class="mb-4">
-          <p class="font-dmmono text-[10px] uppercase tracking-[0.1em] text-ink-mute mb-1.5">
+          <p id="edit-kind-label" class="font-dmmono text-[10px] uppercase tracking-[0.1em] text-ink-mute mb-1.5">
             {$t['edit.kind.label']}
           </p>
-          <div class="flex flex-wrap gap-2">
+          <div class="flex flex-wrap gap-2" role="group" aria-labelledby="edit-kind-label">
             {#each EDIT_KINDS as opt (opt.k)}
               {@const active = editKind === opt.k}
               <button

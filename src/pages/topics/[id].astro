@@ -39,7 +39,7 @@ if (!topicDoc) {
   // The author may have changed the post's kind (cross-collection move,
   // src/lib/forum/movePost.ts) — old links must keep working. 302, never
   // 301: a cached 301 would loop if the post is ever moved back.
-  const elsewhere = await locatePost(db, id, 'topics');
+  const elsewhere = await locatePost(db, id, 'topics', buildModerationFilter(currentUserId));
   if (elsewhere) return Astro.redirect(hrefForPost(elsewhere, id), 302);
   // Either non-existent or filtered out by moderation. 404 via Astro.
   return new Response('Not found', { status: 404 });

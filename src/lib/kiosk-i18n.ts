@@ -412,6 +412,7 @@ const de = {
   'edit.kind.label': 'ART',
   'edit.kind.hint': 'Beim Speichern wandert der Post in die neue Rubrik – die Adresse ändert sich, der alte Link leitet weiter.',
   'edit.kind.blocked': 'Text gespeichert. Die Art lässt sich erst ändern, wenn die Prüfung abgeschlossen ist.',
+  'edit.kind.locked': 'Die Art lässt sich erst ändern, wenn die Prüfung abgeschlossen ist.',
   'edit.kind.failed': 'Art ändern fehlgeschlagen.',
 
   // Delete-confirm card with type-to-confirm friction.
@@ -2346,6 +2347,7 @@ const en: Dict = {
   'edit.kind.label': 'TYPE',
   'edit.kind.hint': 'Saving moves the post to its new section – the address changes, the old link redirects.',
   'edit.kind.blocked': 'Text saved. The type can be changed once the review is done.',
+  'edit.kind.locked': 'The type can be changed once the review is done.',
   'edit.kind.failed': 'Changing the type failed.',
 
   'delete.kicker': 'DELETE POST?',

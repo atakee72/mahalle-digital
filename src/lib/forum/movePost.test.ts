@@ -116,3 +116,9 @@ test('locatePost finds the id in another collection, never the excluded one', as
   assert.equal(await locatePost(db, id, 'topics'), null);
   assert.equal(await locatePost(db, 'not-an-id', 'topics'), null);
 });
+
+test('locatePost respects the caller\'s moderation-visibility filter', async () => {
+  const { db, id } = seed();
+  assert.equal(await locatePost(db, id, 'announcements', { moderationStatus: 'approved' }), 'topics');
+  assert.equal(await locatePost(db, id, 'announcements', { moderationStatus: 'rejected' }), null);
+});
