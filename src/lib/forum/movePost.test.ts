@@ -46,7 +46,10 @@ function seed() {
   store.set('topics', [{ _id, title: 'T', body: 'B', author: 'u1', likes: 2, likedBy: ['u2', 'u3'], views: 5, comments: ['c1'], moderationStatus: 'approved' }]);
   store.set('announcements', []);
   store.set('recommendations', []);
-  store.set('flaggedContent', [{ _id: new ObjectId(), contentId: id, contentType: 'topic', status: 'reviewed' }]);
+  store.set('flaggedContent', [
+    { _id: new ObjectId(), contentId: id, contentType: 'topic', status: 'reviewed' },
+    { _id: new ObjectId(), contentType: 'comment', contentId: 'c9', parentPostId: id, parentCollection: 'topics' },
+  ]);
   store.set('notifications', [
     { _id: new ObjectId(), userId: 'u1', target: { contentType: 'topic', contentId: id, title: 'T', href: `/topics/${id}` } },
     { _id: new ObjectId(), userId: 'u9', target: { contentType: 'topic', contentId: 'other', title: 'X', href: '/topics/other' } },
@@ -69,6 +72,8 @@ test('moves the doc and re-keys every dependent record', async () => {
   assert.equal(moved.views, 5);
   assert.equal(moved.movedFrom, 'topics');
   assert.equal(store.get('flaggedContent')![0].contentType, 'announcement');
+  assert.equal(store.get('flaggedContent')![1].parentCollection, 'announcements');
+  assert.equal(store.get('flaggedContent')![1].contentType, 'comment');
   assert.deepEqual(store.get('notifications')![0].target, { contentType: 'announcement', contentId: id, title: 'T', href: `/announcements/${id}` });
   assert.equal(store.get('notifications')![1].target.href, '/topics/other');
   assert.equal(store.get('translationCache')!.length, 0);

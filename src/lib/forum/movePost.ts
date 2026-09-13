@@ -9,6 +9,7 @@
 //
 // What references a post by KIND and therefore needs re-keying:
 //   flaggedContent.contentType        (singular, contentId is the string id)
+//   flaggedContent.parentCollection (flagged comments)
 //   notifications.target.contentType + .href (href is STORED)
 //   translationCache rows             (key starts with `${contentType}:${id}`) → dropped
 // What does NOT: comments (relevantPostId only), likes/views (on the doc),
@@ -50,6 +51,10 @@ export async function movePost(
   await db.collection('flaggedContent').updateMany(
     { contentId: id, contentType: fromCT },
     { $set: { contentType: toCT } },
+  );
+  await db.collection('flaggedContent').updateMany(
+    { parentPostId: id, parentCollection: from },
+    { $set: { parentCollection: to } },
   );
   await db.collection('notifications').updateMany(
     { 'target.contentId': id, 'target.contentType': fromCT },
