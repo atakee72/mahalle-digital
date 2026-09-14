@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { ObjectId } from 'mongodb';
 import { connectDB } from '../../../../lib/mongodb';
 import { requireAdminSession } from '../../../../lib/auth';
+import { deleteCommentsForPost } from '../../../../lib/comments/cascade';
 import { AdminAnnouncementUpdateSchema } from '../../../../schemas/forum.schema';
 import { parseRequestBody } from '../../../../schemas/validation.utils';
 import { populateAuthors } from '../../../../lib/topicsQuery';
@@ -123,6 +124,8 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     }
 
     await collection.deleteOne({ _id: new ObjectId(id) });
+    // Officials can be commented like any announcement — cascade the thread.
+    await deleteCommentsForPost(db, id);
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../../lib/mongodb';
+import { deleteCommentsForPost } from '../../../../lib/comments/cascade';
 import { ObjectId } from 'mongodb';
 
 export const DELETE: APIRoute = async ({ params, request }) => {
@@ -62,9 +63,8 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
-    // Also delete related comments
-    const commentsCollection = db.collection('comments');
-    await commentsCollection.deleteMany({ topic: new ObjectId(id) });
+    // Cascade the comment thread (reported comments stay in the queue, marked deleted).
+    await deleteCommentsForPost(db, id);
 
     // A pending report/flag on now-deleted content stays in the moderation
     // queue, marked deleted (still strikeable from the stored snapshot).
