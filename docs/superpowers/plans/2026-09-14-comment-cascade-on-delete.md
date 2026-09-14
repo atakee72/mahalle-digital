@@ -241,6 +241,9 @@ const { chromium } = require('playwright'); const fs = require('fs');
     { kind: 'recommendations', create: '/api/recommendations/create', body: { title: 'Cascade-Probe Tipp', body: 'Kommentare müssen mit dem Beitrag verschwinden.', category: 'other', tags: ['test'] } },
     { kind: 'topics', create: '/api/topics/create', body: { title: 'Cascade-Probe Thema', body: 'Kommentare müssen mit dem Beitrag verschwinden.', tags: ['test'] } },
   ];
+  // Admin path: officials are created + deleted through the admin endpoints (same
+  // AnnouncementCreateSchema body; DELETE refuses non-officials with 400).
+  kinds.push({ kind: 'announcements', label: 'admin-official', create: '/api/admin/announcements/create', del: (id) => `/api/admin/announcements/${id}`, body: { title: 'Cascade-Probe Amtlich', body: 'Kommentare müssen mit dem Beitrag verschwinden.', tags: ['test'] } });
   let failed = false;
   for (const k of kinds) {
     const c = await api.post(`${BASE}${k.create}`, { data: k.body });
@@ -248,9 +251,9 @@ const { chromium } = require('playwright'); const fs = require('fs');
     if (c.status() >= 300 || !id) { console.log(k.kind, 'create failed', c.status(), JSON.stringify(j).slice(0, 200)); failed = true; continue; }
     for (const n of [1, 2]) await api.post(`${BASE}/api/comments/create`, { data: { body: `Kommentar ${n}`, topicId: id, collectionType: k.kind } });
     const before = await count(id);
-    const d = await api.delete(`${BASE}/api/${k.kind}/delete/${id}`);
+    const d = await api.delete(`${BASE}${k.del ? k.del(id) : `/api/${k.kind}/delete/${id}`}`);
     const after = await count(id);
-    console.log(`${k.kind}: comments before=${before} delete=${d.status()} after=${after}`);
+    console.log(`${k.label ?? k.kind}: comments before=${before} delete=${d.status()} after=${after}`);
     if (before !== 2 || after !== 0) failed = true;
   }
   await browser.close();
@@ -258,7 +261,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
 })().catch((e) => { console.error(e.message.split('\n')[0]); process.exit(1); });
 ```
 
-Shapes verified 2026-09-14: `GET /api/comments/[postId]` returns `{ comments, count }`; creates return `{ topic }` / `{ announcement }` / `{ recommendation }`; `RecommendationCreateSchema.category` accepts `'other'`. If a create is still rejected (400 with a Zod message), read the schema in `src/schemas/forum.schema.ts` and adapt the body; never change a schema.
+Shapes verified 2026-09-14: `GET /api/comments/[postId]` returns `{ comments, count }` and does NOT check that the parent still exists (so `after` is a true orphan count); creates return `{ topic }` / `{ announcement }` / `{ recommendation }` (the admin create also returns `{ announcement }` and validates with the same `AnnouncementCreateSchema`); `images` defaults to `[]`; `RecommendationCreateSchema.category` accepts `'other'`. If a create is still rejected (400 with a Zod message), read the schema in `src/schemas/forum.schema.ts` and adapt the body; never change a schema.
 
 Run:
 
@@ -268,7 +271,7 @@ for i in $(seq 1 40); do curl -s -o /dev/null -w "%{http_code}" http://localhost
 NODE_PATH=$(npm root -g)/@playwright/cli/node_modules node scratchpad/cascade-probe.cjs
 ```
 
-Expected BEFORE the fix: `announcements: … after=2` and `recommendations: … after=2` (orphans), `topics: … after=0`; exit code 1. NOTE: the two orphaned pairs this run leaves in the dev DB are cleaned by Task 3's script (its dry-run must list them).
+Expected BEFORE the fix: `announcements: … after=2`, `recommendations: … after=2` and `admin-official: … after=2` (orphans), `topics: … after=0`; exit code 1. NOTE: the three orphaned pairs this run leaves in the dev DB are cleaned by Task 3's script (its dry-run must list them).
 
 - [ ] **Step 2: Replace the cascade in the four self-delete routes**
 
@@ -331,7 +334,7 @@ with
 NODE_PATH=$(npm root -g)/@playwright/cli/node_modules node scratchpad/cascade-probe.cjs
 ```
 
-Expected AFTER: all three lines `before=2 delete=200 after=0`, exit 0. Then verify the admin path once with the same session: create an official via `POST /api/admin/announcements/create` (body per `src/schemas/forum.schema.ts`'s admin schema — read it), add one comment with `collectionType: 'announcements'`, `DELETE /api/admin/announcements/<id>`, `count(id)` must be 0. Add these lines to the probe or run them as a second small script; record the output in the report.
+Expected AFTER: all four lines `before=2 delete=200 after=0`, exit 0. Record the BEFORE and AFTER output verbatim in the report.
 
 - [ ] **Step 5: Gates**
 
@@ -447,7 +450,7 @@ main().catch((e) => { console.error(e); process.exit(1); });
 - [ ] **Step 2: Dry-run against the dev DB**
 
 Run: `pnpm tsx scripts/cleanup-orphan-comments.ts 2>&1 | grep -v "npm warn"`
-Expected: `db=mahalle-dev  mode=DRY-RUN`, at least the 3 orphaned parents that existed on 2026-09-14 plus the 2 pairs Task 2's first probe run left (announcement + recommendation), `Would delete N`. Record the exact output in the report.
+Expected: `db=mahalle-dev  mode=DRY-RUN`, at least the 3 orphaned parents that existed on 2026-09-14 plus the 3 pairs Task 2's first probe run left (announcement, recommendation, admin official), `Would delete N`. Record the exact output in the report.
 
 - [ ] **Step 3: Apply against the dev DB, then re-run dry-run**
 
@@ -493,4 +496,5 @@ git commit -m "chore(comments): one-shot orphan cleanup script + runbook"
 - Coverage: bug fix (Task 2 Step 2), missing admin cascade (Task 2 Step 3), flag preservation (Task 1 helper + test), unification of the two correct routes (Task 2 Step 2), existing orphans (Task 3), docs (Task 2 Step 6, Task 3 Step 4).
 - Placeholders: none. Response/create shapes verified against the routes and `forum.schema.ts`; the admin official-create body is bounded with an explicit read instruction.
 - Type consistency: `deleteCommentsForPost(db: CascadeDb, postId: string): Promise<CascadeResult>` used identically in Tasks 1–2; `CascadeDb = Pick<Db,'collection'>` mirrors `MoveDb`.
+- Audit 2026-09-14 (against code): `GET /api/comments/[postId]` filters on `relevantPostId` only, no parent lookup → the probe's `after` count is valid post-delete; all four self-delete routes and the admin route import `connectDB` from `../../../../lib/mongodb`, so the helper import depth is the same everywhere; the admin route has a `db` in scope at the delete line; `AnnouncementCreateSchema` is shared by user and admin creates (`title`/`body`/`tags`, `images` defaults to `[]`); root `CLAUDE.md:175` string exists verbatim; comment flag rows store `contentId` as the hex string (`result.insertedId.toString()`), matching the helper's `String(c._id)`; the fake Db's `updateMany` returns `modifiedCount`, which the helper reads.
 - Out of scope, noted: comments on a post deleted by the account-deletion pipeline are unaffected (authored content stays as „Ehemaliges Mitglied"); the forum kind-move keeps `relevantPostId` so threads follow.
