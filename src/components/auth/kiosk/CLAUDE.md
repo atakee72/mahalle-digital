@@ -156,12 +156,16 @@ truncated to 32 chars (same salt as the contact relay).
   While locked even the correct password is refused. UI: `AuthLoginInner`
   asks peek-only `POST /api/auth/login-status` after a failed signIn and
   shows the danger banner + m:ss countdown + disabled fields.
-- **forgot-password**: 5/h per IP + 3/h per email, SILENT (still generic 200,
+- **forgot-password**: 20/h per IP + 3/h per email, SILENT (still generic 200,
   send skipped). Also bounds the CWE-208 timing side-channel. Lookup now
   collation-insensitive (strength 2).
-- **register**: 5/h per IP → 429 (`auth.err.tooMany` in the UI), placed
-  BEFORE the OpenAI profanity check (cost guard). New emails stored
-  lowercase; duplicate check collation-insensitive.
+- **register**: 40/h per IP + 3/h per email → 429 (`auth.err.tooMany` in the
+  UI). IP gate placed BEFORE the OpenAI profanity check (cost guard); the
+  email gate sits after the format check. **IP gates are ROOM-sized since
+  2026-09-14** (Schillermarkt stand prep): a tablet doing assisted signups, a
+  phone hotspot or a venue Wi-Fi is ONE public IP, and the old 5/h refused
+  the sixth neighbour of the hour. The per-email bucket is the per-person
+  brake. New emails stored lowercase; duplicate check collation-insensitive.
 - **resend-verification**: ALLOWED_ORIGINS CSRF origin guard (contact-relay
   pattern, skipped when unset) + 10/h per user cap on top of the 60s guard.
 - **Not limited**: `POST /api/auth/verify-email` — 256-bit random tokens make
@@ -171,7 +175,7 @@ truncated to 32 chars (same salt as the contact relay).
   with no `.error`; never reintroduce a `result?.error` check.
 - **Known limit of the anti-enum posture**: `register`'s 409-on-taken-email is
   an unavoidable account-existence oracle (inherent to signup UX) — bounded by
-  the 5/h/IP throttle. Login/forgot-password stay fully generic.
+  the 40/h/IP + 3/h/email throttles. Login/forgot-password stay fully generic.
 
 ## Ban enforcement — 3-strike Sperre (shipped, 2026-07-09)
 

@@ -22,11 +22,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     // Rate limits — SILENT: the response stays the same generic 200 either
     // way (no probing signal); limited requests just skip token+send.
-    // 5/hour per IP + 3/hour per target email. Also bounds the known-vs-
+    // 20/hour per IP (room-sized, see register.ts) + 3/hour per target
+    // email — the email bucket is the per-person brake. Also bounds the known-vs-
     // unknown timing side-channel (CWE-208) to guarded volumes.
     const ipHash = hashIp(clientIpFrom(request, clientAddress));
     const [ipLimit, emailLimit] = await Promise.all([
-      consumeRateLimit(`fp:ip:${ipHash}`, 5, 60 * 60 * 1000),
+      consumeRateLimit(`fp:ip:${ipHash}`, 20, 60 * 60 * 1000),
       consumeRateLimit(`fp:email:${email}`, 3, 60 * 60 * 1000),
     ]);
     if (ipLimit.limited || emailLimit.limited) return generic();

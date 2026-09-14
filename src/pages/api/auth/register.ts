@@ -28,10 +28,14 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
             );
         }
 
-        // Per-IP throttle: 5 registrations/hour. Sits BEFORE the profanity
-        // check so bulk signups can't burn OpenAI moderation calls.
+        // Per-IP throttle: 40 registrations/hour. Sits BEFORE the profanity
+        // check so bulk signups can't burn OpenAI moderation calls. Sized for
+        // a room, not a person (2026-09-14, Schillermarkt stand): a tablet
+        // doing assisted signups, a phone hotspot, or one venue Wi-Fi is ONE
+        // IP — 5/h refused the sixth neighbour. The per-person brake is the
+        // per-email limit below.
         const ipHash = hashIp(clientIpFrom(request, clientAddress));
-        const ipLimit = await consumeRateLimit(`reg:ip:${ipHash}`, 5, 60 * 60 * 1000);
+        const ipLimit = await consumeRateLimit(`reg:ip:${ipHash}`, 40, 60 * 60 * 1000);
         if (ipLimit.limited) {
             return new Response(
                 JSON.stringify({ error: 'rate_limited' }),
@@ -64,6 +68,17 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
             return new Response(
                 JSON.stringify({ error: 'Invalid email address' }),
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
+        // Per-email throttle: 3 attempts/hour for the same address. The
+        // person-level brake now that the IP gate is room-sized; also caps
+        // the duplicate-account probing (409) a single address can do.
+        const emailLimit = await consumeRateLimit(`reg:email:${emailNorm}`, 3, 60 * 60 * 1000);
+        if (emailLimit.limited) {
+            return new Response(
+                JSON.stringify({ error: 'rate_limited' }),
+                { status: 429, headers: { 'Content-Type': 'application/json' } }
             );
         }
 
