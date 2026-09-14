@@ -51,7 +51,10 @@ Per signup: verification mail (`register.ts:166`) + welcome mail on first verifi
 
 ---
 
-## C. Load smoke (I run it, ~30 min, prod READ-ONLY + dev writes)
+## C. ✅ DONE 2026-09-14 — Load smoke (prod READ-ONLY + dev writes; full numbers in `scratchpad/load-smoke-2026-09-14.md`)
+Result: **green.** Logged-in prod reads at stand-like pacing answer in ~100 ms (p95 ≤ 350 ms, one cold 2 s), zero errors. Dev: 50 same-second signups from one IP → 40 accepted / 10 refused (the new cap, as designed), 40 moderated comments all accepted; under that unrealistic burst each call is 3–10 s, dominated by OpenAI. Two things learned: (1) **Vercel's automatic „Security Checkpoint"** — a burst of ~50 requests from one IP gets a 403 challenge page; real browsers solve it silently, so a crowded hotspot might flash it once (added to the sheet, D8); (2) the **Atlas 100 ops/s throttle is real**: 50 cold-cache misses on `/api/kiez-stats` (~9 queries each) took 6 s per request, then the endpoint is edge-cached for a day — no event impact. Throwaway account `atakee+lasttest@gmail.com` still exists (useful for the second Saturday); delete it after 26 Sept via profile → Konto löschen.
+
+Original plan for the record:
 
 - **Prod, reads only**: the user registers ONE throwaway prod account („Lasttest") and puts its password in `scratchpad/prodpw.txt` (gitignored; same handling as `devpw.txt` — read straight into the login fill, never printed). The script logs in once, then runs 50 parallel sessions with that cookie fetching `/forum`, `/calendar`, `/api/kiez-stats` and one post detail; measures p95 latency and counts non-200s. Request-level fetches do NOT fire the client-side `POST /api/views/increment`, so the detail page is a pure read. Expectation: p95 < 1.5 s, zero errors. Delete the throwaway account afterwards (profile → Konto löschen, 7-day grace).
 - **Dev, writes**: start the dev server with the mailer disabled — `SMTP_HOST= SMTP_USER= SMTP_PASS= RESEND_API_KEY= pnpm dev --port 4655` — otherwise 50 fake `@mahalle-dev.test` signups send 50 real mails through the mailbox.org relay (bounces, possible account flag). Then 50 parallel registrations from one IP (after A1), then 50 parallel comments on one topic. Expectation: all 201, moderation queue fills without errors, no mail sent (dev-logged links only).
@@ -70,7 +73,8 @@ Per signup: verification mail (`register.ts:166`) + welcome mail on first verifi
 4. **„Du hast dein Tageslimit erreicht"**: 5 posts per rolling 24 h per person (topics, events, announcements, recommendations, listings each count; comments are unlimited; admins exempt). A keen newcomer can hit it — tell them comments are free and the limit resets on its own.
 5. **Someone can't log in**: 5 wrong passwords lock the *account* for 15 min (not the IP). „Passwort vergessen" works from the phone.
 6. **Admin can't create accounts for people** — there is no such endpoint. If signup is broken for everyone, the fix is on the laptop: Vercel env → redeploy, or raise the limit and push (CI ~3 min).
-7. **If the site is down**: Vercel status + `gh run list` + Sentry. The 500 page is dependency-free and will render.
+7. **A „Vercel Security Checkpoint" page appears** (spinner, then the site): Vercel's automatic burst defence for one IP — happens on a hotspot many phones share, clears by itself in seconds; nothing to do.
+8. **If the site is down**: Vercel status + `gh run list` + Sentry. The 500 page is dependency-free and will render.
 
 ---
 
