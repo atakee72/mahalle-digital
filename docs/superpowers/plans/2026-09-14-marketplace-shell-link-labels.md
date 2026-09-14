@@ -27,11 +27,12 @@
 
 **Files:**
 - Modify: `src/pages/marketplace/[id].astro:8` (import) and `:100-102` (the `.map()` in the description `<p>`)
+- Modify: `src/components/marketplace/kiosk/browse/ListingLead.svelte:34-38` (lead-card excerpt: plain-text URL shortening, parity with `ForumPostCard`)
 - Modify: `src/components/marketplace/kiosk/CLAUDE.md` (close the „Bit us again 2026-09-13" note)
 - Probe (gitignored, not committed): `scratchpad/mkt-links-probe.cjs`
 
 **Interfaces:**
-- Consumes: `linkifySegments(text: string): { type: 'text' | 'link'; value: string }[]` and `displayUrl(url: string, max = 40): string` from `src/lib/linkify.ts` (both exist, tested in `src/lib/linkify.test.ts`).
+- Consumes: `linkifySegments(text: string): { type: 'text' | 'link'; value: string }[]`, `displayUrl(url: string, max = 40): string` and `shortenUrlsInText(text: string, max = 40): string` from `src/lib/linkify.ts` (all exist, tested in `src/lib/linkify.test.ts`).
 - Produces: nothing new. Later tasks: none.
 
 - [ ] **Step 1: Confirm the gap on the dev server (the "failing test")**
@@ -114,6 +115,45 @@ and replace lines 100–102 (the whole `.map()` expression inside the descriptio
 
 Nothing else on the page changes.
 
+- [ ] **Step 2b: Shorten URLs in the browse lead-card excerpt (audit addition 2026-09-14)**
+
+`ListingLead.svelte` renders `descriptionPlainText` as plain text (no anchors), exactly like `ForumPostCard`, which got `shortenUrlsInText()` in `65ff7c2a`. Without this step a listing whose description starts with a long link shows 150 raw characters in the marketplace lead card. In `src/components/marketplace/kiosk/browse/ListingLead.svelte` add to the `<script>` imports (the file's other imports use the same `../../../../lib/` depth):
+
+```ts
+  import { shortenUrlsInText } from '../../../../lib/linkify';
+```
+
+and replace lines 34–38
+
+```ts
+  const bodyLead = $derived.by(() => {
+    if (!listing) return '';
+    const src = listing.descriptionPlainText ?? '';
+    return src.length > 180 ? src.slice(0, 180) + '…' : src;
+  });
+```
+
+with
+
+```ts
+  const bodyLead = $derived.by(() => {
+    if (!listing) return '';
+    const src = shortenUrlsInText(listing.descriptionPlainText ?? '');
+    return src.length > 180 ? src.slice(0, 180) + '…' : src;
+  });
+```
+
+Verify by extending the probe before Step 3: after `waitForURL('**/marketplace')` (the test listing is the newest, so it is the lead) add
+
+```js
+  await page.goto(`${BASE}/marketplace`);
+  await page.waitForSelector('main');
+  const lead = await page.locator('main').first().textContent();
+  console.log('lead has short label:', lead.includes('berlin.de/ba-neukoelln/aktuelles…'), '| raw url leaked:', lead.includes('utm_source'));
+```
+
+placed after the listing is created (move the create call above it). Expected AFTER: `true | false`. Note `ListingLead` is a nested island: no `<style>` block may be added (none is).
+
 - [ ] **Step 3: Re-run the probe**
 
 ```bash
@@ -142,14 +182,14 @@ OPEN until the shell gets the same `displayUrl()` label.)
 with
 
 ```
-FIXED 2026-09-14: the shell's `.map()` now renders the same `displayUrl()` label, `title`, `↗` and `overflow-wrap: break-word` — both render sites match again.)
+FIXED 2026-09-14: the shell's `.map()` now renders the same `displayUrl()` label, `title`, `↗` and `overflow-wrap: break-word` — both render sites match again; the browse `ListingLead` excerpt runs through `shortenUrlsInText()` like `ForumPostCard`.)
 ```
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add 'src/pages/marketplace/[id].astro' src/components/marketplace/kiosk/CLAUDE.md
-git commit -m "fix(marketplace): short link labels in the SSR description shell"
+git add 'src/pages/marketplace/[id].astro' src/components/marketplace/kiosk/browse/ListingLead.svelte src/components/marketplace/kiosk/CLAUDE.md
+git commit -m "fix(marketplace): short link labels in the SSR shell and lead card"
 git log -1 --format=%B   # must be exactly the one line above
 ```
 
@@ -159,6 +199,7 @@ Do not push. Report the two screenshot paths and the three gate numbers.
 
 ## Self-review
 
-- Coverage: the only requirement (shell matches the island's anchor contract) is Task 1 Step 2; the docs gotcha is closed in Step 5; verification is Steps 1/3/4.
+- Coverage: the shell matches the island's anchor contract (Step 2); the browse lead card gets the plain-text shortening the forum cards have (Step 2b, audit addition); the docs gotcha is closed in Step 5; verification is Steps 1/3/4.
+- Audit 2026-09-14 (against code): docs anchor string exists verbatim (1 hit); `create.ts` does not validate the image host and admins skip the vision check, so the Cloudinary demo URL is fine; the listing page has ONE `<main>` (from `KioskLayout`); `DELETE /api/listings/delete/[id]` exists; `MarketDetailInner` is the only other `descriptionPlainText` consumer outside compose, and it already carries the anchor.
 - Placeholders: none — the probe body was verified against `ListingCreateSchema` (string description + `descriptionPlainText`, `images` ≥ 1, `delivery: 'abholung'`, `specs: {}`) and the delete route (`/api/listings/delete/[id]`).
 - Type consistency: `displayUrl(url: string, max = 40)` matches `src/lib/linkify.ts`; `linkifySegments` signature unchanged.
