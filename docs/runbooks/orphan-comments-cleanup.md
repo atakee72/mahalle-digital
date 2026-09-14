@@ -8,7 +8,7 @@
 ```
 mongoimport --uri "$MONGODB_URI" --collection comments --file <backup.jsonl>
 ```
-**Verified 2026-09-14 (dev dry run):** the Node driver's plain `JSON.stringify()` on a comment doc serializes `_id`/`relevantPostId`/dates as plain strings (`"6aa7c0b3…"`, ISO timestamps) — NOT BSON extended JSON (`{ "$oid": … }` / `{ "$date": … }`). `mongoimport` restores such a document with `_id` as a plain **string**, not an `ObjectId` — the restored row is not byte-identical to a normally-inserted comment, though `relevantPostId` still matches fine (this script's own `$in: [oid, oid.toHexString()]` filter already treats the two forms as equivalent). If exact `_id` type parity is required, convert the backup line(s) to Extended JSON first (wrap the hex string as `{"$oid": "…"}`) before importing, or write the doc back with a one-off script that wraps `_id`/`relevantPostId` in `new ObjectId(...)` before `insertOne`.
+**Backup format:** each line is MongoDB Extended JSON (relaxed) via `EJSON.stringify`, so `_id`/`relevantPostId` are `{ "$oid": … }` and dates `{ "$date": … }` — `mongoimport` restores them with their original types (verified on dev 2026-09-14 after the fix wave; the first version used plain `JSON.stringify`, which would have restored `_id` as a string).
 
 **Step 0 — verify prod data shape before the dry-run (user only, run against prod):**
 ```

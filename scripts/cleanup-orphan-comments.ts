@@ -16,6 +16,7 @@
 import 'dotenv/config';
 import fs from 'node:fs';
 import { MongoClient, ObjectId } from 'mongodb';
+import { EJSON } from 'bson';
 
 const PARENTS = ['topics', 'announcements', 'recommendations', 'events'] as const;
 
@@ -63,7 +64,8 @@ async function main() {
     console.log(`  parent ${oid.toHexString()}: ${rows.length} comment(s)` + (rows[0]?.createdAt ? `, oldest ${new Date(rows[0].createdAt).toISOString().slice(0, 10)}` : ''));
     if (!apply) continue;
     if (rows.length) {
-      fs.appendFileSync(backupPath, rows.map((d) => JSON.stringify(d)).join('\n') + '\n');
+      // Extended JSON keeps ObjectId/Date types, so `mongoimport` restores rows byte-identical.
+      fs.appendFileSync(backupPath, rows.map((d) => EJSON.stringify(d, { relaxed: true })).join('\n') + '\n');
     }
     const ids = rows.map((r) => String(r._id));
     const del = await comments.deleteMany(filter);
