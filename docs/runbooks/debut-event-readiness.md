@@ -12,14 +12,14 @@ Written 2026-09-14, corrected the same day against the Fabric state notes („MA
 
 ## A. Must fix before the event (code, ~1 h total)
 
-### A1. Signup rate limit is per IP: 5 per hour → the venue Wi-Fi is ONE IP
+### A1. ✅ DONE 2026-09-14 (`e3dd3843`, live) — Signup rate limit was per IP: 5 per hour → the stand's tablet/hotspot is ONE IP
 `src/pages/api/auth/register.ts:34` — `consumeRateLimit('reg:ip:<hash>', 5, 1h)`. At the stand this bites in two ways: (1) **assisted signups on the tablet** — the 6th person you register on the tablet within an hour gets `429 rate_limited`; (2) anyone who joins the stand's phone hotspot shares its IP. Visitors registering on their own mobile data are unaffected (own IPs). A market Saturday with a helpful host at a tablet is exactly the case where 5/h from one IP fails.
 
 Same class, lower likelihood: `forgot-password.ts:29` — 5/h per IP (silent limit; a 6th „Passwort vergessen" on the Wi-Fi just never sends).
 
-**Fix (recommended):** keep the IP gate as a bot brake but size it for a room: `reg:ip` 5 → **40/h**, `fp:ip` 5 → **20/h**. Add a per-email brake on register (`reg:email:<normalized>`, 3/h) so a single retrying person is still throttled. Two constants + one added call; probe: 6 registrations from one IP on dev must all succeed. Revert to 5 after the events if you want — or leave it, 40/h from one IP is still a bot brake. Login lockout is per *account* (`auth.config.ts:40`), not per IP — fine as is.
+**Shipped:** `reg:ip` 40/h, `fp:ip` 20/h, new `reg:email` 3/h; dev probe: 7 signups from one IP all 201, same address 201/409/409/429. Original recommendation for the record — keep the IP gate as a bot brake but size it for a room: `reg:ip` 5 → **40/h**, `fp:ip` 5 → **20/h**. Add a per-email brake on register (`reg:email:<normalized>`, 3/h) so a single retrying person is still throttled. Two constants + one added call; probe: 6 registrations from one IP on dev must all succeed. Revert to 5 after the events if you want — or leave it, 40/h from one IP is still a bot brake. Login lockout is per *account* (`auth.config.ts:40`), not per IP — fine as is.
 
-### A2. Mail volume: 3 mails per signup → 50 signups over a Saturday ≈ 150 mails/day
+### A2. ⬜ OPEN (user decision: Resend plan) — Mail volume: 3 mails per signup → 50 signups over a Saturday ≈ 150 mails/day
 Per signup: verification mail (`register.ts:166`) + welcome mail on first verification (`verify-email.ts`) + **admin mirror mail** for `member` alerts (`adminAlerts.ts:66`, `ADMIN_ALERT_EMAIL`). Resend **Free** = 100 mails/day, 3 000/month. A failed send never blocks the signup (`register.ts:171-173` swallows it) — the person simply gets no verification mail and, since verification is a soft gate, can still use everything. So the failure is silent, not fatal.
 
 **Do:** open resend.com → Usage, note the plan. Then either
