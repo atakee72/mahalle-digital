@@ -1,6 +1,10 @@
-# Debut event readiness — weekend of 19/20 Sept 2026
+# Debut event readiness — Schillermarkt info stand, Sat 19 + Sat 26 Sept 2026
 
-Written 2026-09-14. Question: is Mahalle ready for up to ~50 people signing up and posting at once, on the venue's Wi-Fi, over one evening?
+Written 2026-09-14, corrected the same day against the Fabric state notes („MAHALLE — Master durum notu", 2 Sept; „Schillermarkt stand çözümü", 26 Aug).
+
+**What the events actually are:** an **outdoor info stand** at the weekly Schillermarkt on Herrfurthplatz, Saturdays 10–16, two weeks running. Table, flyers in four languages with a QR code, a tablet running the platform, no sales. Funded by the Bezirksamt Neukölln Gebietsfonds (320 €, signed, 75 % paid out; documentation with photos due by 30 Nov); a SYLFF SLI decision ($9 660, Oct 2026–Sep 2027) lands on **16 Sept**, three days before the first stand. Stakes: this is the platform's public debut in front of the people it is for and the funders watching it — a failure at the stand costs users before they exist.
+
+**What that changes about the load picture:** signups arrive as a **trickle over six hours**, not a burst in one evening; visitors register on **their own phones over mobile data** (own IPs) after scanning the QR — the shared-IP problem moves to the **stand's tablet and any hotspot it hangs on**. Question, restated: is Mahalle ready for a few dozen signups and first posts across a Saturday, with one tablet doing demos and assisted signups?
 
 **Verdict:** the platform is (Vercel fra1 + Atlas, a few requests per second is nothing). Two *settings* would break on the evening — one blocks signups, one silently stops mails. Both are small. Everything else below is verification or event-day routine.
 
@@ -9,13 +13,13 @@ Written 2026-09-14. Question: is Mahalle ready for up to ~50 people signing up a
 ## A. Must fix before the event (code, ~1 h total)
 
 ### A1. Signup rate limit is per IP: 5 per hour → the venue Wi-Fi is ONE IP
-`src/pages/api/auth/register.ts:34` — `consumeRateLimit('reg:ip:<hash>', 5, 1h)`. Everyone on the venue Wi-Fi shares one public IP (NAT), so the **6th person to register gets `429 rate_limited`** and is locked out for up to an hour. People on mobile data are unaffected (own IPs).
+`src/pages/api/auth/register.ts:34` — `consumeRateLimit('reg:ip:<hash>', 5, 1h)`. At the stand this bites in two ways: (1) **assisted signups on the tablet** — the 6th person you register on the tablet within an hour gets `429 rate_limited`; (2) anyone who joins the stand's phone hotspot shares its IP. Visitors registering on their own mobile data are unaffected (own IPs). A market Saturday with a helpful host at a tablet is exactly the case where 5/h from one IP fails.
 
 Same class, lower likelihood: `forgot-password.ts:29` — 5/h per IP (silent limit; a 6th „Passwort vergessen" on the Wi-Fi just never sends).
 
 **Fix (recommended):** keep the IP gate as a bot brake but size it for a room: `reg:ip` 5 → **40/h**, `fp:ip` 5 → **20/h**. Add a per-email brake on register (`reg:email:<normalized>`, 3/h) so a single retrying person is still throttled. Two constants + one added call; probe: 6 registrations from one IP on dev must all succeed. Revert to 5 after the events if you want — or leave it, 40/h from one IP is still a bot brake. Login lockout is per *account* (`auth.config.ts:40`), not per IP — fine as is.
 
-### A2. Mail volume: 3 mails per signup → 50 signups ≈ 150 mails in one evening
+### A2. Mail volume: 3 mails per signup → 50 signups over a Saturday ≈ 150 mails/day
 Per signup: verification mail (`register.ts:166`) + welcome mail on first verification (`verify-email.ts`) + **admin mirror mail** for `member` alerts (`adminAlerts.ts:66`, `ADMIN_ALERT_EMAIL`). Resend **Free** = 100 mails/day, 3 000/month. A failed send never blocks the signup (`register.ts:171-173` swallows it) — the person simply gets no verification mail and, since verification is a soft gate, can still use everything. So the failure is silent, not fatal.
 
 **Do:** open resend.com → Usage, note the plan. Then either
@@ -59,7 +63,9 @@ Per signup: verification mail (`register.ts:166`) + welcome mail on first verifi
 ## D. Event-day sheet (print or keep on the admin phone)
 
 1. **Admin phone**: `/admin/moderation` open in a tab; Telegram alerts on. Approve flagged first posts quickly — a newcomer whose first post sits „in Prüfung" for an hour is a lost newcomer.
-2. **Signup QR** → `https://mahalle.digital/register`. Below it, one line: *„Klappt's nicht im WLAN? Kurz mobile Daten an."* (different IP — the fallback if A1 wasn't shipped).
+2. **Signup QR** on flyer + QR cards → `https://mahalle.digital/register`. Assisted signups on the tablet: after A1 fine; without A1, at most 5 per hour from the tablet — send the 6th to their own phone. If the tablet hangs on a phone hotspot, the tablet + that phone share one IP.
+2b. **Photos** of the stand and people using the platform — the Gebietsfonds AL-7 documentation needs 3–4 per event; not a tech item, but the day is lost if forgotten.
+2c. **Tablet demo**: a logged-in demo account (not the admin) with the tour reset, so every visitor sees the first-run experience; keep the 60–90 s screen-recording loop as fallback when the market Wi-Fi/hotspot drops.
 3. **Verification mail didn't arrive?** It's a soft gate — they can use everything; tell them to check spam later, or resend from `/verify-email` (10/h).
 4. **„Du hast dein Tageslimit erreicht"**: 5 posts per rolling 24 h per person (topics, events, announcements, recommendations, listings each count; comments are unlimited; admins exempt). A keen newcomer can hit it — tell them comments are free and the limit resets on its own.
 5. **Someone can't log in**: 5 wrong passwords lock the *account* for 15 min (not the IP). „Passwort vergessen" works from the phone.
