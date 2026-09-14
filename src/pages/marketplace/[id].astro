@@ -5,7 +5,7 @@ import { fetchListingDetailForSSR } from '../../lib/listingsQuery';
 import { resolveCategory } from '../../lib/marketplaceResolvers';
 import MarketDetailInner from '../../components/marketplace/kiosk/detail/MarketDetailInner.svelte';
 import ListingUnavailable from '../../components/marketplace/kiosk/states/ListingUnavailable.astro';
-import { linkifySegments } from '../../lib/linkify';
+import { linkifySegments, displayUrl } from '../../lib/linkify';
 
 Astro.response.headers.set('Cache-Control', 'no-store, must-revalidate');
 
@@ -98,7 +98,7 @@ const priceText = listing
           image is still set via the KioskLayout `image` prop above. */}
       <p style="font-family: var(--k-font-serif, Georgia, serif); font-style: italic; font-size: 16px; line-height: 1.6; color: var(--k-ink-soft, #4a4740); margin: 0 0 16px;">
         {linkifySegments(bodyText).map((seg) => seg.type === 'link'
-          ? <a href={seg.value} target="_blank" rel="noopener noreferrer" style="color: var(--k-wine, #b23a5b); text-decoration: underline; text-underline-offset: 2px; word-break: break-all;">{seg.value}</a>
+          ? <a href={seg.value} title={seg.value} target="_blank" rel="noopener noreferrer" style="color: var(--k-wine, #b23a5b); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: break-word;">{displayUrl(seg.value)}<span aria-hidden="true" style="font-size: 0.8em; margin-left: 2px;">↗</span></a>
           : seg.value)}
       </p>
     </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { locale, t } from '../../../../lib/kiosk-i18n';
+  import { shortenUrlsInText } from '../../../../lib/linkify';
   import { resolveCategory } from '../../../../lib/marketplaceResolvers';
   import { formatRelativeTime } from '../../../../lib/marketplaceFormat';
   import { optimizeCloudinary } from '../../../../utils/cloudinary';
@@ -33,7 +34,7 @@
   // Truncate body to 180 chars.
   const bodyLead = $derived.by(() => {
     if (!listing) return '';
-    const src = listing.descriptionPlainText ?? '';
+    const src = shortenUrlsInText(listing.descriptionPlainText ?? '');
     return src.length > 180 ? src.slice(0, 180) + '…' : src;
   });
 
