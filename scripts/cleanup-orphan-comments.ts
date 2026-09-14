@@ -14,6 +14,7 @@
 // (same rule as a live delete). Default is dry-run: it prints what it would
 // remove. Reads MONGODB_URI from .env — point it at prod deliberately.
 import 'dotenv/config';
+import fs from 'node:fs';
 import { MongoClient, ObjectId } from 'mongodb';
 
 const PARENTS = ['topics', 'announcements', 'recommendations', 'events'] as const;
@@ -24,7 +25,8 @@ async function main() {
   if (!uri) { console.error('MONGODB_URI missing'); process.exit(1); }
   const client = new MongoClient(uri);
   await client.connect();
-  const dbName = new URL(uri).pathname.slice(1) || 'mahalle-dev';
+  const dbName = new URL(uri).pathname.slice(1);
+  if (!dbName) { console.error('MONGODB_URI has no database path — refusing to guess'); process.exit(1); }
   const db = client.db(dbName);
   console.log(`db=${dbName}  mode=${apply ? 'APPLY (writing)' : 'DRY-RUN (no writes)'}`);
 
@@ -32,22 +34,39 @@ async function main() {
   const parentIds = await comments.distinct('relevantPostId');
   const orphanParents: ObjectId[] = [];
   const unparseable: unknown[] = [];
+  const seenHex = new Set<string>();
   for (const raw of parentIds) {
     const oid = raw instanceof ObjectId ? raw : (typeof raw === 'string' && ObjectId.isValid(raw) ? new ObjectId(raw) : null);
     if (!oid) { unparseable.push(raw); continue; }
+    // distinct() returns an ObjectId-typed and a string-typed relevantPostId as
+    // two separate values even when they're the same real parent — dedupe by
+    // hex so such a parent is checked/listed/deleted once, not twice.
+    const hex = oid.toHexString();
+    if (seenHex.has(hex)) continue;
+    seenHex.add(hex);
     const hits = await Promise.all(PARENTS.map((n) => db.collection(n).countDocuments({ _id: oid }, { limit: 1 })));
     if (!hits.some(Boolean)) orphanParents.push(oid);
   }
   console.log(`${parentIds.length} distinct parents referenced, ${orphanParents.length} no longer exist, ${unparseable.length} unparseable ids (left alone: ${JSON.stringify(unparseable)})`);
 
+  let backupPath = '';
+  if (apply) {
+    fs.mkdirSync('scratchpad', { recursive: true });
+    backupPath = `scratchpad/orphan-comments-backup-${dbName}-${new Date().toISOString().replace(/[:.]/g, '-')}.jsonl`;
+  }
+
   let total = 0;
   for (const oid of orphanParents) {
-    const rows = await comments.find({ relevantPostId: oid }, { projection: { _id: 1, createdAt: 1 } }).toArray();
+    const filter = { relevantPostId: { $in: [oid, oid.toHexString()] } };
+    const rows = await comments.find(filter).sort({ createdAt: 1 }).toArray();
     total += rows.length;
     console.log(`  parent ${oid.toHexString()}: ${rows.length} comment(s)` + (rows[0]?.createdAt ? `, oldest ${new Date(rows[0].createdAt).toISOString().slice(0, 10)}` : ''));
     if (!apply) continue;
+    if (rows.length) {
+      fs.appendFileSync(backupPath, rows.map((d) => JSON.stringify(d)).join('\n') + '\n');
+    }
     const ids = rows.map((r) => String(r._id));
-    const del = await comments.deleteMany({ relevantPostId: oid });
+    const del = await comments.deleteMany(filter);
     const flagged = await db.collection('flaggedContent').updateMany(
       { contentType: 'comment', contentId: { $in: ids } },
       { $set: { contentDeleted: true, contentDeletedAt: new Date() } }
@@ -55,6 +74,7 @@ async function main() {
     console.log(`    deleted ${del.deletedCount}, flagged rows marked ${flagged.modifiedCount}`);
   }
   console.log(`${apply ? 'Deleted' : 'Would delete'} ${total} orphaned comment(s).`);
+  if (apply && total) console.log(`Backup written to ${backupPath}`);
   await client.close();
 }
 
