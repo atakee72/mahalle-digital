@@ -31,6 +31,8 @@ Also worth knowing: `resend-verification` is 10/h per user, fine.
 - [ ] **DB backup**: `gh run list --workflow=db-backup.yml --limit 3` → all `success` (they were on 09-12/13/14). Restore recipe in `docs/runbooks/db-backup.md`. Take one **manual** run right before the event (`gh workflow run db-backup.yml`) so the pre-event state is a named release.
 - [ ] **Atlas**: cloud.mongodb.com → cluster → Metrics: storage used (M0 cap 512 MB; we are far below) and connections (cap 500). Nothing to change, just know the numbers.
 - [ ] **Vercel**: project → Usage: function invocations / bandwidth vs plan. Hobby is ample for this; if the account is Hobby and the site is treated as a commercial-ish community, note Vercel's Hobby terms (non-commercial) — PolyForm-NC license fits, but be aware.
+- [ ] **OpenAI credits** (platform.openai.com → Billing): 50 people posting = 100+ moderation calls + image checks in an evening. The Aug 2026 credits-exhausted incident showed what happens: every post fails safe into the queue as `moderation_error`, nothing errors, the admin gets a `moderation_flagged` Telegram per post. Top up so the balance is not near zero.
+- [ ] **DeepL** (free: 500k chars/month): translations at the event are cheap, but check the month's usage once.
 - [ ] **Sentry**: 5k errors/month cap — check current month's count (< 500 expected). A burst of 50 identical errors would still be one issue.
 - [ ] **Cloudinary**: 25 credits/month free — check usage (post images at events).
 - [ ] **Content for the evening**: the event exists in the calendar; an official announcement is pinned (admin → Amtliches) welcoming newcomers; the landing page heartbeat shows life (it hides empty rows).
@@ -42,8 +44,8 @@ Also worth knowing: `resend-verification` is 10/h per user, fine.
 
 ## C. Load smoke (I run it, ~30 min, prod READ-ONLY + dev writes)
 
-- **Prod, reads only**: 50 parallel logged-in sessions (one seeded prod account is NOT available — use the admin account's cookie from a browser login) fetching `/forum`, `/calendar`, `/api/kiez-stats`, a post detail; measure p95 latency and count non-200s. Expectation: p95 < 1.5 s, zero errors.
-- **Dev, writes**: 50 parallel registrations from one IP (after A1), then 50 parallel comments on one topic. Expectation: all 201, moderation queue fills without errors, Telegram receives alerts (dev has none configured → silent, fine).
+- **Prod, reads only**: the user registers ONE throwaway prod account („Lasttest") and puts its password in `scratchpad/prodpw.txt` (gitignored; same handling as `devpw.txt` — read straight into the login fill, never printed). The script logs in once, then runs 50 parallel sessions with that cookie fetching `/forum`, `/calendar`, `/api/kiez-stats` and one post detail; measures p95 latency and counts non-200s. Request-level fetches do NOT fire the client-side `POST /api/views/increment`, so the detail page is a pure read. Expectation: p95 < 1.5 s, zero errors. Delete the throwaway account afterwards (profile → Konto löschen, 7-day grace).
+- **Dev, writes**: start the dev server with the mailer disabled — `SMTP_HOST= SMTP_USER= SMTP_PASS= RESEND_API_KEY= pnpm dev --port 4655` — otherwise 50 fake `@mahalle-dev.test` signups send 50 real mails through the mailbox.org relay (bounces, possible account flag). Then 50 parallel registrations from one IP (after A1), then 50 parallel comments on one topic. Expectation: all 201, moderation queue fills without errors, no mail sent (dev-logged links only).
 - Output goes to `scratchpad/load-smoke-<date>.md` and is summarized in chat. No prod writes.
 
 ---
@@ -53,9 +55,10 @@ Also worth knowing: `resend-verification` is 10/h per user, fine.
 1. **Admin phone**: `/admin/moderation` open in a tab; Telegram alerts on. Approve flagged first posts quickly — a newcomer whose first post sits „in Prüfung" for an hour is a lost newcomer.
 2. **Signup QR** → `https://mahalle.digital/register`. Below it, one line: *„Klappt's nicht im WLAN? Kurz mobile Daten an."* (different IP — the fallback if A1 wasn't shipped).
 3. **Verification mail didn't arrive?** It's a soft gate — they can use everything; tell them to check spam later, or resend from `/verify-email` (10/h).
-4. **Someone can't log in**: 5 wrong passwords lock the *account* for 15 min (not the IP). „Passwort vergessen" works from the phone.
-5. **Admin can't create accounts for people** — there is no such endpoint. If signup is broken for everyone, the fix is on the laptop: Vercel env → redeploy, or raise the limit and push (CI ~3 min).
-6. **If the site is down**: Vercel status + `gh run list` + Sentry. The 500 page is dependency-free and will render.
+4. **„Du hast dein Tageslimit erreicht"**: 5 posts per rolling 24 h per person (topics, events, announcements, recommendations, listings each count; comments are unlimited; admins exempt). A keen newcomer can hit it — tell them comments are free and the limit resets on its own.
+5. **Someone can't log in**: 5 wrong passwords lock the *account* for 15 min (not the IP). „Passwort vergessen" works from the phone.
+6. **Admin can't create accounts for people** — there is no such endpoint. If signup is broken for everyone, the fix is on the laptop: Vercel env → redeploy, or raise the limit and push (CI ~3 min).
+7. **If the site is down**: Vercel status + `gh run list` + Sentry. The 500 page is dependency-free and will render.
 
 ---
 
@@ -72,3 +75,8 @@ Also worth knowing: `resend-verification` is 10/h per user, fine.
 - Admin „create account for someone" endpoint — nice for a booth, not for weekend one.
 - Telegram digest instead of one ping per new member — 50 pings is noisy but harmless.
 - Atlas paid tier — no reason at this size.
+
+---
+
+## Audit 2026-09-14 (against code)
+Verified: `reg:ip` 5/h at `register.ts:34`, `fp:ip` 5/h at `forgot-password.ts:29`, login lockout keyed per email (`auth.config.ts:40`); mail failure swallowed at `register.ts:171-173`; admin mirror covers `member_new` (`adminAlerts.ts:17-18`); welcome mail sent from `verify-email.ts`; no admin create-user endpoint (`api/admin/users`: GET list + PATCH only); `db-backup.yml` has `workflow_dispatch` and ran green 09-12/13/14; view counts are written only by the client-side `POST /api/views/increment`, not by SSR; dev mailer picks SMTP when `SMTP_*` are set (`mailer.ts:35`), hence the disabled-mailer dev run in C. Not verifiable from here (user checks): Resend plan, OpenAI balance, Vercel/Atlas/Cloudinary/DeepL usage. Resend Free caps (100/day, 3 000/month) are from memory — confirm on the Usage page.
