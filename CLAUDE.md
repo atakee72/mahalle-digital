@@ -205,7 +205,7 @@ AUTH_SECRET=            # NextAuth secret
 AUTH_TRUST_HOST=true
 NEXTAUTH_URL=           # Canonical app origin — https://mahalle.digital in prod (domain live since 2026-08-09; the old mahalle-das-kiezgesichterbuch.vercel.app 308-redirects here, deep links preserved). REQUIRED in prod — the password-reset link is built from this, NOT the request Host header (host-header-injection protection). If unset in prod the forgot-password flow FAILS CLOSED (no reset email sent). Dev falls back to the request origin.
 MONGODB_URI=            # MongoDB connection string. DB name rides in the URI path (client.db() reads it): prod = /mahalle, local dev + Vercel Preview = /mahalle-dev (split 2026-08-14; same Atlas cluster). Seed dev via scripts/seed-dev-db.ts (interlock: refuses any db name without "dev"). Pre-split snapshot CommunityWebApp-test is frozen — never write to it.
-CLOUDINARY_CLOUD_NAME=  # Image upload
+CLOUD_NAME=             # Cloudinary cloud name — the upload routes read CLOUD_NAME (not CLOUDINARY_CLOUD_NAME; only env.schema.ts still mentions the long form, as optional)
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 OPENAI_API_KEY=         # Content moderation API + news relevance scoring
