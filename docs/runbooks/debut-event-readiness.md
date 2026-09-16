@@ -42,7 +42,7 @@ Per signup: verification mail (`register.ts:166`) + welcome mail on first verifi
 - [ ] **Vercel** (Hobby limits, researched): 1 M function invocations, 100 GB transfer, 4 h active CPU per month; functions auto-scale to 30 000 concurrent, 300 s max duration, 2 GB memory. 50 people are far inside all of that. Hobby is **non-commercial only** — a free community project on a PolyForm-NC license fits; note it if sponsorship/ads ever appear. Check project → Usage once.
 - [x] **OpenAI credits** ✅ 2026-09-15: auto-reload ON (the Aug outage cannot repeat). Original note — (platform.openai.com → Billing): 50 people posting = 100+ moderation calls + image checks in an evening. The Aug 2026 credits-exhausted incident showed what happens: every post fails safe into the queue as `moderation_error`, nothing errors, the admin gets a `moderation_flagged` Telegram per post. Top up so the balance is not near zero.
 - [x] **DeepL** ✅ 2026-09-15: 6 959 / 500 000 chars this month (1.4 %). (free: 500k chars/month): translations at the event are cheap, but check the month's usage once.
-- [x] **Sentry** ✅ 2026-09-15: 112 accepted errors in 30 days (incl. the 62-event dev-noise spike of 09-01, since filtered) — 2 % of the cap. Original note — 5k errors/month cap — check current month's count (< 500 expected). A burst of 50 identical errors would still be one issue.
+- [x] **Sentry** ✅ 2026-09-15: 112 accepted errors in 30 days (incl. the 62-event dev-noise spike of 09-01, since filtered) — 2 % of the cap. **Board cleared 2026-09-16:** all 13 issues resolved by the user in the UI (10 were open: 5 view-transition AbortErrors, 3 rare hydration hiccups, the fixed Mongo timeouts + air-logger silence, one moderation tripwire) so the „new issue" alert fires again on any regression. `SENTRY_AUTH_TOKEN` is read-scoped (PUT → 403): resolving goes through the UI, select-all → Resolve. Original note — 5k errors/month cap — check current month's count (< 500 expected). A burst of 50 identical errors would still be one issue.
 - [x] **Cloudinary** ✅ 2026-09-15: 1.6 / 25 credits (6 %), 717 MB stored. Note: the cloud name env var is `CLOUD_NAME`, not `CLOUDINARY_CLOUD_NAME` (doc fixed `45a2add3`). Original note — 25 credits/month free — check usage (post images at events).
 - [ ] **Content for the evening**: the event exists in the calendar; an official announcement is pinned (admin → Amtliches) welcoming newcomers; the landing page heartbeat shows life (it hides empty rows).
 - [ ] **Tour** („Die Führung"): 32 stops — a first-timer's first minutes. Walk it once on a phone as a fresh account.
@@ -93,6 +93,7 @@ Original plan for the record:
 - Admin „create account for someone" endpoint — nice for a booth, not for weekend one.
 - Telegram digest instead of one ping per new member — 50 pings is noisy but harmless.
 - Atlas paid tier — no reason at this size.
+- Client-side `beforeSend` filter for Astro view-transition noise (`AbortError: Skipped/Old view transition…`, `InvalidStateError: … document being hidden`) — 5 of the 10 open Sentry issues on 09-16 were this; harmless double-clicks, but each new message text becomes its own issue. Mirror of the server filter in `sentry.client.config.ts`.
 
 ---
 
