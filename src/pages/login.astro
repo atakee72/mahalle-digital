@@ -1,10 +1,13 @@
 ---
 import AuthLayout from '../layouts/AuthLayout.astro';
 import AuthLoginInner from '../components/auth/kiosk/AuthLoginInner.svelte';
+import { loginCardCopy } from '../lib/auth/loginCardCopy';
 // Session-varying (logged-in members are bounced to /forum) — parity with reset/verify.
 Astro.response.headers.set('Cache-Control', 'no-store, must-revalidate');
+// A shared members-only link lands crawlers here — say what is behind the door (no event data).
+const card = loginCardCopy(Astro.url.searchParams.get('redirect'));
 ---
 
-<AuthLayout title="Anmelden">
+<AuthLayout title="Anmelden" card={card}>
   <AuthLoginInner client:only="svelte" />
 </AuthLayout>

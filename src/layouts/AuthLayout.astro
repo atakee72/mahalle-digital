@@ -11,11 +11,14 @@ import { ViewTransitions } from 'astro:transitions';
 export interface Props {
   title: string;
   description?: string;
+  /** Link-preview copy only (og/twitter) — the tab title and meta description stay. */
+  card?: { title: string; description: string } | null;
 }
 
 const {
   title,
   description = 'Mahalle — die digitale Nachbarschaft für den Schillerkiez.',
+  card = null,
 } = Astro.props;
 ---
 
@@ -31,7 +34,7 @@ const {
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <meta name="generator" content={Astro.generator} />
     <title>{title} | Mahalle</title>
-    <SeoHead title={`${title} | Mahalle`} description={description} noindex={true} />
+    <SeoHead title={card?.title ?? `${title} | Mahalle`} description={card?.description ?? description} noindex={true} />
     <ViewTransitions />
   </head>
 
