@@ -33,13 +33,13 @@ Per signup: verification mail (`register.ts:166`) + welcome mail on first verifi
 
 ---
 
-## B. Verify (no code, 20 min) — 8/13 done 2026-09-15; OPEN: manual DB backup (Friday 18 Sept), Vercel usage glance (dashboard only, no API on Hobby), content for the evening, tour on a phone, PWA install on two phones. Usage script (reads .env, prints numbers only): `node scratchpad/usage-glance.mjs`
+## B. Verify (no code, 20 min) — 9/13 done 2026-09-17; OPEN: manual DB backup (Friday 18 Sept), content for the evening, tour on a phone, PWA install on two phones. Usage script (reads .env, prints numbers only): `node scratchpad/usage-glance.mjs`
 
 - [ ] **DB backup**: `gh run list --workflow=db-backup.yml --limit 3` → all `success` (they were on 09-12/13/14). Restore recipe in `docs/runbooks/db-backup.md`. Take one **manual** run right before the event (`gh workflow run db-backup.yml`) so the pre-event state is a named release.
 - [x] **Atlas** ✅ 2026-09-15: 2.7 MB storage, 4 connections, 32 collections (read via driver `db.stats()`). Original note — (free cluster limits, researched): 500 connections, 0.5 GB storage, **100 operations/second** and 10 GB transfer in/out per rolling 7 days. Above 100 ops/s Atlas does not error — it throttles the connection with a 1-second cooldown, so pages get slow, not broken. One forum page load is several queries (topics + pins + saved counts + session + kontext); 50 people refreshing in the same second could touch the cap briefly. Section C measures this. cloud.mongodb.com → Metrics: note storage and connections.
 - [x] **External uptime monitor** ✅ 2026-09-15: UptimeRobot free, HTTP(s) on `/api/kiez-stats`, 5-min interval, email contact, first hour 100 % (309 ms from the US probe). Original note — there was none before: Sentry only sees errors inside the app; a Vercel/DNS outage would alert nobody. Create a free UptimeRobot (or similar) HTTPS check on `https://mahalle.digital/api/kiez-stats` every 5 min with email + Telegram/push alert. 10 minutes, standard launch practice.
 - [x] **Password reset on prod** ✅ 2026-09-15 with the throwaway account: mail via Resend arrived in the inbox, link on mahalle.digital, new password logs in (verified by a fetch login → 302 to the site). Original note — request one for your own account and complete it end to end (mail arrives, link works, login with the new password). Standard launch-checklist item; the flow has not been exercised on prod since the Resend switch.
-- [ ] **Vercel** (Hobby limits, researched): 1 M function invocations, 100 GB transfer, 4 h active CPU per month; functions auto-scale to 30 000 concurrent, 300 s max duration, 2 GB memory. 50 people are far inside all of that. Hobby is **non-commercial only** — a free community project on a PolyForm-NC license fits; note it if sponsorship/ads ever appear. Check project → Usage once.
+- [x] **Vercel** ✅ 2026-09-17 (dashboard, rolling 30 days): 16 K / 1 M invocations, 151 K / 1 M edge requests, 0.7 / 100 GB data transfer, 80 MB / 10 GB origin transfer, **Active CPU 1 h 39 m / 4 h (41 %)** — steady state, not a trend; hitting a Hobby cap PAUSES functions, the escape hatch is an on-the-spot Pro upgrade (see D2). `vercel usage` 404s and `vercel metrics` needs Observability Plus on Hobby → dashboard only. Original note — (Hobby limits, researched): 1 M function invocations, 100 GB transfer, 4 h active CPU per month; functions auto-scale to 30 000 concurrent, 300 s max duration, 2 GB memory. 50 people are far inside all of that. Hobby is **non-commercial only** — a free community project on a PolyForm-NC license fits; note it if sponsorship/ads ever appear. Check project → Usage once.
 - [x] **OpenAI credits** ✅ 2026-09-15: auto-reload ON (the Aug outage cannot repeat). Original note — (platform.openai.com → Billing): 50 people posting = 100+ moderation calls + image checks in an evening. The Aug 2026 credits-exhausted incident showed what happens: every post fails safe into the queue as `moderation_error`, nothing errors, the admin gets a `moderation_flagged` Telegram per post. Top up so the balance is not near zero.
 - [x] **DeepL** ✅ 2026-09-15: 6 959 / 500 000 chars this month (1.4 %). (free: 500k chars/month): translations at the event are cheap, but check the month's usage once.
 - [x] **Sentry** ✅ 2026-09-15: 112 accepted errors in 30 days (incl. the 62-event dev-noise spike of 09-01, since filtered) — 2 % of the cap. **Board cleared 2026-09-16:** all 13 issues resolved by the user in the UI (10 were open: 5 view-transition AbortErrors, 3 rare hydration hiccups, the fixed Mongo timeouts + air-logger silence, one moderation tripwire) so the „new issue" alert fires again on any regression. `SENTRY_AUTH_TOKEN` is read-scoped (PUT → 403): resolving goes through the UI, select-all → Resolve. Original note — 5k errors/month cap — check current month's count (< 500 expected). A burst of 50 identical errors would still be one issue.
@@ -78,12 +78,43 @@ Original plan for the record:
 
 ---
 
+## D2. Plan B — when something goes wrong (added 2026-09-18)
+
+**Freeze.** From Friday 18 Sept 20:00 until Saturday 16:30 (and again 25–26 Sept) nothing is pushed to `main` — a push is a deploy. **Database content is not part of the freeze**: forum posts, events, official announcements, listings and news go through the app and deploy nothing; write them any time, including from the stand. **Blog posts ARE deploys** (`src/content/blog/*.mdx` live in the repo): publish them before the freeze, check them on prod, then stop. A failed build is harmless (the previous deployment stays live); a push during the event is still an avoidable variable.
+
+**Decision rule at the stand.** If the site is not usable again within **15 minutes**, switch the stand to paper and stop debugging in front of visitors. People remember a friendly stand, not a status page.
+
+**Paper fallback.** A sheet with `Name · E-Mail` and one consent line on top: „Ich möchte eine Einladung zu mahalle.digital per E-Mail bekommen. Die Liste wird danach vernichtet." Send the invitations by hand that evening, then shred the sheet. Flyers with the QR keep working on their own; the tablet shows the 60–90 s recording loop.
+
+| What you see | Likely cause | What to do |
+|---|---|---|
+| UptimeRobot mail „down", site does not load at all | Vercel or DNS outage | Check vercel-status.com from the phone. Nothing to fix on our side → paper. Comes back by itself. |
+| Site loads, every page is slow (5 s+) | Atlas free-tier throttle or a cold start | Wait 1–2 minutes, do not reload in a loop (reloads add load). If it persists past 15 min → paper. |
+| Site loads, pages show the 500 page | Database unreachable or a bad deploy | cloud.mongodb.com → cluster status. If there was a push in the last hour: roll back (below). |
+| **Signup answers „Name contains inappropriate content" for everyone** | OpenAI outage or rate limit — see the known defect below | Until the fix is live there is no switch for this: paper. Existing members are unaffected. |
+| New posts all land „in Prüfung" | OpenAI outage — moderation fails safe into the queue, one Telegram ping per post | Approve by hand on the admin phone (`/admin/moderation`). Nothing is lost. |
+| Verification or reset mails do not arrive | Resend daily cap (100) reached or bounce pause | Verification is a soft gate, people can use everything. resend.com → Emails shows the reason. A locked-out person cannot be helped until mail is back: note their address, reset by hand that evening. |
+| „Vercel Security Checkpoint" spinner | burst from one shared IP (hotspot) | Clears by itself in seconds. |
+| Functions paused, Vercel mail „usage limit reached" | a Hobby cap was hit (Active CPU was at 41 % per 30 days on 09-17) | The only instant fix is vercel.com → Upgrade to Pro (20 $ / month, cancel after the event). Takes effect immediately. |
+| Spam or abuse from a new account | — | Reject the content in the queue (3 strikes = automatic ban); `/admin/mitglieder` shows the account. The 40/h signup and 5/24 h posting limits cap the damage. |
+| Hotspot or market Wi-Fi dies | — | Recording loop on the tablet, QR flyers, paper. |
+
+**Rollback of a bad deploy** (only relevant if the freeze was broken): vercel.com → project → Deployments → the previous production deployment → ⋯ → **Instant Rollback** (works from a phone, no rebuild, seconds; Hobby can roll back to the immediately previous deployment only). Laptop alternative: `git revert <sha> && git push` (CI + build ≈ 3 min). Database content is untouched by either.
+
+**Data safety net.** The manual `db-backup.yml` run on Friday evening is the restore point; recipe in `docs/runbooks/db-backup.md`. Take it AFTER the welcome post and the stand's calendar entry exist, so the snapshot contains them.
+
+**Known defect found 2026-09-18 (not yet fixed): an OpenAI failure blocks ALL signups.** `checkShortTextProfanity()` in `src/lib/moderation.ts:347-364` wraps the OpenAI name check in `try/catch` with the comment „If OpenAI fails, blocklist checks above are sufficient" — but `moderateText()` and `checkSpamWithGPT()` never throw: on an API error, timeout or 429 they RETURN the fail-safe result (`decision: 'pending_review'`). The name check tests `decision !== 'approved'`, so every new member is refused with „Name contains inappropriate content" for the length of the outage. Same path guards the profile motto. Fix: treat a fail-safe result (`flaggedCategories` includes `moderation_error`) as a pass in that function — the three blocklists have already run. Small, contained, testable without OpenAI.
+
+---
+
 ## E. After the first event (30 min)
 
 - `rateLimits` collection: count `baseKey` starting with `reg:ip` that hit the cap (tells you whether A1 mattered).
 - Resend usage vs cap; Sentry new issues; moderation queue drained; `flaggedContent` with `moderation_error` (OpenAI outage tripwire).
 - Orphan check is free: `pnpm tsx scripts/cleanup-orphan-comments.ts` against prod (dry-run) — expect 0.
 - Decide whether to keep the raised limits.
+- **Node.js 24 on Vercel — between 27 and 30 Sept, hard deadline 1 Oct 2026** (dashboard warning 09-17: „2 projects using Node.js 20 or older, new builds will fail starting October 1"). Project → Settings → General → Node.js Version → 24.x, then an empty-commit push and the usual fra1 check. Local builds already run on Node 24.11. The second project on the team needs the same switch. Deliberately NOT done before the event (no build-environment change in the last days).
+- Active CPU on Vercel: 1 h 39 m per 30 days for 16 K invocations (≈ 370 ms each) — look at what burns it (bcrypt, SSR renders, the two crons, my 09-14 load smoke) once the events are over.
 
 ---
 
