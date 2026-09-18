@@ -24,7 +24,7 @@ const { post, meta, related, rank } = Astro.props;
       images={(post.data.galleryImages ?? []).map((img, i) => ({ src: img.src, alt: post.data.coverAlt ? `${post.data.coverAlt} (${i + 1})` : undefined }))}
     />
   </div>
-  <div class="bl-prose max-w-[940px] mx-auto pt-2 pb-4">
+  <div class:list={["bl-prose max-w-[940px] mx-auto pt-2 pb-4", { "bl-prose--nolede": Astro.props.post.data.lede === false }]}>
     <slot />
   </div>
 </ArticleShell>

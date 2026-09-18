@@ -14,6 +14,7 @@
   import BlRubrikChip from './BlRubrikChip.svelte';
   import BlPostMeta from './BlPostMeta.svelte';
   import BlLayoutBadge from './BlLayoutBadge.svelte';
+  import { initialsOf } from '../../../lib/initials';
 
   let { tag, posts, allTags }: { tag: string; posts: BeilagePost[]; allTags: Array<[string, number]> } = $props();
 
@@ -45,7 +46,14 @@
           {#if p.cover}
             <img src={p.cover} alt={p.coverAlt ?? ''} class="w-full object-cover" style="height: 130px; object-position: {p.coverPosition ?? 'center'};" loading="lazy" />
           {:else}
-            <div class="w-full" style="height: 130px; background: var(--k-paper-soft);"></div>
+            <!-- No cover: a deliberate initials plate, not an empty box — an empty
+                 box reads as a broken image and singles the author out (2026-09-18:
+                 one of four election guest authors had sent no photo). -->
+            <div
+              class="w-full flex items-center justify-center font-bricolage"
+              style="height: 130px; background: var(--k-paper-soft); font-size: 44px; font-weight: 800; letter-spacing: -0.03em; color: var(--k-ink-mute);"
+              aria-hidden="true"
+            >{initialsOf(p.author && p.author !== 'Mahalle Team' ? p.author : 'Mahalle')}</div>
           {/if}
         </div>
         <div class="flex items-center" style="gap: 8px; margin: 10px 0 0;">

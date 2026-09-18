@@ -47,6 +47,11 @@
 [data-page="blog"] .bl-prose--hero > p:first-child {
   font-size: 17px;
 }
+/* `lede: false` (verbatim guest posts): no editorial emphasis on the opening paragraph. Must follow both lede rules above — same specificity, later wins. */
+[data-page="blog"] .bl-prose--nolede > p:first-child {
+  font-size: inherit;
+  color: inherit;
+}
 [data-page="blog"] .bl-prose p { margin: 0 0 14px; }
 [data-page="blog"] .bl-prose h2,
 [data-page="blog"] .bl-prose h3 {

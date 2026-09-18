@@ -19,7 +19,7 @@ const { meta, related, rank } = Astro.props;
   <div slot="header">
     <BlogArticleHeader client:only="svelte" post={meta} rank={rank} variant="hero" />
   </div>
-  <div class="bl-prose bl-prose--hero max-w-[720px] mx-auto pt-2 pb-4">
+  <div class:list={["bl-prose bl-prose--hero max-w-[720px] mx-auto pt-2 pb-4", { "bl-prose--nolede": Astro.props.post.data.lede === false }]}>
     <slot />
   </div>
 </ArticleShell>

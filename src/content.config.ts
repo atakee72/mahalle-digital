@@ -20,6 +20,8 @@ const blog = defineCollection({
     coverFit: z.enum(['crop', 'full']).optional(),
     galleryImages: z.array(image()).optional(),
     postLayout: z.enum(['standard', 'hero', 'gallery']).default('standard'),
+    /** First-paragraph emphasis. `false` for guest posts published verbatim: the larger first paragraph is OUR emphasis, and it lands unevenly (a long opening paragraph vs. a one-line greeting, a date line, a headline). */
+    lede: z.boolean().default(true),
     tags: z.array(z.string()).default([]),
     draft: z.boolean().default(false),
   }),
