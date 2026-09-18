@@ -18,6 +18,9 @@ export interface BeilagePost {
   cover?: string;                // processed asset URL (image().src)
   coverWidth?: number;           // intrinsic px (image().width/height) — width/height attrs on the article <img> reserve the box, no CLS on coverFit: full
   coverHeight?: number;
+  ogImage?: string;              // dedicated 1200×630 link-preview asset (image().src), optional
+  ogImageWidth?: number;
+  ogImageHeight?: number;
   coverAlt?: string;
   coverCredit?: string;
   coverCreditUrl?: string;

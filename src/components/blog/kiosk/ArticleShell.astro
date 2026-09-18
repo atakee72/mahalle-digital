@@ -31,7 +31,9 @@ const qrSvg = await QRCode.toString(articleUrl, {
 const standDate = fmtDate(post.pubDateISO, 'de'); // print sheet is DE-only, like both existing print surfaces
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? 'https://mahalle.digital').href;
-const ogImage = post.cover ?? '/og-image.png'; // post.cover is already the processed asset path string
+// Link preview: the dedicated 1200×630 asset when the post has one (its real size is declared), else the cover as-is, else the site default.
+const ogImage = post.ogImage ?? post.cover ?? '/og-image.png'; // both are already processed asset path strings
+const ogDims = post.ogImage && post.ogImageWidth && post.ogImageHeight ? { width: post.ogImageWidth, height: post.ogImageHeight } : undefined;
 const authorName = post.author ?? 'Mahalle Team'; // schema default, for safety
 
 const jsonLd = {
@@ -50,7 +52,7 @@ const jsonLd = {
   },
   mainEntityOfPage: canonicalUrl,
   inLanguage: 'de',
-  ...(post.cover ? { image: new URL(post.cover, Astro.site ?? 'https://mahalle.digital').href } : {}),
+  ...(post.ogImage || post.cover ? { image: new URL((post.ogImage ?? post.cover) as string, Astro.site ?? 'https://mahalle.digital').href } : {}),
   ...(post.tags.length ? { keywords: post.tags.join(', ') } : {}),
 };
 ---
@@ -61,6 +63,9 @@ const jsonLd = {
   page="blog"
   type="article"
   image={ogImage}
+  imageWidth={ogDims?.width}
+  imageHeight={ogDims?.height}
+  imageAlt={post.coverAlt}
   article={{
     publishedTime: post.pubDateISO,
     ...(post.updatedDateISO ? { modifiedTime: post.updatedDateISO } : {}),

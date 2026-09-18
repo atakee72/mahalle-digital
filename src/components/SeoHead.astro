@@ -4,6 +4,10 @@ interface Props {
   description: string;
   canonicalPath?: string | null;
   image?: string;
+  /** Real pixel size of `image`. Pass only when known. */
+  imageWidth?: number;
+  imageHeight?: number;
+  imageAlt?: string;
   type?: 'website' | 'article';
   noindex?: boolean;
   article?: { publishedTime: string; modifiedTime?: string; author?: string; tags?: string[] };
@@ -15,6 +19,9 @@ const {
   description,
   canonicalPath = Astro.url.pathname,
   image = '/og-image.png',
+  imageWidth,
+  imageHeight,
+  imageAlt,
   type = 'website',
   noindex = false,
   article,
@@ -32,6 +39,11 @@ const imageUrl = abs(image);
 // Dimensions are only known for the default og-image (1200×630, committed
 // asset) — a per-page cover image ships without them rather than lying.
 const isDefaultImage = image === '/og-image.png';
+// Declared size: the committed default (1200×630) or whatever the caller KNOWS
+// (dedicated link-preview assets). Never guessed — some platforms render the
+// first share of a link without a picture when the size is missing.
+const ogWidth = isDefaultImage ? 1200 : imageWidth;
+const ogHeight = isDefaultImage ? 630 : imageHeight;
 const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 // </script> in content must not terminate the JSON-LD block early
 const serialize = (o: Record<string, unknown>) => JSON.stringify(o).replace(/</g, '\\u003c');
@@ -46,8 +58,9 @@ const serialize = (o: Record<string, unknown>) => JSON.stringify(o).replace(/</g
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
 <meta property="og:image" content={imageUrl} />
-{isDefaultImage && <meta property="og:image:width" content="1200" />}
-{isDefaultImage && <meta property="og:image:height" content="630" />}
+{ogWidth && ogHeight && <meta property="og:image:width" content={String(ogWidth)} />}
+{ogWidth && ogHeight && <meta property="og:image:height" content={String(ogHeight)} />}
+{imageAlt && <meta property="og:image:alt" content={imageAlt} />}
 {type === 'article' && article?.publishedTime && (
   <meta property="article:published_time" content={article.publishedTime} />
 )}
@@ -60,7 +73,7 @@ const serialize = (o: Record<string, unknown>) => JSON.stringify(o).replace(/</g
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={imageUrl} />
-<meta name="twitter:image:alt" content={title} />
+<meta name="twitter:image:alt" content={imageAlt ?? title} />
 {jsonLdBlocks.map((block) => (
   <script is:inline type="application/ld+json" set:html={serialize(block)} />
 ))}

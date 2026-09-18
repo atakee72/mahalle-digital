@@ -5,6 +5,7 @@ import { getCollection } from 'astro:content';
 import KioskLayout from '../../../layouts/KioskLayout.astro';
 import BeilageTagPage from '../../../components/blog/kiosk/BeilageTagPage.svelte';
 import { compareNewest, readingMinutes, tagCounts, type BeilagePost } from '../../../lib/blog/beilage';
+import wahl2026Og from '../../../content/blog/images/wahl2026-og.jpg';
 
 const { tag = '' } = Astro.params;
 
@@ -29,9 +30,31 @@ const all: BeilagePost[] = entries
   }))
   .sort(compareNewest);
 const posts = all.filter((p) => p.tags.includes(tag));
+
+// Link-preview copy for tags that get promoted as a landing page. Everything
+// else keeps the generic wording. The image is a committed 1200×630 asset.
+const TAG_META: Record<string, { title: string; description: string; image: string; alt: string }> = {
+  wahl2026: {
+    title: 'Kandidat:innen-Check Wahlkreis Neukölln 2 — Die Beilage',
+    description:
+      'Vier Gastbeiträge zur Berliner Wahl am 20. September 2026: Direktkandidat:innen im Wahlkreis Neukölln 2 schreiben, was sie für den Schillerkiez vorhaben. Gleiche Bedingungen für alle, unverändert veröffentlicht.',
+    image: wahl2026Og.src,
+    alt: 'Illustration: vier gleich große Stimmzettel über einer Wahlurne',
+  },
+};
+const tagMeta = TAG_META[tag];
 ---
 
-<KioskLayout title={`Rubrik #${tag} — Die Beilage`} description={`Beiträge der Rubrik #${tag} in der Beilage.`} page="blog" noindex={posts.length === 0}>
+<KioskLayout
+  title={tagMeta?.title ?? `Rubrik #${tag} — Die Beilage`}
+  description={tagMeta?.description ?? `Beiträge der Rubrik #${tag} in der Beilage.`}
+  image={tagMeta?.image}
+  imageWidth={tagMeta ? 1200 : undefined}
+  imageHeight={tagMeta ? 630 : undefined}
+  imageAlt={tagMeta?.alt}
+  page="blog"
+  noindex={posts.length === 0}
+>
   <BeilageTagPage client:only="svelte" tag={tag} posts={posts} allTags={tagCounts(all)} />
 </KioskLayout>
 
