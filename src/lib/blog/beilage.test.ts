@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compareNewest, isSimultaneous, rankOf, relatedFor, type BeilagePost } from './beilage';
+import { compareNewest, isSimultaneous, rankOf, relatedFor, relatedSlots, type BeilagePost } from './beilage';
 
 const post = (id: string, pubDateISO: string, tags: string[] = []): BeilagePost => ({
   id, title: id, description: '', pubDateISO, tags, layout: 'standard', minutes: 1,
@@ -50,4 +50,17 @@ test('a later editorial intro is NOT simultaneous, so it may take the lead card'
   const withIntro = [...posts, post('wahl2026-einleitung', '2026-09-18T12:00:00.000Z', ['wahl2026'])];
   assert.equal(isSimultaneous('wahl2026-einleitung', withIntro), false);
   assert.equal([...withIntro].sort(compareNewest)[0].id, 'wahl2026-einleitung');
+});
+
+test('related rail never drops a member of a simultaneous group — candidates AND the intro', () => {
+  const all = [...posts, post('wahl2026-einladung', '2026-09-18T12:00:00.000Z', ['wahl2026'])];
+  const rail = (id: string) => relatedFor(id, all, relatedSlots(id, all)).map((r) => r.post.id);
+  assert.deepEqual(rail('wahl2026-dehne'), ['wahl2026-einladung', 'wahl2026-haghanipour', 'wahl2026-lueders', 'wahl2026-mende']);
+  assert.deepEqual(rail('wahl2026-mende'), ['wahl2026-einladung', 'wahl2026-dehne', 'wahl2026-haghanipour', 'wahl2026-lueders']);
+  assert.deepEqual(rail('wahl2026-einladung'), ['wahl2026-dehne', 'wahl2026-haghanipour', 'wahl2026-lueders', 'wahl2026-mende']);
+});
+
+test('ordinary posts keep three related slots', () => {
+  assert.equal(relatedSlots('gruendungsnachbarn-guide', posts), 3);
+  assert.equal(relatedSlots('does-not-exist', posts), 3);
 });

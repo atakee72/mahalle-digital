@@ -4,7 +4,7 @@ import { getCollection, render } from 'astro:content';
 import StandardLayout from '../../layouts/blog/StandardLayout.astro';
 import HeroLayout from '../../layouts/blog/HeroLayout.astro';
 import GalleryLayout from '../../layouts/blog/GalleryLayout.astro';
-import { readingMinutes, relatedFor, rankOf, type BeilagePost } from '../../lib/blog/beilage';
+import { readingMinutes, relatedFor, relatedSlots, rankOf, type BeilagePost } from '../../lib/blog/beilage';
 
 const { slug } = Astro.params;
 
@@ -36,7 +36,7 @@ const toMeta = (e: typeof entry): BeilagePost => ({
 });
 const all = published.map(toMeta);
 const meta = toMeta(entry);
-const related = relatedFor(meta.id, all);
+const related = relatedFor(meta.id, all, relatedSlots(meta.id, all));
 const rank = rankOf(meta.id, all);
 
 const { Content } = await render(entry);

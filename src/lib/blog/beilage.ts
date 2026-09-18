@@ -130,6 +130,22 @@ export function isSimultaneous(id: string, posts: Array<{ id: string; pubDateISO
   return !!me && posts.some((p) => p.id !== id && p.pubDateISO === me.pubDateISO);
 }
 
+/**
+ * How many related slots a post gets. Normally 3. When its tag-mates include
+ * posts that were published together (isSimultaneous), the rail shows ALL
+ * tag-mates (capped at 8) — three slots would silently drop one of a group
+ * whose whole point is equal treatment (2026-09-18: with the editorial intro
+ * in the same tag, every candidate page lost the last candidate in the
+ * alphabet, and the intro itself listed only three of the four).
+ */
+export function relatedSlots(currentId: string, posts: BeilagePost[]): number {
+  const me = posts.find((p) => p.id === currentId);
+  if (!me) return 3;
+  const mates = posts.filter((p) => p.id !== currentId && p.tags.some((t) => me.tags.includes(t)));
+  const grouped = isSimultaneous(currentId, posts) || mates.some((p) => isSimultaneous(p.id, posts));
+  return grouped ? Math.min(Math.max(3, mates.length), 8) : 3;
+}
+
 export function relatedFor(currentId: string, posts: BeilagePost[], max = 3): RelatedItem[] {
   const current = posts.find((p) => p.id === currentId);
   if (!current) return [];
