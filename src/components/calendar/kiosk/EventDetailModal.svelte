@@ -30,6 +30,7 @@
   import { generateGoogleCalendarUrl, downloadIcsFile } from '../../../utils/calendarExport';
   import { confirmAction, showError } from '../../../utils/toast';
   import { isLiveNow } from '../../../lib/calendar/eventTime';
+  import { mapSearchUrl } from '../../../lib/calendar/mapLink';
   import { now } from '../../../lib/calendar/nowTicker';
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { createUserProfilesQuery } from '../../../lib/userProfilesQueries';
@@ -424,12 +425,13 @@
               <div class="font-bricolage font-semibold text-[15.5px]">
                 {event.location}
               </div>
-              <!-- Striped map tile — links the free-text Ort to an OSM
-                   search (Berlin-scoped). Symbolic on purpose: a real
-                   embedded map needs geocoding (Nominatim + cache);
-                   upgrade path documented in the area CLAUDE.md. -->
+              <!-- Striped map tile — links the free-text Ort to a forgiving
+                   place search (Berlin-scoped, see lib/calendar/mapLink.ts
+                   for why not OSM). Symbolic on purpose: a real embedded map
+                   needs geocoding (Nominatim + cache); upgrade path
+                   documented in the area CLAUDE.md. -->
               <a
-                href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(`${event.location}, Berlin`)}`}
+                href={mapSearchUrl(event.location)}
                 target="_blank"
                 rel="noopener noreferrer"
                 class="block mt-2 px-3.5 py-3 rounded-sm border border-dashed border-rule bg-[repeating-linear-gradient(45deg,var(--k-paper-warm,#f7f0de)_0_8px,var(--k-paper,#f3ead8)_8px_16px)] font-dmmono text-[10px] tracking-[0.1em] text-ink-mute text-center hover:text-ink hover:border-ink transition-colors"
