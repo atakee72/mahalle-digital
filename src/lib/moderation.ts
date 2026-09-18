@@ -70,6 +70,7 @@ export interface ModerationResult {
 
 // FlaggedContent type is imported from types/index.ts
 import type { FlaggedContent, ModeratedContentType } from '../types';
+import { shortTextVerdict } from './shortTextVerdict';
 
 // ============================================================================
 // THRESHOLDS
@@ -351,15 +352,15 @@ async function checkShortTextProfanity(
         moderateText(text),
         checkSpamWithGPT(text, gptContext)
       ]);
-      if (moderationResult.decision !== 'approved') {
-        return { clean: false, reason: `${label} contains inappropriate content` };
-      }
-      if (gptResult.decision !== 'approved') {
+      // Neither call throws on an OpenAI failure — they RETURN the fail-safe
+      // result. shortTextVerdict() skips those (the blocklists above already
+      // ran) and refuses only on a real flag. See shortTextVerdict.ts.
+      if (shortTextVerdict([moderationResult, gptResult]) === 'refused') {
         return { clean: false, reason: `${label} contains inappropriate content` };
       }
     }
   } catch {
-    // If OpenAI fails, blocklist checks above are sufficient
+    // Defensive only: an unexpected throw must not block a signup either.
   }
 
   return { clean: true };
