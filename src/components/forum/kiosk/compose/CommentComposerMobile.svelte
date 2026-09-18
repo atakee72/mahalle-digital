@@ -13,6 +13,7 @@
 
   import KioskAvatar from '../KioskAvatar.svelte';
   import { t } from '../../../../lib/kiosk-i18n';
+  import { COMMENT_MAX_LEN, commentCounterVisible } from '../../../../lib/forum/commentLimits';
 
   let {
     currentUserId = null,
@@ -26,7 +27,8 @@
     currentUserId?: string | null;
     currentUser?: { name?: string; image?: string | null };
     submitting?: boolean;
-    onSubmit?: (body: string) => void | Promise<void>;
+    // Resolve `false` when the comment was NOT posted — the draft is then kept.
+    onSubmit?: (body: string) => boolean | void | Promise<boolean | void>;
     // Sandbox-only escape hatch: render with `relative` positioning so
     // the bar stays inside its parent in /design-system. Live consumers
     // leave this false — `fixed bottom-12` pins it to the viewport.
@@ -57,23 +59,19 @@
     expanded = false;
   }
 
-  function submit() {
+  // Clear + collapse ONLY on success. The earlier effect cleared whenever
+  // `submitting` flipped back to false — also after a refused comment, which
+  // wiped the draft together with the error (found 2026-09-18).
+  async function submit() {
     const trimmed = body.trim();
     if (!trimmed || submitting || !onSubmit) return;
-    onSubmit(trimmed);
-  }
-
-  // Mirror desktop's auto-clear pattern: when `submitting` flips from true
-  // to false, clear the draft and collapse. Failures keep the draft so
-  // the user can retry; the parent surfaces the toast.
-  let lastSubmitting = $state(false);
-  $effect(() => {
-    if (lastSubmitting && !submitting) {
+    const ok = await onSubmit(trimmed);
+    if (ok !== false) {
       body = '';
       expanded = false;
     }
-    lastSubmitting = submitting;
-  });
+  }
+  const counterVisible = $derived(commentCounterVisible(body.length));
 
   // ESC collapses. Cmd/Ctrl-Enter submits.
   function onTextareaKeydown(e: KeyboardEvent) {
@@ -148,10 +146,19 @@
         placeholder={$t['detail.compose.placeholder']}
         rows="3"
         class="flex-1 min-w-0 bg-paper-soft border-[1.5px] border-ink rounded-md px-3 py-2 font-bricolage text-[13px] leading-relaxed text-ink placeholder:text-ink-mute/55 outline-none focus:border-wine resize-none"
+        maxlength={COMMENT_MAX_LEN}
         disabled={submitting}
       ></textarea>
     </div>
     <div class="flex items-center justify-end gap-2">
+      {#if counterVisible}
+        <span
+          class={`mr-auto font-dmmono text-[10px] ${body.length >= COMMENT_MAX_LEN ? 'text-wine' : 'text-ink-mute'}`}
+          aria-live="polite"
+        >
+          {body.length} / {COMMENT_MAX_LEN}
+        </span>
+      {/if}
       <button
         type="button"
         onclick={collapse}

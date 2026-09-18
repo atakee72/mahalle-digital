@@ -546,8 +546,11 @@
 
   // ─── Comment composer ───────────────────────────────────────────────
   let postingComment = $state(false);
-  async function submitComment(body: string) {
-    if (postingComment) return;
+  // Resolves true when the comment was posted, false otherwise — the
+  // composers keep the draft on false. Refusals surface as a localized toast
+  // (was a raw browser alert with the API's internal "Validation failed").
+  async function submitComment(body: string): Promise<boolean> {
+    if (postingComment) return false;
     postingComment = true;
     try {
       const res = await fetch('/api/comments/create', {
@@ -558,15 +561,25 @@
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Kommentar fehlgeschlagen.');
+        if (res.status === 400 && err?.details?.body) {
+          showError($t['comment.toast.create.tooLong']);
+        } else if (res.status === 401) {
+          showError($t['comment.toast.create.login']);
+        } else if (err?.error === 'account_banned') {
+          showError($t['comment.toast.create.banned']);
+        } else {
+          showError($t['comment.toast.create.error']);
+        }
+        return false;
       }
       const json = await res.json();
       // Optimistically prepend (matches API sort order — newest first).
       comments = [json.comment, ...comments];
+      return true;
     } catch (err) {
-      // Surface as page-level alert. Comment errors are rare; a toast
-      // would normally be ideal — kept minimal in 5b.
-      if (typeof window !== 'undefined') alert((err as Error).message);
+      console.error('comment create failed', err);
+      showError($t['comment.toast.create.error']);
+      return false;
     } finally {
       postingComment = false;
     }

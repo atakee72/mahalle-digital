@@ -22,6 +22,7 @@
   import TranslateControl from './TranslateControl.svelte';
   import KioskReportModal from './KioskReportModal.svelte';
   import { t, tStr } from '../../../lib/kiosk-i18n';
+  import { COMMENT_MAX_LEN } from '../../../lib/forum/commentLimits';
 
   let {
     comment,
@@ -298,7 +299,7 @@
       <textarea
         bind:value={draft}
         onkeydown={onTextareaKeydown}
-        maxlength="3000"
+        maxlength={COMMENT_MAX_LEN}
         rows="3"
         class="w-full bg-paper-soft border-[1.5px] border-ink rounded-md px-3 py-2 font-bricolage text-sm leading-relaxed text-ink outline-none focus:border-wine resize-y min-h-[72px]"
       ></textarea>

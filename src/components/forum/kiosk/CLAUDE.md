@@ -120,10 +120,13 @@ Surfaced by a two-pass subagent audit of the forum; all shipped + prod-verified.
 
 ---
 
-### Comment length (2026-09-18, found by the first real member question)
-Comments allow **3000 characters** (was 1000; posts allow 5000). The number lives in THREE places — keep them in step: `COMMENT_MAX_LEN` in `src/schemas/comment.schema.ts` (create + edit schema share it) and the hard `maxlength="3000"` on the edit textarea in `ForumComment.svelte`. The server counts JS string length, so an emoji costs 2.
+### Comment length, counter and failed sends (2026-09-18, found by the first real member question)
+Comments allow **3000 characters** (was 1000; posts allow 5000). One source: `COMMENT_MAX_LEN` in the dependency-pure `src/lib/forum/commentLimits.ts` — imported by the zod schema (`comment.schema.ts`, create + edit, re-exported there) AND by the three comment islands, so zod never enters an island bundle. The server counts JS string length, so an emoji costs 2.
 
-**Still open (deferred, user decides when):** neither `compose/CommentComposer.svelte` nor `compose/CommentComposerMobile.svelte` has a `maxlength` or a counter, and `submitComment()` in `ForumPostDetail.svelte` surfaces a refusal as a raw browser `alert('Validation failed')` — the API does return the reason in `details.body`, the UI drops it. Fix shape: move the constant to a dependency-pure file so the islands can import it without pulling zod, `maxlength` + a counter that appears past ~80 %, and a localized `showError` instead of the alert. How it was found: an admin's 2 277-character answer to a newcomer was refused on the day before the debut event, with no hint why.
+- **Both composers** (`compose/CommentComposer.svelte`, `compose/CommentComposerMobile.svelte`) and the edit box in `ForumComment.svelte` carry `maxlength={COMMENT_MAX_LEN}`. The composers show `n / 3000` once the draft passes 80 % (`commentCounterVisible()`), wine at the cap. Ordinary comments never see a counter — deliberate, it is a warning, not a meter.
+- **A failed send keeps the draft.** `onSubmit` resolves `false` when the comment was NOT posted; the composers clear (and the mobile one collapses) only on anything else. Before this, both cleared whenever `submitting` flipped back to false — i.e. also after a refusal — although their code comments claimed the opposite. A 2 000-character answer would have vanished together with the error.
+- **Refusals are a localized toast**, not a browser `alert` with the API's internal „Validation failed": `comment.toast.create.{tooLong,login,banned,error}` (DE/EN), chosen in `submitComment()` in `ForumPostDetail.svelte` from status + `details.body` + `error`. Three of the four messages say the text is still there, because that is the first thing a person fears.
+- Tests: `src/lib/forum/commentLimits.test.ts` (counter threshold, create/edit share the cap). Browser probes (desktop + 390 px): `scratchpad/comment-counter-probe.cjs`, `comment-counter-mobile.cjs` — note the page has TWO „antworten" buttons (the `💬 n antworten` jump in the post header and the send button); a loose role/name locator clicks the wrong one.
 
 ## Legacy (pre-kiosk dark-glass forum) notes
 

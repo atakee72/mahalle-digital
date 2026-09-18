@@ -17,6 +17,7 @@
   import KioskAvatar from '../KioskAvatar.svelte';
   import KioskBtn from '../KioskBtn.svelte';
   import { t } from '../../../../lib/kiosk-i18n';
+  import { COMMENT_MAX_LEN, commentCounterVisible } from '../../../../lib/forum/commentLimits';
 
   let {
     currentUser,
@@ -25,30 +26,22 @@
   } = $props<{
     currentUser: { name?: string; image?: string | null };
     submitting?: boolean;
-    onSubmit: (body: string) => void | Promise<void>;
+    // Resolve `false` when the comment was NOT posted — the draft is then kept.
+    onSubmit: (body: string) => boolean | void | Promise<boolean | void>;
   }>();
 
   let body = $state('');
+  const counterVisible = $derived(commentCounterVisible(body.length));
 
-  function submit() {
+  // Clear the draft ONLY on success. The earlier version cleared whenever
+  // `submitting` flipped back to false, i.e. also after a refused comment —
+  // which wiped a long answer together with the error (found 2026-09-18).
+  async function submit() {
     const trimmed = body.trim();
     if (!trimmed || submitting) return;
-    onSubmit(trimmed);
+    const ok = await onSubmit(trimmed);
+    if (ok !== false) body = '';
   }
-
-  // Reset on successful submit — caller toggles `submitting` to false
-  // after the mutation resolves; we clear here so the textarea empties.
-  // Edge case: if the mutation fails, the body is still in `body` so
-  // the user can retry without re-typing.
-  let lastSubmittingState = $state(false);
-  $effect(() => {
-    if (lastSubmittingState && !submitting) {
-      // submit cycle ended — only clear when caller signals success
-      // (caller's onSubmit returns void; for now we trust the cycle).
-      body = '';
-    }
-    lastSubmittingState = submitting;
-  });
 
   function onKey(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -76,6 +69,7 @@
         placeholder={$t['detail.compose.placeholder']}
         rows="3"
         class="w-full appearance-none bg-paper-warm border-[1.5px] border-ink rounded-md px-3 py-2 font-bricolage text-[13px] leading-relaxed text-ink placeholder:text-ink-mute/55 outline-none focus:border-wine resize-y min-h-[72px]"
+        maxlength={COMMENT_MAX_LEN}
         disabled={submitting}
       ></textarea>
     </div>
@@ -83,6 +77,12 @@
 
   <div class="flex items-center justify-between mt-2 gap-2">
     <span class="font-dmmono text-[10px] text-ink-mute">
+      {#if counterVisible}
+        <span class={body.length >= COMMENT_MAX_LEN ? 'text-wine' : ''} aria-live="polite">
+          {body.length} / {COMMENT_MAX_LEN}
+        </span>
+        ·
+      {/if}
       {$t['detail.compose.modNote']}
     </span>
     <KioskBtn

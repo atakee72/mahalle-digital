@@ -450,6 +450,10 @@ const de = {
   'comment.toast.edit.flagged': 'Bearbeiten gesperrt — Kommentar wird moderiert.',
   'comment.toast.edit.error': 'Konnte nicht gespeichert werden.',
   'comment.toast.delete.error': 'Konnte nicht gelöscht werden.',
+  'comment.toast.create.tooLong': 'Dein Kommentar ist zu lang — höchstens 3000 Zeichen. Dein Text ist noch da.',
+  'comment.toast.create.login': 'Bitte melde dich neu an, dann kannst du kommentieren. Dein Text ist noch da.',
+  'comment.toast.create.banned': 'Dein Konto kann zurzeit nicht kommentieren.',
+  'comment.toast.create.error': 'Dein Kommentar konnte nicht gesendet werden. Dein Text ist noch da — versuch es gleich noch einmal.',
 
   // Mobile sticky composer (CommentComposerMobile.svelte).
   'comment.composer.placeholder.short': 'Antworten…',
@@ -2381,6 +2385,10 @@ const en: Dict = {
   'comment.toast.edit.flagged': 'Editing locked — comment is under moderation.',
   'comment.toast.edit.error': "Couldn't save your edit.",
   'comment.toast.delete.error': "Couldn't delete the comment.",
+  'comment.toast.create.tooLong': "Your comment is too long — 3000 characters at most. Your text is still here.",
+  'comment.toast.create.login': "Please log in again, then you can comment. Your text is still here.",
+  'comment.toast.create.banned': "Your account can't comment at the moment.",
+  'comment.toast.create.error': "Your comment couldn't be sent. Your text is still here — try again in a moment.",
 
   'comment.composer.placeholder.short': 'Reply…',
   'comment.composer.send': 'send',

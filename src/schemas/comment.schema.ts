@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { ObjectIdSchema } from './forum.schema';
 
-// 1000 → 3000 on 2026-09-18: a neighbour's proper answer hit the old cap and
-// the UI only said "Validation failed". Posts allow 5000; one constant for
-// create + edit so the two can never drift.
-export const COMMENT_MAX_LEN = 3000;
+import { COMMENT_MAX_LEN } from '../lib/forum/commentLimits';
+
+// One constant for create + edit (and the comment islands) so they can never drift.
+export { COMMENT_MAX_LEN };
 
 // Comment Create Schema
 export const CommentCreateSchema = z.object({
