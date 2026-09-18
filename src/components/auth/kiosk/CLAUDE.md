@@ -214,6 +214,10 @@ truncated to 32 chars (same salt as the contact relay).
   (admins are trusted superusers); revisit when the admin moderation
   redesign touches these endpoints.
 
+## Link-preview card for shared members-only links (2026-09-18)
+
+A shared link to a gated page sends every crawler through the middleware's 302 to `/login?redirect=…`, so the preview card in WhatsApp & co. is the LOGIN page's. `loginCardCopy(redirect)` (`src/lib/auth/loginCardCopy.ts`, pure, 4 tests) lets `login.astro` hand `AuthLayout` a `card` prop that overrides ONLY the og/twitter title + description — tab title, meta description, `noindex` and the default 1200×630 image stay. First (only) case: `/calendar?event=…` → „Ein Termin im Schillerkiez | Mahalle" + an invitation to sign in or register. **The card carries no event data, by decision**: a public `/e/<id>` share page with title/time/place was proposed and declined the same day — the login wall on shared events is wanted as a signup funnel. The copy derives from the SHAPE of the redirect only (validated through `safeInternalPath`, off-site redirects keep the default card; a test asserts nothing from the link leaks into the card). To add a surface (topic, listing): one more branch in that helper. Previews are cached on first share — links shared before the change keep the old card.
+
 ## Signed-out confirmation strap
 
 Login has a signed-out strap keyed off `?abgemeldet=1` (stripped via `replaceState`); ALL logout paths must use `/login?abgemeldet=1` (LogoutAction, PKontoCard, legacy Navbar). The strap shows a one-line confirmation „Du bist abgemeldet. Bis bald im Kiez." / "You're signed out. See you around the Kiez." Task 3's avatar-menu links to `/logout`, whose island uses this contract.
