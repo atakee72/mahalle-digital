@@ -24,6 +24,7 @@
   import BlRubrikChip from './BlRubrikChip.svelte';
   import BlPostMeta from './BlPostMeta.svelte';
   import BlLayoutBadge from './BlLayoutBadge.svelte';
+  import { initialsOf } from '../../../lib/initials';
 
   let { posts }: { posts: BeilagePost[] } = $props();
 
@@ -177,7 +178,24 @@
     class="block bl-card-in"
     style="text-decoration: none; color: inherit; border-bottom: 1px dashed var(--k-rule); padding-bottom: 16px;"
   >
-    {#if thumb && post.cover && !isSimultaneous(post.id, posts)}
+    <!-- Photo strip: normally only the first card of a column. Posts published
+         in the same second ALL get one, same height, and an initials plate when
+         there is no cover — equal treatment, and nobody is singled out by a
+         missing photo. Taller (150) than the ordinary strip (110): at 110 a
+         portrait is cut at the nose. -->
+    {#if isSimultaneous(post.id, posts)}
+      <div style="border: 1.5px solid var(--k-ink); border-radius: var(--k-radius-md); overflow: hidden; margin-bottom: 10px;">
+        {#if post.cover}
+          <img src={post.cover} alt={post.coverAlt ?? ''} class="w-full object-cover" style="height: 150px; object-position: {post.coverPosition ?? 'center'};" loading="lazy" />
+        {:else}
+          <div
+            class="w-full flex items-center justify-center font-bricolage"
+            style="height: 150px; background: var(--k-paper-soft); font-size: 44px; font-weight: 800; letter-spacing: -0.03em; color: var(--k-ink-mute);"
+            aria-hidden="true"
+          >{initialsOf(post.author && post.author !== 'Mahalle Team' ? post.author : 'Mahalle')}</div>
+        {/if}
+      </div>
+    {:else if thumb && post.cover}
       <div style="border: 1.5px solid var(--k-ink); border-radius: var(--k-radius-md); overflow: hidden; margin-bottom: 10px;">
         <img src={post.cover} alt={post.coverAlt ?? ''} class="w-full object-cover" style="height: 110px; object-position: {post.coverPosition ?? 'center'};" loading="lazy" />
       </div>
