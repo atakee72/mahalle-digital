@@ -120,6 +120,11 @@ Surfaced by a two-pass subagent audit of the forum; all shipped + prod-verified.
 
 ---
 
+### Comment length (2026-09-18, found by the first real member question)
+Comments allow **3000 characters** (was 1000; posts allow 5000). The number lives in THREE places — keep them in step: `COMMENT_MAX_LEN` in `src/schemas/comment.schema.ts` (create + edit schema share it) and the hard `maxlength="3000"` on the edit textarea in `ForumComment.svelte`. The server counts JS string length, so an emoji costs 2.
+
+**Still open (deferred, user decides when):** neither `compose/CommentComposer.svelte` nor `compose/CommentComposerMobile.svelte` has a `maxlength` or a counter, and `submitComment()` in `ForumPostDetail.svelte` surfaces a refusal as a raw browser `alert('Validation failed')` — the API does return the reason in `details.body`, the UI drops it. Fix shape: move the constant to a dependency-pure file so the islands can import it without pulling zod, `maxlength` + a counter that appears past ~80 %, and a localized `showError` instead of the alert. How it was found: an admin's 2 277-character answer to a newcomer was refused on the day before the debut event, with no hint why.
+
 ## Legacy (pre-kiosk dark-glass forum) notes
 
 These sections describe the **legacy React forum** (`ForumWrapper` / `ForumContainer` / `lucide-react` icons / `ReadMoreModal`) at top-level `src/components/`, NOT the kiosk Svelte forum that lives in this directory. Kept for reference while legacy code still exists. The shared bits (server SSR helpers in `topicsQuery.ts`, `savedPosts` collection, image upload at `/api/posts/upload`) still apply to both forums.
