@@ -13,7 +13,8 @@
 >
   <span>{fmtDate(post.pubDateISO, $locale)}</span>
   <span>·</span>
-  <span>{$t['blog.meta.team']}</span>
+  <!-- Guest posts carry their author's name; the schema default 'Mahalle Team' keeps the localized team label. -->
+  <span>{post.author && post.author !== 'Mahalle Team' ? post.author : $t['blog.meta.team']}</span>
   <span>·</span>
   <span>{post.minutes} {$t['blog.meta.min']}</span>
   <span

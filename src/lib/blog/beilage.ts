@@ -101,6 +101,35 @@ export interface RelatedItem { post: BeilagePost; shared: string[]; }
  * Ties and zero-shared fill: newest first. Zero-shared items get shared: []
  * (rendered as ZULETZT ERSCHIENEN).
  */
+/**
+ * THE blog order: newest first; posts with the SAME timestamp fall back to
+ * their file id A→Z. Declared rule since 2026-09-18 — four election guest
+ * posts were published in the same second, and their ids
+ * (`wahl2026-<surname>`) make the tie resolve alphabetically by surname. A
+ * title tiebreak would sort by FIRST name (titles start with it). Without a
+ * tiebreak the order of simultaneous posts is whatever the loader returns.
+ * Every sort of posts goes through this (index, tag page, related, № n/N).
+ */
+export function compareNewest(
+  a: { id: string; pubDateISO: string },
+  b: { id: string; pubDateISO: string }
+): number {
+  return b.pubDateISO.localeCompare(a.pubDateISO) || a.id.localeCompare(b.id);
+}
+
+/**
+ * True when another post carries the exact same timestamp — i.e. the posts
+ * were published together on purpose (election guest posts, 2026-09-18).
+ * The index then gives NONE of them the lead card or a photo strip: the lead
+ * slot and the first-in-column thumbnail are prominence, and alphabetical
+ * order must not turn into a bigger picture for whoever is called Dehne — nor
+ * into a disadvantage for a candidate who sent no photo.
+ */
+export function isSimultaneous(id: string, posts: Array<{ id: string; pubDateISO: string }>): boolean {
+  const me = posts.find((p) => p.id === id);
+  return !!me && posts.some((p) => p.id !== id && p.pubDateISO === me.pubDateISO);
+}
+
 export function relatedFor(currentId: string, posts: BeilagePost[], max = 3): RelatedItem[] {
   const current = posts.find((p) => p.id === currentId);
   if (!current) return [];
@@ -108,8 +137,7 @@ export function relatedFor(currentId: string, posts: BeilagePost[], max = 3): Re
     .filter((p) => p.id !== currentId)
     .map((post) => ({ post, shared: post.tags.filter((t) => current.tags.includes(t)) }))
     .sort((a, b) =>
-      b.shared.length - a.shared.length ||
-      b.post.pubDateISO.localeCompare(a.post.pubDateISO))
+      b.shared.length - a.shared.length || compareNewest(a.post, b.post))
     .slice(0, max);
 }
 
@@ -122,6 +150,7 @@ export function tagCounts(posts: BeilagePost[]): Array<[string, number]> {
 
 /** № n/N: 1-based rank in ascending pubDate order (Decision 10). */
 export function rankOf(id: string, posts: BeilagePost[]): { no: number; of: number } {
-  const asc = [...posts].sort((a, b) => a.pubDateISO.localeCompare(b.pubDateISO));
+  // Exact reverse of compareNewest, so № counts down the listed order without swaps.
+  const asc = [...posts].sort((a, b) => compareNewest(b, a));
   return { no: asc.findIndex((p) => p.id === id) + 1, of: asc.length };
 }

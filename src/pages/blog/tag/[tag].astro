@@ -4,7 +4,7 @@
 import { getCollection } from 'astro:content';
 import KioskLayout from '../../../layouts/KioskLayout.astro';
 import BeilageTagPage from '../../../components/blog/kiosk/BeilageTagPage.svelte';
-import { readingMinutes, tagCounts, type BeilagePost } from '../../../lib/blog/beilage';
+import { compareNewest, readingMinutes, tagCounts, type BeilagePost } from '../../../lib/blog/beilage';
 
 const { tag = '' } = Astro.params;
 
@@ -12,12 +12,12 @@ const { tag = '' } = Astro.params;
 Astro.response.headers.set('Cache-Control', 'no-store, must-revalidate');
 const entries = await getCollection('blog', ({ data }) => !data.draft);
 const all: BeilagePost[] = entries
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
   .map((e) => ({
     id: e.id,
     title: e.data.title,
     description: e.data.description,
     pubDateISO: e.data.pubDate.toISOString(),
+    author: e.data.author,
     tags: e.data.tags ?? [],
     layout: e.data.postLayout,
     minutes: readingMinutes(e.body ?? ''),
@@ -26,7 +26,8 @@ const all: BeilagePost[] = entries
     coverHeight: e.data.cover?.height,
     coverAlt: e.data.coverAlt,
     coverPosition: e.data.coverPosition,
-  }));
+  }))
+  .sort(compareNewest);
 const posts = all.filter((p) => p.tags.includes(tag));
 ---
 

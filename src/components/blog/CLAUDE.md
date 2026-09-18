@@ -185,7 +185,7 @@ the content schema.
 | 03 — Leere Rubrik | `BeilageTagPage.svelte` | unknown or currently-empty tag; renders at HTTP 200 |
 | 04 — draft | `[...slug].astro` | see "Draft gating" above |
 
-## Decision 9 — lead card only on unfiltered page 1
+## Decision 9 — lead card only on unfiltered page 1 (exception: simultaneous posts, see below)
 
 `BeilageIndex.svelte`'s `showLead` derived is
 `!isFiltered && page === 0 && pageItems.length > 0` — the large lead card only
@@ -193,6 +193,21 @@ ever appears on the true front page (no active search/tag/month filter, first
 page). Any filter or pagination collapses the layout to the plain newspaper
 column grid; there is no "lead" concept once you're inside a filtered/paged
 view.
+
+## Simultaneous posts — order, equal treatment, guest authors (2026-09-18, election guest posts)
+Four candidates' guest posts (`src/content/blog/wahl2026-<surname>.mdx`, tag `wahl2026`) were published in ONE push with the IDENTICAL `pubDate`. Three rules came out of it; all live in `beilage.ts` and are tested in `src/lib/blog/beilage.test.ts`.
+
+- **One order for every list: `compareNewest()`** — newest first, equal timestamps fall back to the file id A→Z. Index, tag page, `relatedFor()` and `rankOf()` (exact reverse, so № counts down the listed order) all go through it. The ids are `wahl2026-<surname>` ON PURPOSE: the titles start with the first name, so a title tiebreak would sort Bahar, Charlotte, Michael, Philipp. Before this rule, the order of same-timestamp posts was whatever the glob loader returned.
+- **`isSimultaneous()` → no prominence.** A post that shares its exact timestamp with another never gets the index lead card (Decision 9 gains this exception) and never the first-in-column photo strip. Otherwise alphabetical order turns into a big photo + „NEU" strap for one candidate, a nose-cropped strip for the second and nothing for the rest — and a candidate who sent no photo is visibly worse off. A later editorial intro has its own timestamp, is not simultaneous, and takes the lead card normally.
+- **Author on the cards.** `BlPostMeta` printed the localized „Mahalle-Team" unconditionally — on a candidate's text that reads as Mahalle's words. It now shows `post.author` unless it is the schema default `'Mahalle Team'`; index + tag page serialize `author`. Side effect, correct: the manifest now shows its real author.
+
+**Recipe for the next guest post (docx + photo):**
+1. Text: `scratchpad/wahl2026/docx2md.py` reads the docx with the stdlib (a docx is a zip with XML; no pandoc / python-docx installed). Verbatim means verbatim — typos stay.
+2. Escape `\ ` * _ { } [ ] < > ~ | #` in the body (MDX treats them as markup; „Nachbar*innen" is the classic). **Astro's smartypants curls straight quotes** — a candidate's `"Ehrlich.` became `“Ehrlich.`; write a straight double quote as `{'"'}` in the body.
+3. Prove it: `scratchpad/wahl2026/verify.cjs` renders each post on a dev server and checks that every source sentence appears in order, whitespace-normalised. It is what caught the curled quote.
+4. Photo: `scratchpad/wahl2026/photos.mjs` — sharp, `.rotate()` first (bakes in EXIF orientation), max 2000 px, JPEG, NO metadata (one supplied photo carried a private description line and camera data). `coverCredit: "privat"` (press convention for a photo supplied by the person), and a per-photo `coverPosition` checked by eye on the article header — faces sit in the upper third. `cover` is optional; every surface handles a post without one.
+5. Same neutral `description` template for all, no summary of positions. Same two footer lines. No funding logo (the blog is not part of the funded events).
+6. A blog post is a DEPLOY — mind the event freeze windows.
 
 ## Content collection schema (`src/content.config.ts`)
 

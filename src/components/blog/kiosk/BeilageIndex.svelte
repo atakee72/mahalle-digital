@@ -18,8 +18,7 @@
     fmtMonthLabel,
     monthKey,
     monthGroups,
-    tagCounts,
-  } from '../../../lib/blog/beilage';
+    tagCounts, isSimultaneous } from '../../../lib/blog/beilage';
   import { scrollFade } from '../../../lib/scrollFade';
   import BlMasthead from './BlMasthead.svelte';
   import BlRubrikChip from './BlRubrikChip.svelte';
@@ -51,7 +50,10 @@
   const isFiltered = $derived(!!query.trim() || !!activeTag || !!activeMonth);
   const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)));
   const pageItems = $derived(filtered.slice(page * pageSize, (page + 1) * pageSize));
-  const showLead = $derived(!isFiltered && page === 0 && pageItems.length > 0);
+  // No lead card for a post that was published together with others (see isSimultaneous).
+  const showLead = $derived(
+    !isFiltered && page === 0 && pageItems.length > 0 && !isSimultaneous(pageItems[0].id, posts)
+  );
   const lead = $derived(showLead ? pageItems[0] : null);
   const columnItems = $derived(showLead ? pageItems.slice(1) : pageItems);
   const counts = $derived(tagCounts(posts));
@@ -175,7 +177,7 @@
     class="block bl-card-in"
     style="text-decoration: none; color: inherit; border-bottom: 1px dashed var(--k-rule); padding-bottom: 16px;"
   >
-    {#if thumb && post.cover}
+    {#if thumb && post.cover && !isSimultaneous(post.id, posts)}
       <div style="border: 1.5px solid var(--k-ink); border-radius: var(--k-radius-md); overflow: hidden; margin-bottom: 10px;">
         <img src={post.cover} alt={post.coverAlt ?? ''} class="w-full object-cover" style="height: 110px; object-position: {post.coverPosition ?? 'center'};" loading="lazy" />
       </div>

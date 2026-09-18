@@ -3,18 +3,18 @@
 import { getCollection } from 'astro:content';
 import KioskLayout from '../../layouts/KioskLayout.astro';
 import BeilageIndex from '../../components/blog/kiosk/BeilageIndex.svelte';
-import { readingMinutes, type BeilagePost } from '../../lib/blog/beilage';
+import { readingMinutes, type BeilagePost, compareNewest } from '../../lib/blog/beilage';
 
 // Session-varying SSR (KioskLayout reads the session for the nav) — never let a shared cache keep it.
 Astro.response.headers.set('Cache-Control', 'no-store, must-revalidate');
 const entries = await getCollection('blog', ({ data }) => !data.draft);
 const posts: BeilagePost[] = entries
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
   .map((e) => ({
     id: e.id,
     title: e.data.title,
     description: e.data.description,
     pubDateISO: e.data.pubDate.toISOString(),
+    author: e.data.author,
     tags: e.data.tags ?? [],
     layout: e.data.postLayout,
     minutes: readingMinutes(e.body ?? ''),
@@ -23,7 +23,8 @@ const posts: BeilagePost[] = entries
     coverHeight: e.data.cover?.height,
     coverAlt: e.data.coverAlt,
     coverPosition: e.data.coverPosition,
-  }));
+  }))
+  .sort(compareNewest);
 ---
 
 <KioskLayout title="Die Beilage" description="Die Beilage — das Magazin des Schillerkiez Kurier. Geschichten, Orte und Menschen aus dem Kiez." page="blog">
