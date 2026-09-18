@@ -187,6 +187,16 @@
       : ''
   );
 
+  // Author photo — already joined server-side (`populateAuthors` normalizes
+  // `image || userPicture`). The BY slab had passed a hardcoded null since the
+  // prototype, so authors showed initials while the attendee disc next to it
+  // showed the photo (found 2026-09-18).
+  const authorImage = $derived(
+    typeof event?.author === 'object' && event?.author !== null
+      ? (((event.author as any).image as string | null | undefined) ?? null)
+      : null
+  );
+
   // Mahalle-Team detection — for the second pill label next to the
   // category strip. Currently isOfficial ships as a server-only flag;
   // we ALSO honor an author-name heuristic so seeded "Mahalle-Team"
@@ -444,7 +454,7 @@
               {$t['cal.detail.by']}
             </span>
             <div class="flex items-center gap-2">
-              <KioskAvatar name={authorName} image={null} size="sm" />
+              <KioskAvatar name={authorName} image={authorImage} size="sm" />
               <div>
                 {#if showAuthorLink}
                   <a
