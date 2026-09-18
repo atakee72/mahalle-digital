@@ -8,6 +8,8 @@ const blog = defineCollection({
     description: z.string(),
     pubDate: z.coerce.date(),
     updatedDate: z.coerce.date().optional(),
+    // ORDER-ONLY date: a post that joins a group published earlier sorts with it and keeps its true pubDate (see beilage.ts compareNewest).
+    sortDate: z.coerce.date().optional(),
     author: z.string().default('Mahalle Team'),
     cover: image().optional(),
     coverAlt: z.string().optional(),

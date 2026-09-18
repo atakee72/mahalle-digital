@@ -10,6 +10,7 @@ export interface BeilagePost {
   title: string;
   description: string;
   pubDateISO: string;            // ISO 8601
+  sortISO?: string;              // ORDER-ONLY date (frontmatter `sortDate`); display always uses pubDateISO
   updatedDateISO?: string;       // ISO 8601
   author?: string;
   tags: string[];
@@ -113,12 +114,22 @@ export interface RelatedItem { post: BeilagePost; shared: string[]; }
  * tiebreak the order of simultaneous posts is whatever the loader returns.
  * Every sort of posts goes through this (index, tag page, related, № n/N).
  */
-export function compareNewest(
-  a: { id: string; pubDateISO: string },
-  b: { id: string; pubDateISO: string }
-): number {
-  return b.pubDateISO.localeCompare(a.pubDateISO) || a.id.localeCompare(b.id);
+export function compareNewest(a: Sortable, b: Sortable): number {
+  return sortKey(b).localeCompare(sortKey(a)) || a.id.localeCompare(b.id);
 }
+
+/**
+ * A post may carry an ORDER-ONLY date (`sortDate` in the frontmatter →
+ * `sortISO`). Reason (2026-09-19): a successor candidate's guest post arrived
+ * a day after the four that were published together. Its true publication
+ * date must stay visible, but as the newest post it would have taken the lead
+ * card and the top of the tag page on election weekend. With the group's
+ * timestamp as its sort date it lines up inside the group by surname and
+ * counts as simultaneous (equal strip, no lead card). Display, month groups
+ * and article metadata keep using pubDateISO.
+ */
+type Sortable = { id: string; pubDateISO: string; sortISO?: string };
+const sortKey = (p: Sortable): string => p.sortISO ?? p.pubDateISO;
 
 /**
  * True when another post carries the exact same timestamp — i.e. the posts
@@ -128,9 +139,9 @@ export function compareNewest(
  * order must not turn into a bigger picture for whoever is called Dehne — nor
  * into a disadvantage for a candidate who sent no photo.
  */
-export function isSimultaneous(id: string, posts: Array<{ id: string; pubDateISO: string }>): boolean {
+export function isSimultaneous(id: string, posts: Sortable[]): boolean {
   const me = posts.find((p) => p.id === id);
-  return !!me && posts.some((p) => p.id !== id && p.pubDateISO === me.pubDateISO);
+  return !!me && posts.some((p) => p.id !== id && sortKey(p) === sortKey(me));
 }
 
 /**

@@ -64,3 +64,31 @@ test('ordinary posts keep three related slots', () => {
   assert.equal(relatedSlots('gruendungsnachbarn-guide', posts), 3);
   assert.equal(relatedSlots('does-not-exist', posts), 3);
 });
+
+// A guest post that arrives LATER keeps its true publication date but joins its
+// group for ordering (2026-09-19: a successor candidate's post, a day after the others).
+const LATE = '2026-09-18T23:00:00.000Z';
+const withLate = [
+  ...posts,
+  post('wahl2026-einladung', '2026-09-18T12:00:00.000Z', ['wahl2026']),
+  { ...post('wahl2026-hempel', LATE, ['wahl2026']), sortISO: T },
+];
+
+test('a late post with a sort date lines up inside its group, by surname — not on top as the newest', () => {
+  assert.deepEqual([...withLate].sort(compareNewest).map((p) => p.id).slice(0, 6), [
+    'wahl2026-einladung', 'wahl2026-dehne', 'wahl2026-haghanipour', 'wahl2026-hempel', 'wahl2026-lueders', 'wahl2026-mende',
+  ]);
+});
+
+test('the late post counts as simultaneous with its group (no lead card, equal strip) and keeps its own date', () => {
+  assert.equal(isSimultaneous('wahl2026-hempel', withLate), true);
+  assert.equal(isSimultaneous('wahl2026-dehne', withLate), true);
+  assert.equal(withLate.find((p) => p.id === 'wahl2026-hempel')!.pubDateISO, LATE);
+});
+
+test('№ n/N and the related rail follow the same order', () => {
+  assert.equal(relatedSlots('wahl2026-hempel', withLate), 5);
+  assert.deepEqual(relatedFor('wahl2026-dehne', withLate, relatedSlots('wahl2026-dehne', withLate)).map((r) => r.post.id).slice(0, 5), [
+    'wahl2026-einladung', 'wahl2026-haghanipour', 'wahl2026-hempel', 'wahl2026-lueders', 'wahl2026-mende',
+  ]);
+});

@@ -20,6 +20,7 @@ const toMeta = (e: typeof entry): BeilagePost => ({
   title: e.data.title,
   description: e.data.description,
   pubDateISO: e.data.pubDate.toISOString(),
+  sortISO: e.data.sortDate?.toISOString(),
   updatedDateISO: e.data.updatedDate?.toISOString(),
   author: e.data.author,
   tags: e.data.tags ?? [],

@@ -64,6 +64,8 @@
   const col1 = $derived(columnItems.filter((_, i) => i % 2 === 0));
   const col2 = $derived(columnItems.filter((_, i) => i % 2 === 1));
   const oldestISO = $derived(posts[posts.length - 1]?.pubDateISO ?? null);
+  // „zuletzt" is the newest TRUE publication date — not posts[0], which a post with an order-only sort date can precede.
+  const latestISO = $derived(posts.reduce<string | null>((m, p) => (m === null || p.pubDateISO > m ? p.pubDateISO : m), null));
   const callHref = $derived(
     `/topics/create?prefill_title=${encodeURIComponent($t['blog.call.prefillTitle'])}&prefill_tags=blogidee`
   );
@@ -294,7 +296,7 @@
     </div>
   </div>
 {:else}
-  <BlMasthead count={posts.length} latestISO={posts[0]?.pubDateISO ?? null} />
+  <BlMasthead count={posts.length} latestISO={latestISO} />
 
   <div class="px-6 lg:px-12 py-3 border-b border-dashed" style="border-color: var(--k-rule);">
     <!-- Desktop rubric row -->

@@ -18,6 +18,7 @@ const all: BeilagePost[] = entries
     title: e.data.title,
     description: e.data.description,
     pubDateISO: e.data.pubDate.toISOString(),
+    sortISO: e.data.sortDate?.toISOString(),
     author: e.data.author,
     tags: e.data.tags ?? [],
     layout: e.data.postLayout,
@@ -37,7 +38,7 @@ const TAG_META: Record<string, { title: string; description: string; image: stri
   wahl2026: {
     title: 'Kandidat:innen-Check Wahlkreis Neukölln 2 — Die Beilage',
     description:
-      'Vier Gastbeiträge zur Berliner Wahl am 20. September 2026: Direktkandidat:innen im Wahlkreis Neukölln 2 schreiben, was sie für den Schillerkiez vorhaben. Gleiche Bedingungen für alle, unverändert veröffentlicht.',
+      'Gastbeiträge zur Berliner Wahl am 20. September 2026: Direktkandidat:innen im Wahlkreis Neukölln 2 schreiben, was sie für den Schillerkiez vorhaben. Gleiche Bedingungen für alle, unverändert veröffentlicht.',
     image: wahl2026Og.src,
     alt: 'Illustration: vier gleich große Stimmzettel über einer Wahlurne',
   },
