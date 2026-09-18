@@ -363,13 +363,22 @@
         <div style="border-bottom: 2px solid var(--k-ink); margin: 22px 0 0;"></div>
         <div style="border-bottom: 1px solid var(--k-ink); margin: 2px 0 20px;"></div>
 
-        <div class="grid grid-cols-1 md:grid-cols-[1fr_1px_1fr]" style="gap: 22px;">
+        <!-- Phones: ONE list in the true order. The two newspaper columns are
+             filled alternately (col1 = items 0,2,4 · col2 = 1,3,5), which reads
+             correctly side by side but, stacked, showed 0,2,4,1,3,5 — found
+             2026-09-18 when four guest posts had to appear alphabetically. -->
+        <div class="flex flex-col md:hidden" style="gap: 18px;">
+          {#each columnItems as p, i (p.id)}
+            {@render colCard(p, i === 0)}
+          {/each}
+        </div>
+        <div class="hidden md:grid md:grid-cols-[1fr_1px_1fr]" style="gap: 22px;">
           <div class="flex flex-col" style="gap: 18px;">
             {#each col1 as p, i (p.id)}
               {@render colCard(p, i === 0)}
             {/each}
           </div>
-          <div class="hidden md:block" style="background: var(--k-rule);"></div>
+          <div style="background: var(--k-rule);"></div>
           <div class="flex flex-col" style="gap: 18px;">
             {#each col2 as p, i (p.id)}
               {@render colCard(p, i === 0)}
