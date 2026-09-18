@@ -569,7 +569,7 @@
       </a>
     </div>
     <div
-      class="flex flex-wrap items-baseline gap-x-5 gap-y-1 mt-3 font-dmmono text-[11px] text-ink-mute"
+      class="flex flex-wrap items-baseline gap-x-2.5 md:gap-x-5 gap-y-1 mt-3 font-dmmono text-[10px] md:text-[11px] text-ink-mute [&>span]:whitespace-nowrap"
     >
       <span><span class="font-bold text-ink">{stats.total}</span> {$t['forum.stats.topics']}</span>
       <span
