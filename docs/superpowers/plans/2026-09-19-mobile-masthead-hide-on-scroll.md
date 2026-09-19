@@ -6,6 +6,8 @@
 
 **Architecture:** A pure, tested state function (`nextMastState`) decides hidden/visible from scroll positions. `KioskNav.svelte` feeds it from one rAF-throttled passive scroll listener and moves the sticky `<header>` by animating its `top` (never `transform` — the account menu and the notification panel are `position: fixed` children of the header, and a transform would become their containing block). The bar's current visible height is published as the CSS variable `--k-mast-offset`, so the two things docked under the bar (blog reading bar, mobile calendar "reveal" scroll) follow without knowing about scroll logic.
 
+**Mechanism proven before planning (headless Chromium spike, 2026-09-19, app-like page: `html,body{overflow-x:clip}`, `body` flex column, sticky header with a `position:fixed` child, a second sticky bar docked at `top: var(--k-mast-offset)`):** setting the header's `top` to `-56px` hides it (`bottom` 56 → 0), the 200 ms `top` transition animates (18 px at mid-point), the docked bar follows in lockstep (56 → 18 → 0 → 56), and the fixed child stays on the viewport (bottom edge 844 of 844, full width) the whole time. One property to know: a sticky bar cannot be pushed above its natural position — on an unscrolled page a negative `top` does nothing. The 80 px always-visible zone (taller than the 56 px bar) means the code never asks for that.
+
 **Tech Stack:** Astro 5 SSR, Svelte 5 runes (`$state`, `$effect`, `untrack`), Tailwind 3.4, `node:test` via `npx tsx <file>`, Playwright (the copy bundled with the global `@playwright/cli`).
 
 **Spec:** none on file — the decisions were made in conversation on 2026-09-19 and are recorded verbatim under Global Constraints.
@@ -14,7 +16,9 @@
 
 - **Top bar only.** The bottom nav (`<nav class="lg:hidden fixed bottom-0 …">` in `KioskNav.svelte`) is not touched: it is the only place with Forum/Kalender/News/Markt/Kiez on phones, the mobile comment composer is anchored above it (`fixed bottom-12`), and iOS Safari's own toolbar already moves at that edge.
 - **Below `lg` only** (`max-width: 1023.98px`). Desktop never hides the bar.
-- **Always visible:** within the first 80 px of the page; on pages that do not scroll; while the account menu or the notification panel is open; while a tour card (`.tour-card`) is on screen; while keyboard focus (`:focus-visible`) is inside the header; right after every navigation (the island re-mounts).
+- **Always visible:** within the first 80 px of the page; on pages that do not scroll; while the account menu or the notification panel is open; while a tour card (`.tour-card`) is on screen; while keyboard focus (`:focus-visible`) is inside the header. Every navigation starts visible (the island re-mounts with fresh state); a scroll RESTORE shorter than 600 px may then hide it again — accepted, it is the state the member left the page in.
+- The locks are evaluated on scroll events (plus an immediate "show" when a menu opens or focus enters the bar). A tour that starts while the bar is hidden therefore shows the bar on its next scroll event, not instantly — accepted: the bar never shifts layout (sticky `top` only), so tour geometry is unaffected, and no tour stop points into the bar (verified: no `data-tour` in `KioskNav`, `NotificationBell`, `AvatarMenu`; no such selector in `src/lib/tour/tourChapters.ts`).
+- Page scroll locks (`src/lib/scrollLock.ts`, `AvatarMenu`'s own lock) set `overflow: hidden` and keep `scrollY` — they produce no scroll jump, so they need no special handling.
 - **Hide** after 24 px of continuous downward travel; **show** after 8 px of continuous upward travel ("first scroll up"). A single-frame jump larger than 600 px is a programmatic jump (scroll restore), not a gesture: it never changes the state.
 - **No `transform`, `filter`, `will-change` or `contain` on the `<header>`** — see Architecture. Animate `top` on the sticky element.
 - `prefers-reduced-motion: reduce` → the bar still hides/shows, without a transition.
@@ -22,7 +26,7 @@
 - Error budgets must not rise: `pnpm type-check` ≤ 26 errors, `npx -y svelte-check@4` ≤ 92 errors.
 - Commit messages: ONE line, no "Generated with" line, no Co-Authored-By line. `git add` specific files only, never `-A`.
 - Never print any value from `.env` or from `scratchpad/devpw.txt`. Dev server on port 4655 only (`npx astro dev --port 4655`), stop it afterwards with `fuser -k 4655/tcp`. Do not start anything on port 3000.
-- **No push and no merge to `main`** — that is the user's call, and not before Saturday 19 Sept 16:30 (deploy freeze for the market stand). Work in a worktree/branch created with superpowers:using-git-worktrees; suggested branch name `feat/mobile-masthead-hide`.
+- **No push and no merge to `main`** — that is the user's call, and not before Saturday 19 Sept 16:30 (deploy freeze for the market stand). Work on the branch `feat/mobile-masthead-hide`. A plain branch in the main checkout is fine when no other session is active (`git worktree list` shows only the known `ui-polish` worktree, and nothing is running in it). If you use a worktree instead: `.env` and `scratchpad/devpw.txt` are gitignored and will be MISSING there — symlink both from the main checkout (never copy their contents into a command line, never stage them), and give every subagent the absolute worktree path, because subagents stay pinned to the directory they were launched from.
 
 ## File Structure
 
@@ -52,7 +56,7 @@
   - `interface MastState { hidden: boolean; lastY: number; anchorY: number; dir: -1 | 0 | 1 }`
   - `initialMastState(y?: number): MastState`
   - `nextMastState(prev: MastState, rawY: number, maxY: number, locked: boolean): MastState`
-  - `mastBottomAfterScroll(delta: number, mastH: number, currentBottom: number, hides: boolean): number`
+  - `mastBottomAfterScroll(delta: number, mastH: number, currentBottom: number, hides: boolean, currentY: number): number`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -128,11 +132,13 @@ test('a page that cannot scroll never hides the bar', () => {
 });
 
 test('mastBottomAfterScroll predicts where the bar will be after a programmatic scroll', () => {
-  assert.equal(mastBottomAfterScroll(200, 56, 56, true), 0, 'far enough down → the bar will be gone');
-  assert.equal(mastBottomAfterScroll(-120, 56, -2, true), 56, 'up → the bar will be back');
-  assert.equal(mastBottomAfterScroll(10, 56, 56, true), 56, 'a small move keeps the current state');
-  assert.equal(mastBottomAfterScroll(10, 56, -2, true), 0, 'hidden bar: never a negative bottom');
-  assert.equal(mastBottomAfterScroll(200, 67, 67, false), 67, 'desktop: the bar never hides');
+  assert.equal(mastBottomAfterScroll(200, 56, 56, true, 300), 0, 'far enough down → the bar will be gone');
+  assert.equal(mastBottomAfterScroll(-120, 56, -2, true, 900), 56, 'up → the bar will be back');
+  assert.equal(mastBottomAfterScroll(10, 56, 56, true, 300), 56, 'a small move keeps the current state');
+  assert.equal(mastBottomAfterScroll(10, 56, -2, true, 300), 0, 'hidden bar: never a negative bottom');
+  assert.equal(mastBottomAfterScroll(200, 67, 67, false, 300), 67, 'desktop: the bar never hides');
+  assert.equal(mastBottomAfterScroll(60, 56, 56, true, 0), 56, 'landing inside the top zone: the bar stays, however far the scroll was');
+  assert.equal(mastBottomAfterScroll(-400, 56, -2, true, 430), 56, 'scrolling up INTO the top zone: the bar is back');
 });
 ```
 
@@ -201,10 +207,12 @@ export function nextMastState(prev: MastState, rawY: number, maxY: number, locke
  * For code that scrolls the page so something lands "right under the masthead":
  * the scroll itself may hide or show the bar, so aim at where the bar WILL be.
  * `delta` = the scroll distance computed against the bar's current bottom
- * (positive = down); `hides` = whether this viewport hides the bar at all.
+ * (positive = down); `hides` = whether this viewport hides the bar at all;
+ * `currentY` = the scroll position before the scroll.
  */
-export function mastBottomAfterScroll(delta: number, mastH: number, currentBottom: number, hides: boolean): number {
+export function mastBottomAfterScroll(delta: number, mastH: number, currentBottom: number, hides: boolean, currentY: number): number {
   if (!hides) return currentBottom;
+  if (currentY + delta <= TOP_ZONE) return mastH; // the bar is always shown near the top
   if (delta >= HIDE_AFTER) return 0;
   if (delta <= -SHOW_AFTER) return mastH;
   return Math.max(currentBottom, 0);
@@ -322,6 +330,7 @@ In the same file, directly under the line `let avatarEl = $state<HTMLElement | n
 
   // Published for whatever docks under the bar (BlogReadBar, calendar reveal).
   $effect(() => {
+    if (!mastH) return; // not measured yet — consumers keep their own fallback instead of docking at 0 for a frame
     document.documentElement.style.setProperty('--k-mast-offset', mastHidden ? '0px' : `${mastH}px`);
   });
 ```
@@ -399,7 +408,7 @@ git commit -m "nav: masthead hides on scroll down and returns on scroll up (belo
 
 **Interfaces:**
 - Consumes (Task 2): CSS variables `--k-mast-offset`, `--k-mast-h` on `document.documentElement`.
-- Consumes (Task 1): `mastBottomAfterScroll(delta, mastH, currentBottom, hides)`, `MAST_HIDE_QUERY`.
+- Consumes (Task 1): `mastBottomAfterScroll(delta, mastH, currentBottom, hides, currentY)`, `MAST_HIDE_QUERY`.
 - Produces: nothing new.
 
 - [ ] **Step 1: Blog reading bar follows the masthead**
@@ -454,7 +463,8 @@ with
       stepperTop - Math.max(currentBottom, 0) - 8,
       header?.offsetHeight ?? 0,
       currentBottom,
-      window.matchMedia(MAST_HIDE_QUERY).matches
+      window.matchMedia(MAST_HIDE_QUERY).matches,
+      window.scrollY
     );
     const delta = stepperTop - mastheadBottom - 8;
 ```
@@ -521,8 +531,8 @@ async function login(page, redirect) {
   await login(p, '/forum');
   const h = await bottom(p);
   check('phone: bar visible at the top', h > 40 && (await hiddenAttr(p)) === null, `bottom=${h}`);
-  await scrollSteps(p, 60);
-  check('phone: still visible inside the top zone (60px)', (await bottom(p)) > 40);
+  await scrollSteps(p, 40);
+  check('phone: still visible inside the top zone (40px)', (await bottom(p)) > 40);
   await scrollSteps(p, 400);
   check('phone: hidden after scrolling down', (await bottom(p)) <= 0 && (await hiddenAttr(p)) === 'true', `bottom=${await bottom(p)}`);
   await p.screenshot({ path: 'scratchpad/masthead-hidden-forum.png' });
@@ -565,8 +575,8 @@ async function login(page, redirect) {
   const rm = await (await b.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })).newPage();
   await rm.goto(`${BASE}/blog`, { waitUntil: 'networkidle' });
   await scrollSteps(rm, 400);
-  const dur = await rm.evaluate(() => getComputedStyle(document.querySelector('header')).transitionDuration);
-  check('reduced motion: hides without a transition', (await bottom(rm)) <= 0 && (dur === '0s' || dur === ''), `duration=${dur}`);
+  const prop = await rm.evaluate(() => getComputedStyle(document.querySelector('header')).transitionProperty);
+  check('reduced motion: hides without a transition', (await bottom(rm)) <= 0 && prop === 'none', `transition-property=${prop}`);
 
   await b.close();
   const failed = results.filter((r) => !r).length;
