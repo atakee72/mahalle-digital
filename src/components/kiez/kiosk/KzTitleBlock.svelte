@@ -36,7 +36,7 @@
   );
 </script>
 
-<section class="px-4 md:px-5 py-5 lg:px-9 lg:pt-6 lg:pb-5 border-b border-dashed border-rule">
+<section class="px-4 md:px-9 py-5 lg:px-10 lg:pt-6 lg:pb-5 border-b border-dashed border-rule">
   <div class="grid gap-6 lg:gap-7 lg:grid-cols-[1fr_330px] items-start">
     <div class="min-w-0">
       <div class="font-dmmono text-[11px] uppercase tracking-[0.14em]" style="color: var(--k-accent, var(--k-moss));">

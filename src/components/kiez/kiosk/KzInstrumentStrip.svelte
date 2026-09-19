@@ -66,7 +66,7 @@
   const GAP_Y = 40 - GAP_H;
 
   const wrapClass = 'flex flex-wrap items-center gap-3.5 lg:flex-nowrap lg:gap-6';
-  const padClass = 'px-4 md:px-[18px] py-3 lg:px-9 lg:py-3.5'; // 16px on phones = the shared page inset (was 18, the title below it 20)
+  const padClass = 'px-4 md:px-9 py-3 lg:px-10 lg:py-3.5'; // 16px on phones = the shared page inset (was 18, the title below it 20)
   const leftClass = 'w-full lg:w-auto lg:min-w-[300px]';
   const rightClass = 'text-right lg:ml-auto';
   const tileClass =

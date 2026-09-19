@@ -5,7 +5,7 @@
   // No props — rendered when loading && data.items.length === 0 (first paint).
 </script>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 px-4 md:px-5 lg:px-9 py-6" aria-hidden="true">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 px-4 md:px-9 lg:px-10 py-6" aria-hidden="true">
   {#each Array(6) as _, i (i)}
     <div
       class="market-skeleton"

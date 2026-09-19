@@ -19,7 +19,7 @@
   const accent = $derived(KZ_SERIES_COLORS[plr] ?? KZ_SERIES_COLORS.all);
 </script>
 
-<section data-tour="kiez-plr" class="flex items-center gap-4 border-b border-dashed border-rule px-4 py-3.5 lg:gap-[26px] lg:px-9 lg:py-[18px]">
+<section data-tour="kiez-plr" class="flex items-center gap-4 border-b border-dashed border-rule px-4 md:px-9 py-3.5 lg:gap-[26px] lg:px-10 lg:py-[18px]">
   <div class="shrink-0 lg:hidden">
     <KzMap size={56} {accent} highlight={plr} />
   </div>

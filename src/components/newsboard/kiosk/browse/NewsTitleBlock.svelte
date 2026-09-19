@@ -4,7 +4,7 @@
 </script>
 
 <section
-  class="flex justify-between items-end px-4 md:px-9"
+  class="flex justify-between items-end px-4 md:px-9 lg:px-10"
   style="padding-top:20px; padding-bottom:14px; border-bottom:1px dashed var(--k-rule);"
 >
   <div>

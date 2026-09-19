@@ -15,7 +15,7 @@
   // depends on Tailwind's default mono stack anymore.)
 </script>
 
-<footer class="flex flex-col items-start gap-4 px-4 md:px-5 py-5 lg:flex-row lg:items-center lg:justify-between lg:px-9 lg:py-6">
+<footer class="flex flex-col items-start gap-4 px-4 md:px-9 py-5 lg:flex-row lg:items-center lg:justify-between lg:px-10 lg:py-6">
   <div class="font-dmmono text-[10px] leading-relaxed text-[var(--k-ink-mute)]">
     {$t['kiez.footer.sources']}: Amt für Statistik Berlin-Brandenburg · Monitoring Soziale Stadtentwicklung · BLUME-Messnetz (mc042)<br />
     † {$t['kiez.footer.loggerNote']}

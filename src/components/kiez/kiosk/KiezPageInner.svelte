@@ -89,7 +89,7 @@
   {#if statsStatus === 'loading'}
     <KzSkeleton />
   {:else if statsStatus === 'error'}
-    <section class="px-4 md:px-5 py-12 lg:px-9">
+    <section class="px-4 md:px-9 py-12 lg:px-10">
       <div class="rounded-lg border-[1.5px] border-dashed border-[var(--k-danger)] px-5 py-6 text-center">
         <p class="font-serif italic text-[17px] text-[var(--k-ink-soft)]">{$t['kiez.state.error.title']}</p>
         <p class="mt-1.5 font-dmmono text-[10px] text-[var(--k-ink-mute)]">{errorDetail || $t['kiez.state.error.network']} · /api/kiez-stats</p>
@@ -100,7 +100,7 @@
       </div>
     </section>
   {:else if isEmpty}
-    <section class="px-4 md:px-5 py-12 lg:px-9">
+    <section class="px-4 md:px-9 py-12 lg:px-10">
       <div class="rounded-lg border-[1.5px] border-dashed border-[var(--k-rule)] px-5 py-6 text-center">
         <p class="font-serif italic text-[17px] text-[var(--k-ink-soft)]">{$t['kiez.state.empty.title']}</p>
         <p class="mt-2 text-[12.5px] leading-relaxed text-[var(--k-ink-mute)]">{$t['kiez.state.empty.body']}</p>

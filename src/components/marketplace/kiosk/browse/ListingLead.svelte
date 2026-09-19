@@ -223,10 +223,17 @@
     font-size: 22px;
   }
 
+  /* Tablet: the shared 36px page inset (16 phones · 36 tablets · 40 desktop — same steps as px-4 md:px-9 lg:px-10). */
+  @media (min-width: 768px) {
+    .market-lead {
+      margin: 14px 36px;
+    }
+  }
+
   /* Desktop: 2-column editorial layout per original design. */
   @media (min-width: 1024px) {
     .market-lead {
-      margin: 18px 36px;
+      margin: 18px 40px;
       grid-template-columns: 1.35fr 1fr;
       column-gap: 28px;
     }

@@ -550,7 +550,7 @@
 </script>
 
 <!-- pt-5 md:pt-6 matches the kicker rhythm of calendar/news/market (20/24px under the masthead rule; user, 2026-09-10) — was py-8 md:py-10. -->
-<main class="max-w-7xl mx-auto px-4 md:px-8 lg:px-10 pt-5 md:pt-6 pb-8 md:pb-10">
+<main class="max-w-7xl mx-auto px-4 md:px-9 lg:px-10 pt-5 md:pt-6 pb-8 md:pb-10">
   <!-- ── Header section ─────────────────────────────────────────── -->
   <section class="mb-5 pb-4 border-b border-dashed border-rule">
     <p class="font-dmmono text-[11px] uppercase tracking-[0.18em] text-wine mb-2">
