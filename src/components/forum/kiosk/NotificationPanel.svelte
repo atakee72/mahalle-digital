@@ -139,17 +139,16 @@
   // locks/unlocks immediately.
   $effect(() => {
     const mq = window.matchMedia('(max-width: 1023px)');
+    // <html> only — a body `overflow: hidden` locks nothing on this site and
+    // un-sticks the masthead (2026-09-19, see lib/scrollLock.ts).
     const prevHtml = document.documentElement.style.overflow;
-    const prevBody = document.body.style.overflow;
     let locked = false;
     function sync() {
       if (mq.matches && !locked) {
         document.documentElement.style.overflow = 'hidden';
-        document.body.style.overflow = 'hidden';
         locked = true;
       } else if (!mq.matches && locked) {
         document.documentElement.style.overflow = prevHtml;
-        document.body.style.overflow = prevBody;
         locked = false;
       }
     }
@@ -159,7 +158,6 @@
       mq.removeEventListener('change', sync);
       if (locked) {
         document.documentElement.style.overflow = prevHtml;
-        document.body.style.overflow = prevBody;
       }
     };
   });

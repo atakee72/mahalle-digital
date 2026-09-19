@@ -7,10 +7,16 @@
 // React modals get this from react-remove-scroll; the Svelte native-dialog
 // modals call lockPageScroll() while open.
 //
-// Must lock <html> AND <body>: global.css sets `html { overflow-x: clip }`
-// (the sticky fix), which stops body overflow from propagating to the
-// viewport, so a body-only `overflow: hidden` is a silent no-op here.
-// Inline styles are saved and restored so the stylesheet's `clip` survives.
+// Lock <html>, and ONLY <html>. global.css sets `html { overflow-x: clip }`
+// (the sticky fix), so <html>'s overflow is never `visible` and <body>'s
+// overflow never propagates to the viewport: a body `overflow: hidden` locks
+// NOTHING here (measured 2026-09-19: body-only → the wheel still scrolls).
+// What it does do is turn <body> into its own scroll container, and the
+// sticky masthead then sticks to <body> instead of the screen — with any
+// locking overlay open at scrollY > 0 the top bar scrolled away under the
+// scrim (prod, header top -380 at scrollY 380). Until that day this function
+// set both; never add the body half back.
+// The inline style is saved and restored so the stylesheet's `clip` survives.
 // The scrollbar gutter is compensated on <body> so desktop content doesn't
 // jump sideways when the scrollbar disappears.
 
@@ -20,16 +26,13 @@ export function lockPageScroll(): () => void {
   const body = document.body;
   const prev = {
     htmlOverflow: html.style.overflow,
-    bodyOverflow: body.style.overflow,
     bodyPaddingRight: body.style.paddingRight,
   };
   const gutter = window.innerWidth - html.clientWidth;
   html.style.overflow = 'hidden';
-  body.style.overflow = 'hidden';
   if (gutter > 0) body.style.paddingRight = `${gutter}px`;
   return () => {
     html.style.overflow = prev.htmlOverflow;
-    body.style.overflow = prev.bodyOverflow;
     body.style.paddingRight = prev.bodyPaddingRight;
   };
 }

@@ -100,20 +100,18 @@
     };
   });
 
-  // Mobile bottom-sheet: lock scroll while open. Must lock <html> too —
-  // global.css sets `html { overflow-x: clip }` (sticky fix), which stops
-  // body overflow from propagating to the viewport, so a body-only lock
-  // doesn't actually prevent page scroll. Desktop dropdown deliberately
-  // doesn't lock (unchanged behavior).
+  // Mobile bottom-sheet: lock scroll while open — on <html> ONLY. global.css
+  // sets `html { overflow-x: clip }` (sticky fix), so body overflow never
+  // reaches the viewport: a body lock prevents nothing, and it un-sticks the
+  // masthead this menu hangs from (it made <body> a scroll container; the bar
+  // scrolled away under the scrim — fixed 2026-09-19, see lib/scrollLock.ts).
+  // Desktop dropdown deliberately doesn't lock (unchanged behavior).
   $effect(() => {
     if (!window.matchMedia('(max-width: 1023px)').matches) return;
     const prevHtml = document.documentElement.style.overflow;
-    const prevBody = document.body.style.overflow;
     document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
     return () => {
       document.documentElement.style.overflow = prevHtml;
-      document.body.style.overflow = prevBody;
     };
   });
 </script>
