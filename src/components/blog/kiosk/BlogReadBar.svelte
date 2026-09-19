@@ -52,8 +52,12 @@
   const done = $derived(progress >= 1);
 </script>
 
+<!-- Docks under the masthead's VISIBLE height: KioskNav publishes --k-mast-offset
+     (0px while the bar is hidden on phones, 2026-09-19). The measured topOffset
+     stays as the fallback for the first paint before the island has run. -->
 <div
-  style="border-bottom: 1.5px solid var(--k-ink); background: var(--k-paper-warm); position: sticky; top: {topOffset}px; z-index: 30;"
+  class="transition-[top] duration-200 ease-out motion-reduce:transition-none"
+  style="border-bottom: 1.5px solid var(--k-ink); background: var(--k-paper-warm); position: sticky; top: var(--k-mast-offset, {topOffset}px); z-index: 30;"
 >
   <!-- Desktop row -->
   <div class="hidden lg:flex items-center" style="gap: 14px; padding: 9px 48px;">

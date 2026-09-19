@@ -27,6 +27,7 @@
   import { tick } from 'svelte';
   import { swipeX } from '../../../../lib/swipe';
   import { resolveDragEnd } from '../../../../lib/calendar/rangeDrag';
+  import { mastBottomAfterScroll, MAST_HIDE_QUERY } from '../../../../lib/nav/hideOnScroll';
   import {
     eventCoversDay,
     isLiveNow,
@@ -156,8 +157,20 @@
     const stepper = Array.from(document.querySelectorAll<HTMLElement>('[data-tour="cal-month-nav"]'))
       .find((el) => el.getBoundingClientRect().height > 0);
     if (!stepper) return;
-    const mastheadBottom = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
-    const delta = stepper.getBoundingClientRect().top - mastheadBottom - 8;
+    // The scroll below may itself hide or show the masthead (hide-on-scroll,
+    // 2026-09-19) — aim at where the bar WILL be, or the stepper lands a bar's
+    // height too low (bar hides) or under it (bar returns).
+    const header = document.querySelector('header');
+    const currentBottom = header?.getBoundingClientRect().bottom ?? 0;
+    const stepperTop = stepper.getBoundingClientRect().top;
+    const mastheadBottom = mastBottomAfterScroll(
+      stepperTop - Math.max(currentBottom, 0) - 8,
+      header?.offsetHeight ?? 0,
+      currentBottom,
+      window.matchMedia(MAST_HIDE_QUERY).matches,
+      window.scrollY
+    );
+    const delta = stepperTop - mastheadBottom - 8;
     if (Math.abs(delta) < 4) return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     window.scrollBy({ top: delta, behavior: reduced ? 'auto' : 'smooth' });
