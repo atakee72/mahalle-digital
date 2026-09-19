@@ -111,6 +111,8 @@ Original plan for the record:
 
 ---
 
+**Night before the stand, 2026-09-18 22:50 → 09-19 02:30 (the freeze was lifted by the user for these; last deploy `2d47e6f8` + docs):** forum stats row on one line on phones (`b1f6924c`); Lüders' photo (`7a3b00bd`); two LATE guest posts — Otto Hempel (Die PARTEI, successor after the death of Angela „Schinnie" Schrauber; `1aa08d6f`) and Matt Bristow (Volt; `2d47e6f8`) — each with its TRUE date and an order-only `sortDate` so it lines up inside the group by surname instead of taking the lead card (now: intro, Bristow, Dehne, Haghanipour, Hempel, Lüders, Mende); the intro got two „Nachtrag" lines and says „Sechs Gastbeiträge". Forum: a normal announcement about the stand, the „Lesetipp" recommendation and the official „Heute Infostand … hakt etwas? Schreib mich an" pin were posted (DB content, user-run scripts / dashboard). **Vercel incident the same night** („Elevated Errors Triggering Deployments", 22:56–23:13): two pushes got no build; after the fix Vercel REPLAYED the queued builds out of order and the newest-CREATED build — of an OLDER commit — took the domain. Recipe: compare `gh api repos/atakee72/mahalle-digital/deployments` (newest sha) with a marker on the live site, then push one empty commit; once every commit has its build nothing can overtake it. Each deploy restarts the servers → expect a one-off Sentry blip (`MongoServerSelectionError` on `/api/profile/tour`, ClientRouter `null.body` on a page open during the swap); resolve them so the board stays clean. Sentry's auto-detected uptime monitor on a per-build `*.vercel.app` address was disabled (UptimeRobot watches the real domain). Rejected that night, with reasons recorded in the conversation: an invitation modal, an „expect hiccups today" modal (→ pinned official instead), thinner mobile chrome (tap targets), an inverted bottom nav. Parked with a finished, audited plan: mobile masthead hide-on-scroll (`docs/superpowers/plans/2026-09-19-mobile-masthead-hide-on-scroll.md`).
+
 ## E. After the first event (30 min)
 
 - `rateLimits` collection: count `baseKey` starting with `reg:ip` that hit the cap (tells you whether A1 mattered).
@@ -118,6 +120,8 @@ Original plan for the record:
 - Orphan check is free: `pnpm tsx scripts/cleanup-orphan-comments.ts` against prod (dry-run) — expect 0.
 - Decide whether to keep the raised limits.
 - **Node.js 24 on Vercel — between 27 and 30 Sept, hard deadline 1 Oct 2026** (dashboard warning 09-17: „2 projects using Node.js 20 or older, new builds will fail starting October 1"). Project → Settings → General → Node.js Version → 24.x, then an empty-commit push and the usual fra1 check. Local builds already run on Node 24.11. The second project on the team needs the same switch. Deliberately NOT done before the event (no build-environment change in the last days).
+- Phone chrome, in this order: execute the masthead hide-on-scroll plan on a branch + Vercel preview link for a real-phone pass; then ONE combined pin bar („newest title +2 ▾") and the tag row folded into a „# Tags" chip (≈130 px more room; nothing gets smaller).
+- Sentry filters: server pattern `/MongoNetworkError.*timed out/` misses `MongoNetworkTimeoutError` and `MongoServerSelectionError` (one-word fix); client `beforeSend` twin for ClientRouter noise (`AbortError`, `InvalidStateError`, `null (reading 'body')`).
 - Active CPU on Vercel: 1 h 39 m per 30 days for 16 K invocations (≈ 370 ms each) — look at what burns it (bcrypt, SSR renders, the two crons, my 09-14 load smoke) once the events are over.
 
 ---
