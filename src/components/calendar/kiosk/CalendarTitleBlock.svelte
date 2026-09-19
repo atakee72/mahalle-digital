@@ -71,7 +71,7 @@
     <div class="font-dmmono text-[11px] uppercase tracking-[0.18em] text-teal mb-2">
       {$t['cal.title.kicker']} · <span class="min-[410px]:hidden">{todayKickerShort}</span><span class="hidden min-[410px]:inline">{todayKicker}</span> · {timeNow}
     </div>
-    <h1 class="font-bricolage font-extrabold text-ink leading-[0.95] tracking-tight text-4xl md:text-5xl">
+    <h1 class="font-bricolage font-extrabold text-ink leading-[0.95] tracking-tight text-[34px] min-[380px]:text-4xl md:text-5xl">
       {$t['cal.title.q1']}
       <span class="font-instrument italic font-normal text-teal">{$t['cal.title.q2']}</span>
       {$t['cal.title.q3']}

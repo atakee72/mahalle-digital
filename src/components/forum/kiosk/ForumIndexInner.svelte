@@ -35,6 +35,7 @@
   import { t, locale } from '../../../lib/kiosk-i18n';
   import { relTime } from '../../../lib/relTime';
   import { parseIndexState, serializeIndexState } from '../../../lib/forum/indexUrlState';
+  import { shortDayMonth } from '../../../lib/forum/dateline';
   import { online } from '../../../lib/onlineStore';
   import { MAX_PINS } from '../../../lib/announcements/pinRules';
   import ForumPostCard from './ForumPostCard.svelte';
@@ -389,6 +390,9 @@
   const hhmm = $derived(
     now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
   );
+  // Below 410 px the kicker uses the short month — the full dateline wrapped to
+  // two lines on 360–390 px phones and pushed the heading down (2026-09-19).
+  const dayMonthShort = $derived(shortDayMonth(now, $locale === 'de' ? 'de' : 'en'));
 
   function handleFilterChange(f: Filter) {
     // 'saved' routes to the dedicated /bookmarks page rather than
@@ -550,11 +554,13 @@
   <!-- ── Header section ─────────────────────────────────────────── -->
   <section class="mb-5 pb-4 border-b border-dashed border-rule">
     <p class="font-dmmono text-[11px] uppercase tracking-[0.18em] text-wine mb-2">
-      FORUM · {dayOfWeek.toUpperCase()} {dayMonth.toUpperCase()} · {hhmm}
+      FORUM · {dayOfWeek.toUpperCase()} <span class="min-[410px]:hidden">{dayMonthShort.toUpperCase()}</span><span class="hidden min-[410px]:inline">{dayMonth.toUpperCase()}</span> · {hhmm}
     </p>
     <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] md:items-end gap-4">
+      <!-- 34px below 380px: at 36px „Was reden wir heute?" is 4px wider than a 360px phone allows and wrapped
+           to a second line (2026-09-19). The calendar's mobile hero uses the same two sizes — keep them in step. -->
       <h1
-        class="font-bricolage font-extrabold text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[0.95] text-ink"
+        class="font-bricolage font-extrabold text-[34px] min-[380px]:text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[0.95] text-ink"
       >
         {$t['forum.title.prefix']}
         <em class="font-instrument italic font-normal text-wine">{$t['forum.title.accent']}</em>
