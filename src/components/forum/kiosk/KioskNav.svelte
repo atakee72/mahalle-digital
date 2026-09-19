@@ -12,6 +12,8 @@
   import { initialsOf } from '../../../lib/initials';
   import AvatarMenu from './AvatarMenu.svelte';
   import NotificationBell from './NotificationBell.svelte';
+  import { untrack } from 'svelte';
+  import { initialMastState, nextMastState, MAST_HIDE_QUERY } from '../../../lib/nav/hideOnScroll';
 
   let { currentPath = '/', user = null } = $props<{
     currentPath?: string;
@@ -21,6 +23,85 @@
   let menuOpen = $state(false);
   let bellOpen = $state(false);
   let avatarEl = $state<HTMLElement | null>(null);
+
+  // ─── Hide-on-scroll (phones/tablets, 2026-09-19) ─────────────────────
+  // The bar slides away on a deliberate scroll down and returns on the first
+  // scroll up (rules + thresholds: lib/nav/hideOnScroll.ts). It moves by
+  // animating the sticky header's `top` — NEVER transform: AvatarMenu's
+  // bottom sheet and the notification panel are position:fixed CHILDREN of
+  // this header, and a transformed ancestor becomes their containing block
+  // (root CLAUDE.md, „backdrop-filter creates a containing block").
+  let headerEl = $state<HTMLElement | null>(null);
+  let mastHidden = $state(false);
+  let mastH = $state(0);
+
+  $effect(() => {
+    const el = headerEl;
+    if (!el) return;
+    const root = document.documentElement;
+    const mq = window.matchMedia(MAST_HIDE_QUERY);
+    let st = initialMastState(window.scrollY);
+    let raf = 0;
+
+    // Write-only on purpose: reading `mastH` back here would make this effect
+    // depend on its own write — it re-ran, and its cleanup deleted the
+    // --k-mast-offset the effect below had just published (found 2026-09-19).
+    const measure = () => {
+      const h = el.offsetHeight;
+      mastH = h;
+      root.style.setProperty('--k-mast-h', `${h}px`);
+    };
+    const apply = () => {
+      raf = 0;
+      // untrack: these reads must not turn this effect into a dependent of the
+      // menu flags (it would tear down and re-subscribe on every menu toggle).
+      const locked = untrack(
+        () =>
+          !mq.matches ||
+          menuOpen ||
+          bellOpen ||
+          el.querySelector(':focus-visible') !== null ||
+          document.querySelector('.tour-card') !== null
+      );
+      st = nextMastState(st, window.scrollY, root.scrollHeight - window.innerHeight, locked);
+      mastHidden = st.hidden;
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(apply);
+    };
+    const onResize = () => {
+      measure();
+      onScroll();
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    mq.addEventListener('change', onScroll);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+      mq.removeEventListener('change', onScroll);
+      root.style.removeProperty('--k-mast-h');
+      root.style.removeProperty('--k-mast-offset');
+    };
+  });
+
+  // Opening a menu, or keyboard focus entering the bar, brings it back at once
+  // (the scroll handler only runs on scroll).
+  $effect(() => {
+    if (menuOpen || bellOpen) mastHidden = false;
+  });
+
+  // Published for whatever docks under the bar (BlogReadBar, calendar reveal).
+  $effect(() => {
+    if (!mastH) return; // not measured yet — consumers keep their own fallback instead of docking at 0 for a frame
+    document.documentElement.style.setProperty('--k-mast-offset', mastHidden ? '0px' : `${mastH}px`);
+  });
 
   // Avatar click toggles the account menu on ALL viewports (desktop:
   // anchored dropdown; mobile: bottom sheet — presentation switches in
@@ -96,7 +177,13 @@
 </script>
 
 <!-- ─── Top bar (sticky, all viewports) ───────────────────────────────── -->
-<header class="sticky top-0 {menuOpen || bellOpen ? 'z-50' : 'z-40'} border-b-2 border-ink" style="background: var(--k-ochre);">
+<header
+  bind:this={headerEl}
+  data-mast-hidden={mastHidden ? 'true' : undefined}
+  onfocusin={() => (mastHidden = false)}
+  class="sticky {menuOpen || bellOpen ? 'z-50' : 'z-40'} border-b-2 border-ink transition-[top] duration-200 ease-out motion-reduce:transition-none"
+  style="background: var(--k-ochre); top: {mastHidden ? -(mastH + 2) : 0}px;"
+>
   <!-- py-2 below lg: a lower bar on phones (user, 2026-09-10); the 44px tap
        boxes inside the 25px locale pill overflow it invisibly, so they don't
        push the row height. -->

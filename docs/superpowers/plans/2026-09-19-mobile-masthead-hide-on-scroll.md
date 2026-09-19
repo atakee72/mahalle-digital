@@ -278,9 +278,13 @@ In the same file, directly under the line `let avatarEl = $state<HTMLElement | n
     let st = initialMastState(window.scrollY);
     let raf = 0;
 
+    // Write-only on purpose: reading `mastH` back here would make this effect
+    // depend on its own write — it re-ran, and its cleanup deleted the
+    // --k-mast-offset the effect below had just published (found 2026-09-19).
     const measure = () => {
-      mastH = el.offsetHeight;
-      root.style.setProperty('--k-mast-h', `${mastH}px`);
+      const h = el.offsetHeight;
+      mastH = h;
+      root.style.setProperty('--k-mast-h', `${h}px`);
     };
     const apply = () => {
       raf = 0;
