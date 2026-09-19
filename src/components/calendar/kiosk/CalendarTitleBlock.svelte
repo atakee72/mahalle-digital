@@ -43,7 +43,11 @@
   // agenda/day used to show the desktop kicker + stats with no title, and the
   // controls sat on the other side — user-reported).
   const dateLocale = $derived($locale === 'de' ? deLocale : enUS);
-  const todayKicker = $derived(format($now, 'EEEE d. MMM', { locale: dateLocale }).toUpperCase());
+  // Two lengths: the forum-style full dateline („KALENDER · DONNERSTAG 30. SEPTEMBER · 21:54", 43 chars in
+  // wide-tracked mono) needs ~400 px; below that the short month keeps the kicker on ONE line — a wrapped
+  // kicker pushes the whole heading down a line (2026-09-19).
+  const todayKicker = $derived(format($now, 'EEEE d. MMMM', { locale: dateLocale }).toUpperCase());
+  const todayKickerShort = $derived(format($now, 'EEEE d. MMM', { locale: dateLocale }).toUpperCase());
   const timeNow = $derived(format($now, 'HH:mm'));
 
   const views: { k: View; label: () => string }[] = [
@@ -61,15 +65,18 @@
        no longer renders its own header/rail; this + CalCategoryRail are the
        single mobile chrome for month, agenda and day. ─────────────────── -->
   <div class="lg:hidden">
-    <div class="font-dmmono text-[10px] uppercase tracking-[0.1em] text-teal mb-2">
-      {todayKicker} · {timeNow}
+    <!-- Kicker + title follow the forum's heading exactly (11px / 0.18em / mb-2, title text-4xl md:text-5xl,
+         no extra top margin): until 2026-09-19 this hero had drifted — 10px kicker without the section name,
+         24px more air above a 40px title — and the calendar's top read differently from every other section. -->
+    <div class="font-dmmono text-[11px] uppercase tracking-[0.18em] text-teal mb-2">
+      {$t['cal.title.kicker']} · <span class="min-[410px]:hidden">{todayKickerShort}</span><span class="hidden min-[410px]:inline">{todayKicker}</span> · {timeNow}
     </div>
-    <h1 class="font-bricolage font-extrabold text-ink leading-[0.95] tracking-tight mt-6 text-[40px] md:text-[48px]">
+    <h1 class="font-bricolage font-extrabold text-ink leading-[0.95] tracking-tight text-4xl md:text-5xl">
       {$t['cal.title.q1']}
       <span class="font-instrument italic font-normal text-teal">{$t['cal.title.q2']}</span>
       {$t['cal.title.q3']}
     </h1>
-    <div class="flex items-center justify-end gap-2 mt-5">
+    <div class="flex items-center justify-end gap-2 mt-4">
       <!-- data-tour anchors duplicate the desktop ones below; the tour engine takes the first VISIBLE match. -->
       <div data-tour="cal-month-nav" class="inline-flex items-center border-[1.5px] border-ink rounded-full font-dmmono text-[11px] font-semibold leading-none">
         <button
@@ -124,7 +131,7 @@
   <!-- ── Desktop header ──────────────────────────────────────────────────── -->
   <div class="hidden lg:block">
   <div class="font-dmmono text-[11px] uppercase tracking-[0.12em] text-teal">
-    {$t['cal.title.kicker']}{#if monthLabel} · {monthLabel}{/if}
+    {$t['cal.title.kicker']}{#if monthLabel}{' · '}{monthLabel}{/if}
   </div>
   <h1
     class="hidden lg:block font-bricolage font-extrabold text-ink leading-[0.95] tracking-tight mt-1.5 text-[40px] md:text-[48px] lg:text-[56px]"
