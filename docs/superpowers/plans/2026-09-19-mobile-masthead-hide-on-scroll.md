@@ -19,6 +19,7 @@
 - **Always visible:** within the first 80 px of the page; on pages that do not scroll; while the account menu or the notification panel is open; while a tour card (`.tour-card`) is on screen; while keyboard focus (`:focus-visible`) is inside the header. Every navigation starts visible (the island re-mounts with fresh state); a scroll RESTORE shorter than 600 px may then hide it again — accepted, it is the state the member left the page in.
 - The locks are evaluated on scroll events (plus an immediate "show" when a menu opens or focus enters the bar). A tour that starts while the bar is hidden therefore shows the bar on its next scroll event, not instantly — accepted: the bar never shifts layout (sticky `top` only), so tour geometry is unaffected, and no tour stop points into the bar (verified: no `data-tour` in `KioskNav`, `NotificationBell`, `AvatarMenu`; no such selector in `src/lib/tour/tourChapters.ts`).
 - Page scroll locks (`src/lib/scrollLock.ts`, `AvatarMenu`'s own lock) set `overflow: hidden` and keep `scrollY` — they produce no scroll jump, so they need no special handling.
+- **Found while executing (2026-09-19), pre-existing and OUT OF SCOPE here:** those same locks put `overflow: hidden` on `<html>`, which un-sticks the sticky header — with a menu or dialog open at any `scrollY > 0` the top bar scrolls away under the scrim (measured on prod without this feature: header top `-380` at `scrollY 380`). It is a scroll-lock bug affecting every locking overlay, to be fixed on its own (candidate: lock without changing `<html>`'s overflow, or `position: fixed` the header while locked) — do not fold it into this branch.
 - **Hide** after 24 px of continuous downward travel; **show** after 8 px of continuous upward travel ("first scroll up"). A single-frame jump larger than 600 px is a programmatic jump (scroll restore), not a gesture: it never changes the state.
 - **No `transform`, `filter`, `will-change` or `contain` on the `<header>`** — see Architecture. Animate `top` on the sticky element.
 - `prefers-reduced-motion: reduce` → the bar still hides/shows, without a transition.
@@ -555,7 +556,11 @@ async function login(page, redirect) {
   await p.waitForTimeout(400);
   const sheet = await p.evaluate(() => { const el = document.querySelector('.am-menu'); if (!el) return null; const r = el.getBoundingClientRect(); return { w: Math.round(r.width), bottom: Math.round(r.bottom), vw: innerWidth, vh: innerHeight }; });
   check('phone: account sheet is positioned against the VIEWPORT (no containing-block bug)', !!sheet && sheet.w >= sheet.vw - 2 && sheet.bottom >= sheet.vh - 2, JSON.stringify(sheet));
-  check('phone: bar visible while the menu is open', (await bottom(p)) > 40);
+  // What THIS feature owns is the bar's STATE. Its on-screen position under an open menu is a separate,
+  // pre-existing bug (verified on prod 2026-09-19, without this code): the scroll lock's `html{overflow:hidden}`
+  // un-sticks the header, so it scrolls away under the scrim at any scrollY > 0.
+  const menuState = await p.evaluate(() => { const h = document.querySelector('header'); return { hiddenAttr: h.getAttribute('data-mast-hidden'), top: h.style.top }; });
+  check('phone: bar STATE stays visible while the menu is open', menuState.hiddenAttr === null && menuState.top === '0px', JSON.stringify(menuState));
   await p.keyboard.press('Escape');
 
   // ── phone, blog article: the reading bar follows ──
