@@ -3,7 +3,7 @@
 // never import it from client islands (they fetch the APIs instead).
 import type { Db } from 'mongodb';
 import type { AirDailyDoc, AirLogDoc, AirHistoryDay, AirHistoryResponse } from '../../types/kiezStats';
-import { fetchMc042 } from './blume';
+import { fetchMc042, isValidGrade } from './blume';
 
 export const AIR_LOG_COLLECTION = 'schillerkiez_air_log';
 export const AIR_DAILY_COLLECTION = 'schillerkiez_air_daily';
@@ -42,10 +42,14 @@ export function buildDailyRollup(
   day: string,
   lqis: number[]
 ): Omit<AirDailyDoc, 'updatedAt'> | null {
-  if (lqis.length === 0) return null;
-  const lqiMax = Math.max(...lqis);
-  const lqiMean = Math.round((lqis.reduce((a, b) => a + b, 0) / lqis.length) * 10) / 10;
-  return { day, lqiMax, lqiMean, readings: lqis.length };
+  // Only real grades count. Rows logged before 2026-09-19 can carry BLUME's
+  // -1 „no measurement" code (see blume.ts) — one of them turned a day of 2s
+  // into lqiMean -0.1.
+  const valid = lqis.filter(isValidGrade);
+  if (valid.length === 0) return null;
+  const lqiMax = Math.max(...valid);
+  const lqiMean = Math.round((valid.reduce((a, b) => a + b, 0) / valid.length) * 10) / 10;
+  return { day, lqiMax, lqiMean, readings: valid.length };
 }
 
 export async function ensureAirIndexes(db: Db): Promise<void> {
@@ -65,7 +69,12 @@ export async function recomputeDailyRollup(db: Db, day: string): Promise<void> {
     .map((d) => d.lqi as number)
     .toArray();
   const rollup = buildDailyRollup(day, lqis);
-  if (!rollup) return;
+  if (!rollup) {
+    // No valid reading (any more) ⇒ no doc: a rollup left over from „no
+    // measurement" rows must not survive as a fake day.
+    await db.collection(AIR_DAILY_COLLECTION).deleteOne({ day });
+    return;
+  }
   await db
     .collection(AIR_DAILY_COLLECTION)
     .updateOne({ day }, { $set: { ...rollup, updatedAt: new Date() } }, { upsert: true });
@@ -150,7 +159,7 @@ export async function getAirHistory(db: Db, now: Date = new Date()): Promise<Air
 
   const last = await db
     .collection(AIR_LOG_COLLECTION)
-    .find({}, { projection: { ts: 1, lqi: 1 } })
+    .find({ lqi: { $gte: 1, $lte: 5 } }, { projection: { ts: 1, lqi: 1 } }) // never a stored „no measurement" row
     .sort({ ts: -1 })
     .limit(1)
     .toArray();
