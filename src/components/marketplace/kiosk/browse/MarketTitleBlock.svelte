@@ -43,7 +43,7 @@
 </script>
 
 <section
-  class="px-5 py-5 lg:px-9 lg:py-[22px] lg:pb-[14px]"
+  class="px-4 md:px-5 py-5 lg:px-9 lg:py-[22px] lg:pb-[14px]"
   style="border-bottom: 1px dashed var(--k-rule);"
 >
   <div

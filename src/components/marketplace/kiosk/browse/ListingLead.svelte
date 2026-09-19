@@ -197,7 +197,9 @@
 <style>
   /* Mobile-first: single-column stack, tight margins, horizontal dashed divider. */
   .market-lead {
-    margin: 14px 12px;
+    /* 16px side margin = the page inset every section uses on phones (forum, calendar, news: 16).
+       Was 12px while this page's heading sat at 20px — heading and cards did not share an edge (2026-09-19). */
+    margin: 14px 16px;
     display: grid;
     grid-template-columns: 1fr;
     row-gap: 0;

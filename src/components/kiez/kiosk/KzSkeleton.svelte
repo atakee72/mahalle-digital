@@ -5,7 +5,7 @@
   // (desktop) and :188-190 (mobile).
 </script>
 
-<div class="px-5 py-8 lg:px-9" aria-hidden="true">
+<div class="px-4 md:px-5 py-8 lg:px-9" aria-hidden="true">
   <!-- mobile: two stacked bars (states.jsx:188-190) -->
   <div class="flex flex-col gap-2.5 lg:hidden">
     <div class="kz-skel h-14 rounded-lg"></div>

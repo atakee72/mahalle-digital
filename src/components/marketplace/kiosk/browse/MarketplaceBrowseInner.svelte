@@ -457,7 +457,7 @@
 
     <!-- ─── Listing grid ───────────────────────────────────────────── -->
     {#if gridItems.length > 0}
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 px-5 py-5 lg:px-9 lg:py-6" data-tour="markt-grid">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 px-4 md:px-5 py-5 lg:px-9 lg:py-6" data-tour="markt-grid">
         {#each gridItems as item (item._id)}
           <a
             href="/marketplace/{item._id}"
