@@ -261,9 +261,18 @@
     await tick();
     document.querySelector<HTMLElement>('#forum-pin-stack button')?.focus();
   }
+  // Folding plays the unfold in reverse first (.pin-fold-out, last bar leaves
+  // first), then the summary bar takes over. Instant under reduced motion.
+  let pinsFolding = $state(false);
   async function foldPins() {
-    pinsUnfolded = false;
+    if (pinsFolding) return;
     expandedPinId = null; // a card must not stay open inside a hidden stack
+    if (pinSlideMs > 0) {
+      pinsFolding = true;
+      await new Promise((r) => setTimeout(r, 200 + 40 * (pinnedOfficials.length - 1)));
+      pinsFolding = false;
+    }
+    pinsUnfolded = false;
     await tick();
     document.querySelector<HTMLElement>('[data-pin-summary]')?.focus();
   }
@@ -691,8 +700,8 @@
                  from under the first one (.pin-unfold-in in global.css — this
                  island is nested, a <style> block here would be orphaned). -->
             <div
-              class={pinMode === 'unfolded' ? (i === 0 ? 'relative z-[1]' : 'pin-unfold-in') : ''}
-              style={`--pin-i:${i}`}
+              class={pinMode === 'unfolded' ? (i === 0 ? 'relative z-[1]' : pinsFolding ? 'pin-fold-out' : 'pin-unfold-in') : ''}
+              style={`--pin-i:${i};--pin-r:${pinnedOfficials.length - 1 - i}`}
             >
               <!-- #7fc2ce is deliberate: teal legible on ink (no on-ink teal
                    token exists — same reason the blog has --k-rust-on-ink).
@@ -737,9 +746,9 @@
               type="button"
               data-pin-fold
               aria-controls="forum-pin-stack"
-              style={`--pin-i:${pinnedOfficials.length}`}
+              style={`--pin-i:${pinnedOfficials.length};--pin-r:0`}
               onclick={foldPins}
-              class="pin-unfold-in md:hidden mt-1 ml-auto flex items-center gap-1 min-h-[36px] px-2 font-dmmono text-[10px] uppercase tracking-[0.12em] text-ink-mute focus:outline-none focus:ring-2 focus:ring-ink rounded"
+              class="{pinsFolding ? 'pin-fold-out' : 'pin-unfold-in'} md:hidden mt-1 ml-auto flex items-center gap-1 min-h-[36px] px-2 font-dmmono text-[10px] uppercase tracking-[0.12em] text-ink-mute focus:outline-none focus:ring-2 focus:ring-ink rounded"
             ><span aria-hidden="true">▴</span> {$t['pinned.stack.collapse']}</button>
           {/if}
         </div>

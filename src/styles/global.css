@@ -1083,12 +1083,24 @@ option:disabled {
     animation-delay: calc(var(--pin-i, 1) * 40ms);
   }
   [data-pin-fold].pin-unfold-in { animation-name: pinFoldCtlIn; }
+  /* Folding back: the same move in reverse, the last bar leaves first
+     (--pin-r counts from the bottom); foldPins() waits for it, then swaps. */
+  .pin-fold-out {
+    animation: pinFoldOut 200ms cubic-bezier(.4,0,.7,.3) both;
+    animation-delay: calc(var(--pin-r, 0) * 40ms);
+  }
+  [data-pin-fold].pin-fold-out { animation-name: pinFoldCtlOut; animation-duration: 120ms; }
 }
 @keyframes pinUnfoldIn {
   from { transform: translateY(calc(var(--pin-i, 1) * -44px)); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
 @keyframes pinFoldCtlIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pinFoldOut {
+  from { transform: none; opacity: 1; }
+  to { transform: translateY(calc(var(--pin-i, 1) * -44px)); opacity: 0; }
+}
+@keyframes pinFoldCtlOut { from { opacity: 1; } to { opacity: 0; } }
 
 .tour-ring {
   position: fixed; z-index: 60; pointer-events: none;
