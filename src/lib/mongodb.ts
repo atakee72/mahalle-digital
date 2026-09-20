@@ -1,4 +1,5 @@
 import { MongoClient, Db, type MongoClientOptions } from "mongodb";
+import { connectWithRetry } from "./mongoRetry";
 
 if (!import.meta.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
@@ -69,8 +70,12 @@ function getClientPromise(): Promise<MongoClient> {
 const clientPromise: Promise<MongoClient> = getClientPromise();
 export default clientPromise;
 
-// Helper function to get DB instance (backward compatibility)
+// Helper function to get DB instance (backward compatibility).
+// One retry for a cold-start connect failure (2026-09-20, see mongoRetry.ts):
+// the failed attempt is un-cached above, so the second `getClientPromise()`
+// builds a fresh client — what the NEXT request used to get, this caller now
+// gets itself. A real outage still throws (last error) and stays loud.
 export async function connectDB(): Promise<Db> {
-  const client = await getClientPromise();
+  const client = await connectWithRetry(getClientPromise);
   return client.db();
 }

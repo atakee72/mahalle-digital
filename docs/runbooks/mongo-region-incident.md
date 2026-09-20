@@ -90,3 +90,27 @@ builds a fresh client.
 **Caveat:** consumers that await the *default export* (the Auth.js adapter in
 `auth.config.ts`) hold one fixed promise and don't get the retry. Prefer
 `connectDB()` in new code.
+
+## Reopened 2026-09-18 … 09-20 — one event after every deploy → retry the first connect
+
+PROD-2 reopened three times in two days (09-18 00:07, 09-20 13:09 local, plus the
+08-24 event): each time ONE event, in the minute after a production deploy, on
+`GET /api/profile/tour` (an open tab polling the tour state hits the freshly
+started instance first). Stack frames read first, per the playbook above — all
+three: `MongoClient.connect → topologyConnect → Topology.connect →
+Topology.selectServer`, `handled=true`, with request context. So the 08-11 fixes
+work as designed (no unhandled rejection, no poisoned container); what remained
+is that the ONE request waiting on a slow cold-start connect fails after 10 s,
+while the next request connects instantly with a fresh client.
+
+**Fix (`src/lib/mongoRetry.ts`, used by `connectDB()`):** retry that first
+connect once, for connection-class errors only. Not a Sentry filter — an outage
+has the same signature and must stay loud; it now surfaces after two attempts
+(~20 s) instead of one (~10 s). Verified with the real driver against an
+unreachable host → dev database (attempts 2, failed client closed, ping ok, 0
+unhandled rejections) and against a permanent outage (error after 2 attempts).
+
+**If PROD-2 reopens again:** read the frames. `MongoClient.connect` twice in a
+row means both attempts failed — that is no longer a cold-start blip; check
+Atlas status and the region pin before anything else.
+

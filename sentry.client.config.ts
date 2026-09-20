@@ -4,6 +4,7 @@
 // With SENTRY_DSN unset, init is a documented no-op — the app runs
 // with monitoring disabled until env vars land.
 import * as Sentry from '@sentry/astro';
+import { isClientNoise } from './src/lib/sentry/clientNoise';
 
 Sentry.init({
   // PUBLIC_ prefix REQUIRED: Astro only exposes PUBLIC_*-prefixed env vars
@@ -23,4 +24,15 @@ Sentry.init({
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 0,
   sendDefaultPii: false,
+  // Drop browser noise that can never point at a defect (cancelled view
+  // transitions, React's hydrate-fallback notice, ClientRouter's null read on
+  // a page that was open during a deploy) — they reopened issues and pinged
+  // the admin after every deploy / backgrounded tab. Rules, reasons and the
+  // exact strings: src/lib/sentry/clientNoise.ts (unit-tested). Twin of the
+  // server config's TRANSIENT_PATTERNS.
+  beforeSend(event) {
+    const ex = event.exception?.values?.[0];
+    const files = (ex?.stacktrace?.frames ?? []).map((f) => f.filename ?? '');
+    return isClientNoise(ex?.type, ex?.value, files) ? null : event;
+  },
 });
