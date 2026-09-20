@@ -14,6 +14,7 @@
   // filter logic (which items to show) lives in ForumIndexInner. Saved /
   // Mine + multi-collection feed land in Phase 4b.
 
+  import { tick } from 'svelte';
   import { t } from '../../../lib/kiosk-i18n';
   import { scrollFade } from '../../../lib/scrollFade';
   import { tagsChipLabel } from '../../../lib/forum/mobileChrome';
@@ -47,6 +48,40 @@
   // Per-visit view state only. From md up the row is always visible and
   // the chip is display:none, so this flag has no effect there.
   let tagsOpen = $state(false);
+  // Phones: the tag row slides out from under the filter row and the posts
+  // follow (same move as the forum pin stack); closing plays it backwards
+  // and only then hides the row. Web Animations on the row itself — no CSS
+  // needed. Instant under prefers-reduced-motion.
+  let tagRowEl = $state<HTMLElement | null>(null);
+  let tagsMoving = false;
+  const tagMotionOk = () =>
+    !!tagRowEl?.animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const tagFrames = (h: number) => [
+    { height: '0px', marginTop: '0px', opacity: 0, transform: 'translateY(-10px)' },
+    { height: `${h}px`, marginTop: '8px', opacity: 1, transform: 'none' }
+  ];
+  async function toggleTags() {
+    if (tagsMoving) return;
+    if (!tagsOpen) {
+      tagsOpen = true;
+      await tick();
+      if (!tagRowEl || !tagMotionOk()) return;
+      tagsMoving = true;
+      const a = tagRowEl.animate(tagFrames(tagRowEl.offsetHeight), { duration: 240, easing: 'cubic-bezier(.2,.7,.3,1)' });
+      await a.finished.catch(() => {});
+      tagsMoving = false;
+    } else {
+      if (tagRowEl && tagMotionOk()) {
+        tagsMoving = true;
+        const a = tagRowEl.animate(tagFrames(tagRowEl.offsetHeight).reverse(), { duration: 200, easing: 'cubic-bezier(.4,0,.7,.3)', fill: 'forwards' });
+        await a.finished.catch(() => {});
+        tagsOpen = false;
+        await tick();
+        a.cancel();
+        tagsMoving = false;
+      } else tagsOpen = false;
+    }
+  }
 
   // Pill chrome — outlined rounded-full, two color states per tone.
   function pillClass(active: boolean): string {
@@ -138,7 +173,7 @@
         data-tour="forum-tag"
         aria-expanded={tagsOpen}
         aria-controls="forum-tag-row"
-        onclick={() => (tagsOpen = !tagsOpen)}
+        onclick={toggleTags}
         class={`md:hidden shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full font-bricolage font-medium text-sm transition-colors duration-150 ${pillClass(!!activeTag)}`}
       >
         <span class="truncate max-w-[7rem]">{tagsChipLabel(activeTag, $t['filter.tagsChip'])}</span>
@@ -153,6 +188,7 @@
          generates classes it can read in the source. -->
     <div
       id="forum-tag-row"
+      bind:this={tagRowEl}
       use:scrollFade
       class={`kiosk-scroll-fade items-center gap-2 overflow-x-auto no-scrollbar mt-2 lg:mt-0 lg:contents ${tagsOpen ? 'flex' : 'hidden md:flex'}`}
     >
