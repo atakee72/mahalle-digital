@@ -40,6 +40,7 @@
   import { MAX_PINS } from '../../../lib/announcements/pinRules';
   import ForumPostCard from './ForumPostCard.svelte';
   import TagBar, { type Filter } from './TagBar.svelte';
+  import { pinStackMode } from '../../../lib/forum/mobileChrome';
   import ForumIndexSkeleton from './states/ForumIndexSkeleton.svelte';
   import EmptyFilterPanel from './states/EmptyFilterPanel.svelte';
   import EmptyZeroPanel from './states/EmptyZeroPanel.svelte';
@@ -245,6 +246,26 @@
 
   function togglePin(id: string) {
     expandedPinId = expandedPinId === id ? null : id;
+  }
+
+  // Phones (< md), 2026-09-20: two or three pins start as ONE summary bar
+  // ("newest title +2 ▾"); a tap unfolds the usual bars, "einklappen" folds
+  // them again. From md up the bars always show (CSS) and this state has no
+  // effect. Per-visit view state, like expandedPinId — never persisted.
+  let pinsUnfolded = $state(false);
+  const pinMode = $derived(pinStackMode(pinnedOfficials.length, pinsUnfolded));
+  // The tapped button leaves the DOM on both switches — hand the focus on,
+  // or keyboard and screen-reader users are dropped back to <body>.
+  async function unfoldPins() {
+    pinsUnfolded = true;
+    await tick();
+    document.querySelector<HTMLElement>('#forum-pin-stack button')?.focus();
+  }
+  async function foldPins() {
+    pinsUnfolded = false;
+    expandedPinId = null; // a card must not stay open inside a hidden stack
+    await tick();
+    document.querySelector<HTMLElement>('[data-pin-summary]')?.focus();
   }
 
   // Relative time for the slim pin bars — shared helper (src/lib/relTime.ts).
@@ -637,9 +658,33 @@
            collapsing any other open one; clicking the open bar again
            closes it. The card is NOT a link — only its "→ read" CTA
            (readHref) navigates. Hidden when the kind filter wouldn't
-           include announcements. -->
+           include announcements. Phones (< md), 2026-09-20: with 2–3 pins
+           the stack starts as ONE summary bar (data-pin-summary, "+n"); a
+           tap unfolds these bars, "einklappen" folds them (pinMode /
+           pinsUnfolded). -->
       {#if (activeFilter === 'all' || activeFilter === 'announcement') && pinnedOfficials.length}
-        <div class="md:col-span-2 lg:col-span-3 flex flex-col gap-2">
+        <div class="md:col-span-2 lg:col-span-3">
+          {#if pinMode === 'folded'}
+            <!-- Phones only: one bar for all pins. Same chrome and height as
+                 a pin bar; the relative time gives way to the "+n" badge. -->
+            <button
+              type="button"
+              data-pin-summary
+              aria-expanded="false"
+              aria-controls="forum-pin-stack"
+              onclick={unfoldPins}
+              class="md:hidden w-full text-left flex items-center gap-3 min-h-[36px] px-4 py-[5px] bg-ink text-paper border-[1.5px] border-teal rounded-lg shadow-[2px_2px_0_var(--k-teal)] focus:outline-none focus:ring-2 focus:ring-ink"
+            >
+              <span aria-hidden="true" class="text-[12px]">📌</span>
+              <span class="shrink-0 font-dmmono text-[9px] uppercase tracking-[0.12em] text-[#7fc2ce]">{$t['pinned.bar.label']}</span>
+              <span class="min-w-0 truncate font-bricolage text-[14px] font-bold tracking-[-0.01em]">{pinnedOfficials[0].title}</span>
+              <span aria-hidden="true" class="ml-auto shrink-0 px-1.5 rounded-full border border-[#7fc2ce] font-dmmono text-[10px] leading-[16px] text-[#7fc2ce]">+{pinnedOfficials.length - 1}</span>
+              <span class="sr-only">{($t['pinned.stack.more'] as string).replace('{n}', String(pinnedOfficials.length - 1))}</span>
+              <span aria-hidden="true" class="shrink-0 text-[#7fc2ce] font-bold">▾</span>
+            </button>
+          {/if}
+          <!-- 'hidden md:flex' must stay a literal string (Tailwind scan). -->
+          <div id="forum-pin-stack" class={`flex-col gap-2 ${pinMode === 'folded' ? 'hidden md:flex' : 'flex'}`}>
           {#each pinnedOfficials as pin (pin._id)}
             {@const open = expandedPinId === pin._id}
             <div>
@@ -680,6 +725,16 @@
               {/if}
             </div>
           {/each}
+          </div>
+          {#if pinMode === 'unfolded'}
+            <button
+              type="button"
+              data-pin-fold
+              aria-controls="forum-pin-stack"
+              onclick={foldPins}
+              class="md:hidden mt-1 ml-auto flex items-center gap-1 min-h-[36px] px-2 font-dmmono text-[10px] uppercase tracking-[0.12em] text-ink-mute focus:outline-none focus:ring-2 focus:ring-ink rounded"
+            ><span aria-hidden="true">▴</span> {$t['pinned.stack.collapse']}</button>
+          {/if}
         </div>
       {/if}
 
