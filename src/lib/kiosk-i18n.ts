@@ -174,6 +174,7 @@ const de = {
   'forum.title.accent': 'reden',
   'forum.title.suffix': 'wir heute?',
   'forum.cta.newTopic': '+ neues thema',
+  'forum.mobile.cta.aria': 'Neues Thema erstellen',
   'forum.cta.readMore': 'mehr laden',
   'forum.compose.success': '✓ Dein Beitrag wurde eingestellt',
 
@@ -1029,6 +1030,7 @@ const de = {
   'news.titleblock.kicker': 'NEWS · AUS DEM KIEZ',
   'news.titleblock.heading': 'Was <span class="font-instrument italic font-normal">passiert</span> heute im Kiez?',
   'news.titleblock.submit': '+ news einreichen',
+  'news.mobile.cta.aria': 'News einreichen',
   'news.readmore': 'weiterlesen →',
   'news.filter.sektion': 'SEKTION',
   'news.filter.zeitraum': 'ZEITRAUM',
@@ -2143,6 +2145,7 @@ const en: Dict = {
   'forum.title.accent': 'talking',
   'forum.title.suffix': 'about today?',
   'forum.cta.newTopic': '+ new topic',
+  'forum.mobile.cta.aria': 'Create new topic',
   'forum.cta.readMore': 'load more',
   'forum.compose.success': '✓ Your post has been submitted',
 
@@ -2922,6 +2925,7 @@ const en: Dict = {
   'news.titleblock.kicker': 'NEWS · FROM THE KIEZ',
   'news.titleblock.heading': "What’s <span class=\"font-instrument italic font-normal\">happening</span> in the Kiez today?",
   'news.titleblock.submit': '+ submit news',
+  'news.mobile.cta.aria': 'Submit news',
   'news.readmore': 'read more →',
   'news.filter.sektion': 'SECTION',
   'news.filter.zeitraum': 'TIMEFRAME',

@@ -122,6 +122,9 @@ When true it shows the amber RSS-only `NewsDegradedBanner` + a masthead note + a
 Save is **optimistic with rollback** (mutates `savedIds` + `articles`, reverts on
 non-OK). Toast helper is `showToast(message, { type })` from `src/utils/toast.ts`.
 
+## Floating „+" on phones (2026-09-20, user request)
+`a[data-news-fab]` at the end of `NewsboardIndexInner.svelte` → `/newsboard/submit`: the same floating add button as calendar, market and forum (`fixed bottom-16 right-4 z-30`, 56 px, `lg:hidden`, label `news.mobile.cta.aria`), shown in every list state. It is INK with a wine print shadow (user decision 2026-09-20: the button takes the page colour; an ink shadow would vanish under an ink disc, so it borrows the primary ink button's wine shadow). The title block's „+ news einreichen" button stays. Known cost the user accepted: a permanent button may bring more submissions into the editorial queue. Probe + details: `src/components/forum/kiosk/CLAUDE.md` → „Floating „+" on phones".
+
 ## Default time window = `week`
 
 `activeZeitraum` defaults to `'week'` (not `'today'`) so the HEUTE/GESTERN/FRÜHER

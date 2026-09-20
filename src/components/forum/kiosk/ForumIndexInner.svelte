@@ -627,10 +627,12 @@
         <em class="font-instrument italic font-normal text-wine">{$t['forum.title.accent']}</em>
         {$t['forum.title.suffix']}
       </h1>
+      <!-- Desktop only since 2026-09-20: below lg the floating "+" at the end of
+           this file is the way in (and carries the same data-tour anchor). -->
       <a
         href="/topics/create"
         data-tour="forum-new-topic"
-        class="self-start md:self-auto inline-flex items-center gap-2 px-5 py-2 rounded-full bg-ink text-paper font-bricolage font-medium text-sm border-2 border-ink shadow-[2px_2px_0_var(--k-wine)] hover:shadow-[3px_3px_0_var(--k-wine)] hover:-translate-x-px hover:-translate-y-px active:translate-x-px active:translate-y-px transition-all duration-[180ms] ease-out shrink-0"
+        class="hidden lg:inline-flex lg:self-auto items-center gap-2 px-5 py-2 rounded-full bg-ink text-paper font-bricolage font-medium text-sm border-2 border-ink shadow-[2px_2px_0_var(--k-wine)] hover:shadow-[3px_3px_0_var(--k-wine)] hover:-translate-x-px hover:-translate-y-px active:translate-x-px active:translate-y-px transition-all duration-[180ms] ease-out shrink-0"
       >
         {$t['forum.cta.newTopic']}
       </a>
@@ -925,3 +927,15 @@
     onLoadMore={loadMore}
   />
 </main>
+
+<!-- Floating "+ neues thema" FAB (phones/tablets only) — the same button as on
+     the calendar and the market, parked above the bottom nav with 16 px
+     clearance. Below lg it replaces the title block's pill, which scrolled
+     away (user, 2026-09-20). The "+" is an SVG so it sits dead centre. Colour follows the page: wine here and on the market, teal on the calendar, ink on News. -->
+<a
+  href="/topics/create"
+  aria-label={$t['forum.mobile.cta.aria']}
+  data-forum-fab
+  data-tour="forum-new-topic"
+  class="fixed bottom-16 right-4 z-30 w-14 h-14 rounded-full bg-wine text-paper border-2 border-ink font-bricolage font-bold text-[28px] leading-none shadow-[3px_3px_0_var(--k-ink,#0e1033)] flex items-center justify-center lg:hidden"
+><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 4v16M4 12h16" /></svg></a>

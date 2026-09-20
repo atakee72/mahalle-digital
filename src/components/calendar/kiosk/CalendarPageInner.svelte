@@ -526,11 +526,12 @@
   />
 
   <!-- Floating add-event FAB (mobile-only, all views). Parked above
-       the bottom mobile nav (h-12 at z-40) with 16px clearance. Wine
-       fill + ink print-shadow matches the kiosk vocabulary. -->
+       the bottom mobile nav (h-12 at z-40) with 16px clearance. Teal
+       fill since 2026-09-20 (user: the button takes the page colour —
+       forum + market wine, calendar teal, news ink) + ink print-shadow. -->
   <a
     href="/events/create"
     aria-label={$t['cal.mobile.cta.aria']}
-    class="fixed bottom-16 right-4 z-30 w-14 h-14 rounded-full bg-wine text-paper border-2 border-ink font-bricolage font-bold text-[28px] leading-none shadow-[3px_3px_0_var(--k-ink,#0e1033)] flex items-center justify-center lg:hidden"
-  >+</a>
+    class="fixed bottom-16 right-4 z-30 w-14 h-14 rounded-full bg-teal text-paper border-2 border-ink font-bricolage font-bold text-[28px] leading-none shadow-[3px_3px_0_var(--k-ink,#0e1033)] flex items-center justify-center lg:hidden"
+  ><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 4v16M4 12h16" /></svg></a>
 </div>
