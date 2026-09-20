@@ -1073,6 +1073,23 @@ option:disabled {
 /* ── Tour („Die Führung") — layout-mounted island, styles global by rule.
    Ring paints the scrim via oversized box-shadow: stacking-context-proof
    spotlight (design_handoff_tour, plan decision 1). ─────────────────── */
+/* Forum pin stack on phones: a tap on the summary bar splits it into the
+   single bars. Bar n starts n steps higher (one step = 36px bar + 8px gap), so
+   it slides out from under the first bar; the fold control fades in last.
+   Lives here because ForumIndexInner is a nested island (orphaned-style rule). */
+@media (prefers-reduced-motion: no-preference) {
+  .pin-unfold-in {
+    animation: pinUnfoldIn 240ms cubic-bezier(.2,.7,.3,1) both;
+    animation-delay: calc(var(--pin-i, 1) * 40ms);
+  }
+  [data-pin-fold].pin-unfold-in { animation-name: pinFoldCtlIn; }
+}
+@keyframes pinUnfoldIn {
+  from { transform: translateY(calc(var(--pin-i, 1) * -44px)); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes pinFoldCtlIn { from { opacity: 0; } to { opacity: 1; } }
+
 .tour-ring {
   position: fixed; z-index: 60; pointer-events: none;
   border: 2.5px solid var(--k-ochre);

@@ -685,9 +685,15 @@
           {/if}
           <!-- 'hidden md:flex' must stay a literal string (Tailwind scan). -->
           <div id="forum-pin-stack" class={`flex-col gap-2 ${pinMode === 'folded' ? 'hidden md:flex' : 'flex'}`}>
-          {#each pinnedOfficials as pin (pin._id)}
+          {#each pinnedOfficials as pin, i (pin._id)}
             {@const open = expandedPinId === pin._id}
-            <div>
+            <!-- Phones, after a tap on the summary bar: bars 2 and 3 slide out
+                 from under the first one (.pin-unfold-in in global.css — this
+                 island is nested, a <style> block here would be orphaned). -->
+            <div
+              class={pinMode === 'unfolded' ? (i === 0 ? 'relative z-[1]' : 'pin-unfold-in') : ''}
+              style={`--pin-i:${i}`}
+            >
               <!-- #7fc2ce is deliberate: teal legible on ink (no on-ink teal
                    token exists — same reason the blog has --k-rust-on-ink).
                    Don't "fix" it to text-teal, which vanishes on the ink bg. -->
@@ -731,8 +737,9 @@
               type="button"
               data-pin-fold
               aria-controls="forum-pin-stack"
+              style={`--pin-i:${pinnedOfficials.length}`}
               onclick={foldPins}
-              class="md:hidden mt-1 ml-auto flex items-center gap-1 min-h-[36px] px-2 font-dmmono text-[10px] uppercase tracking-[0.12em] text-ink-mute focus:outline-none focus:ring-2 focus:ring-ink rounded"
+              class="pin-unfold-in md:hidden mt-1 ml-auto flex items-center gap-1 min-h-[36px] px-2 font-dmmono text-[10px] uppercase tracking-[0.12em] text-ink-mute focus:outline-none focus:ring-2 focus:ring-ink rounded"
             ><span aria-hidden="true">▴</span> {$t['pinned.stack.collapse']}</button>
           {/if}
         </div>
