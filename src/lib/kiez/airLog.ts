@@ -61,6 +61,18 @@ export async function ensureAirIndexes(db: Db): Promise<void> {
     .createIndex({ day: 1 }, { unique: true, name: 'air_daily_day_unique' });
 }
 
+/**
+ * Why the morning freshness alarm found no readings (pure; used by airFreshness.ts).
+ * Since 2026-09-19 a silent STATION logs nothing (its -1 is not a reading), so „no
+ * readings in 24h" no longer means the logger is dead. `stationHasLqiNow` is the
+ * live feed's answer for mc042, or null when BLUME could not be asked — then assume
+ * the case that needs a human.
+ */
+export function silenceKind(recentReadings: number, stationHasLqiNow: boolean | null): 'ok' | 'station_silent' | 'logger_dead' {
+  if (recentReadings > 0) return 'ok';
+  return stationHasLqiNow === false ? 'station_silent' : 'logger_dead';
+}
+
 /** Recompute one Berlin day's rollup from its logged readings. No readings ⇒ no doc (gaps stay absent). */
 export async function recomputeDailyRollup(db: Db, day: string): Promise<void> {
   const lqis = await db

@@ -14,7 +14,8 @@
 // break, so it makes a reliable host for this check.
 import * as Sentry from '@sentry/astro';
 import { connectDB } from '../mongodb';
-import { AIR_LOG_COLLECTION } from './airLog';
+import { AIR_LOG_COLLECTION, silenceKind } from './airLog';
+import { fetchMc042, isValidGrade } from './blume';
 
 /**
  * Window for "is anything arriving at all". Deliberately a whole day rather
@@ -39,12 +40,40 @@ export async function checkAirLoggerFreshness(now: Date = new Date()): Promise<v
     const recent = await col.countDocuments({ ts: { $gte: since } });
     if (recent > 0) return;
 
+    // Since 2026-09-19 a silent STATION logs nothing (BLUME's -1 is not a
+    // reading), so an empty window no longer proves the logger is dead. Ask
+    // the feed: no value for mc042 right now ⇒ the station is down, the logger
+    // is fine. BLUME unreachable ⇒ null ⇒ assume the logger (needs a human).
+    let stationHasLqiNow: boolean | null = null;
+    try {
+      stationHasLqiNow = (await fetchMc042()).some((c) => c.component === 'lqi' && isValidGrade(c.grade));
+    } catch {
+      stationHasLqiNow = null;
+    }
+    const kind = silenceKind(recent, stationHasLqiNow);
+
     const newest = await col.findOne<{ ts?: Date }>({}, { sort: { ts: -1 }, projection: { ts: 1 } });
 
     // STATIC message — a variable one fragments into a new Sentry issue per
     // string. Detail belongs in `extra`. And flush explicitly: this is a
     // success path, so the middleware's error-path flush never runs and
     // Vercel freezes the function the moment the response leaves.
+    if (kind === 'station_silent') {
+      // Its OWN static message + warning level: a different issue from the
+      // logger alarm, true to its cause. Leave it UNRESOLVED while the station
+      // is down — resolved, it would reopen (and ping) every morning.
+      Sentry.captureMessage('kiez: station mc042 silent — no valid reading in 24h (logger healthy)', {
+        level: 'warning',
+        extra: {
+          windowHours: WINDOW_HOURS,
+          newestReadingTs: newest?.ts instanceof Date ? newest.ts.toISOString() : 'none',
+          hint: 'BLUME sends -1 for mc042; nothing to fix in the app. The live strip shows the labelled Karl-Marx-Straße substitute meanwhile.',
+        },
+      });
+      await Sentry.flush(2000);
+      return;
+    }
+
     Sentry.captureMessage('kiez: air logger silent — no readings in 24h', {
       level: 'error',
       extra: {

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import type { AirQualityResponse } from '../../types/kiezStats';
-import { fetchMc042, BLUME_STATION_ID } from '../../lib/kiez/blume';
+import { fetchBlumeAll, pickAirSource, FALLBACK_STATION, PRIMARY_STATION_NAME } from '../../lib/kiez/blume';
 
 const POLLUTANT_NAMES: Record<string, string> = {
   pm10: 'PM10',
@@ -13,10 +13,12 @@ const GRADE_LABELS = ['', 'sehr gut', 'gut', 'mäßig', 'schlecht', 'sehr schlec
 
 export const GET: APIRoute = async () => {
   try {
-    const data = await fetchMc042();
+    // mc042 when it has a value; else the labelled Karl-Marx-Straße substitute; else 502 → the strip's „Kein Signal" state.
+    const pick = pickAirSource(await fetchBlumeAll());
+    const data = pick?.data ?? [];
 
     const lqi = data.find((d) => d.component === 'lqi');
-    if (!lqi || lqi.grade == null) {
+    if (!pick || !lqi || lqi.grade == null) {
       return new Response(JSON.stringify({ error: 'No LQI data for mc042' }), {
         status: 502,
         headers: { 'Content-Type': 'application/json' },
@@ -33,12 +35,15 @@ export const GET: APIRoute = async () => {
       }));
 
     const response: AirQualityResponse = {
-      station: BLUME_STATION_ID,
-      stationName: 'Nansenstraße',
+      station: pick.station,
+      stationName: pick.source === 'substitute' ? FALLBACK_STATION.name : PRIMARY_STATION_NAME,
       datetime: lqi.datetime,
       overallGrade: lqi.grade,
       overallLabel: GRADE_LABELS[lqi.grade] ?? '',
       pollutants,
+      ...(pick.source === 'substitute'
+        ? { substitute: { kind: FALLBACK_STATION.kind, distanceKm: FALLBACK_STATION.distanceKm, primaryStationName: PRIMARY_STATION_NAME } }
+        : {}),
     };
 
     return new Response(JSON.stringify(response), {

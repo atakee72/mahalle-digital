@@ -1761,6 +1761,9 @@ const de = {
   'kiez.strip.staleNote':
     'Messnetz gestört — die Berliner Stationen liefern zurzeit keine neuen Daten. Letzter Messwert: {ts}. Sobald das Messnetz wieder sendet, erscheinen hier neue Werte.',
   'kiez.strip.noSignal': 'KEIN SIGNAL',
+  'kiez.strip.substitute.kicker': 'ERSATZWERT · STATION {name} · {code}',
+  'kiez.strip.substitute.note':
+    'Die Station {primary} meldet derzeit nichts. Ersatzwert von der Messstation {name}, {km} km vom Herrfurthplatz — sie steht an einer Hauptstraße, die Werte liegen dort meist etwas höher als in den Wohnstraßen des Kiezes.',
   'kiez.strip.airQuality': 'Luftgüte',
   'kiez.strip.offTitle': 'Die Station meldet sich nicht.',
   'kiez.strip.lastReading': 'Letzter Wert: {ts} · LQI {lqi}',
@@ -3645,6 +3648,9 @@ const en: Dict = {
   'kiez.strip.staleNote':
     'Measurement network disrupted — the Berlin stations are currently not delivering new data. Last reading: {ts}. New readings will appear here once the network is back.',
   'kiez.strip.noSignal': 'NO SIGNAL',
+  'kiez.strip.substitute.kicker': 'SUBSTITUTE VALUE · STATION {name} · {code}',
+  'kiez.strip.substitute.note':
+    'The {primary} station isn’t reporting right now. Substitute value from the {name} station, {km} km from Herrfurthplatz — it stands on a main road, so its values are usually a little higher than in the Kiez’s residential streets.',
   'kiez.strip.airQuality': 'Air quality',
   'kiez.strip.offTitle': 'The station isn’t reporting.',
   'kiez.strip.lastReading': 'Last reading: {ts} · LQI {lqi}',

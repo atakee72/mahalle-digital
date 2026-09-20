@@ -122,7 +122,12 @@
           <span
             class="inline-block h-[7px] w-[7px] rounded-full {isStale ? 'bg-[var(--k-ink-mute)]' : 'kz-live-dot bg-[var(--k-success)]'}"
           ></span>
-          {$t['kiez.strip.station']} · {isStale ? $t['kiez.strip.disrupted'] : $t['kiez.strip.live']}
+          {#if air.substitute}
+            <!-- mc042 silent → labelled substitute (Karl-Marx-Straße, traffic station). Never unlabelled: a kiosk number must be what it says it is. -->
+            {tStr($t['kiez.strip.substitute.kicker'], { name: air.stationName.toUpperCase(), code: air.station.toUpperCase() })} · {isStale ? $t['kiez.strip.disrupted'] : $t['kiez.strip.live']}
+          {:else}
+            {$t['kiez.strip.station']} · {isStale ? $t['kiez.strip.disrupted'] : $t['kiez.strip.live']}
+          {/if}
         </div>
         <div class="{headlineLiveClass}">
           {$t['kiez.strip.airQuality']}: <span style={`color:${gradeColor(air.overallGrade)}`}>{air.overallGrade} · {gradeLabel(air.overallGrade)}</span>
@@ -131,6 +136,15 @@
         {#if isStale}
           <div class="mt-1 max-w-[420px] font-dmmono text-[10px] leading-relaxed text-[var(--k-ochre)]">
             {tStr($t['kiez.strip.staleNote'], { ts: formatAirTs(air.datetime) })}
+          </div>
+        {/if}
+        {#if air.substitute}
+          <div class="mt-1 max-w-[420px] font-dmmono text-[10px] leading-relaxed text-[var(--k-ochre)]" data-air-substitute>
+            {tStr($t['kiez.strip.substitute.note'], {
+              primary: air.substitute.primaryStationName,
+              name: air.stationName,
+              km: air.substitute.distanceKm.toLocaleString($locale === 'de' ? 'de-DE' : 'en-GB'),
+            })}
           </div>
         {/if}
       </div>

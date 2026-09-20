@@ -177,6 +177,12 @@ export interface AirQualityResponse {
   overallGrade: number; // 1–5 (from "lqi" component)
   overallLabel: string; // German label
   pollutants: AirQualityPollutant[];
+  /** Present ONLY when the values come from the substitute station because mc042 has no measurement (2026-09-20). `station`/`stationName` then name the substitute. */
+  substitute?: {
+    kind: 'traffic';
+    distanceKm: number;
+    primaryStationName: string; // the silent station, for the note
+  };
 }
 
 /** MongoDB doc in `schillerkiez_air_log` — one BLUME reading (logger runs every 30 min; BLUME publishes hourly, duplicates are dropped on the unique `ts`). Hourly rows are pruned after 90 days. */
