@@ -26,6 +26,32 @@
     } catch { /* ignore */ }
   });
 
+  // Paste a link → the server reads the article's title, text, image and site
+  // name (GET /api/news/preview, hardened) and we fill the fields that are still
+  // EMPTY — never overwrite what the member typed. One lookup per address.
+  let previewState = $state<'idle' | 'loading' | 'filled' | 'failed'>('idle');
+  let lastPreviewed = '';
+  async function fillFromUrl() {
+    const url = sourceUrl.trim();
+    if (!/^https:\/\/\S+\.\S+/.test(url) || url === lastPreviewed) return;
+    lastPreviewed = url;
+    previewState = 'loading';
+    try {
+      const res = await fetch(`/api/news/preview?url=${encodeURIComponent(url)}`);
+      if (!res.ok) throw new Error();
+      const d = await res.json();
+      if (sourceUrl.trim() !== url) return; // the member changed the link meanwhile
+      let filled = false;
+      if (!title.trim() && d.title) { title = d.title; filled = true; }
+      if (!description.trim() && d.description) { description = d.description; filled = true; }
+      if (!sourceName.trim() && d.siteName) { sourceName = d.siteName; filled = true; }
+      if (!imageUrl && !uploading && d.image) { imageUrl = d.image; filled = true; }
+      previewState = filled ? 'filled' : 'idle';
+    } catch {
+      if (sourceUrl.trim() === url) previewState = 'failed';
+    }
+  }
+
   const valid = $derived(
     title.trim().length >= 5 && description.trim().length >= 10 &&
     /^https?:\/\//.test(sourceUrl) && !!sektion
@@ -83,6 +109,19 @@
       </div>
     {:else}
       <div class="flex flex-col" style="gap:18px; max-width:640px;">
+        <!-- The link comes FIRST since 2026-09-21: pasting it fills the fields below. -->
+        <label class="flex flex-col" style="gap:6px;">
+          <span class="font-dmmono uppercase" style="font-size:10px; letter-spacing:0.12em; font-weight:700;">{$t['news.submit.field.url']}</span>
+          <input
+            bind:value={sourceUrl}
+            data-news-url
+            onpaste={() => setTimeout(fillFromUrl, 0)}
+            onchange={fillFromUrl}
+            placeholder="https://" type="url" class="font-dmmono" style="padding:8px 10px; background:var(--k-paper-soft); border:1px solid var(--k-rule); border-radius:var(--k-radius-md);" />
+          <span data-news-url-status aria-live="polite" class="font-instrument italic" style={`font-size:12px; line-height:1.4; color:${previewState === 'failed' ? 'var(--k-warn)' : 'var(--k-ink-mute)'};`}>
+            {previewState === 'loading' ? $t['news.submit.url.loading'] : previewState === 'filled' ? $t['news.submit.url.filled'] : previewState === 'failed' ? $t['news.submit.url.failed'] : $t['news.submit.url.hint']}
+          </span>
+        </label>
         <label class="flex flex-col" style="gap:6px;">
           <span class="font-dmmono uppercase" style="font-size:10px; letter-spacing:0.12em; font-weight:700;">{$t['news.submit.field.title']}</span>
           <input bind:value={title} placeholder={$t['news.submit.ph.title']} maxlength="200" class="font-bricolage" style="padding:8px 10px; background:var(--k-paper-soft); border:1px solid var(--k-rule); border-radius:var(--k-radius-md);" />
@@ -95,10 +134,6 @@
           <span class="font-dmmono uppercase" style="font-size:10px; letter-spacing:0.12em; font-weight:700;">{$t['news.submit.section']}</span>
           <SektionPicker value={sektion} onSelect={(s) => (sektion = s)} />
         </div>
-        <label class="flex flex-col" style="gap:6px;">
-          <span class="font-dmmono uppercase" style="font-size:10px; letter-spacing:0.12em; font-weight:700;">{$t['news.submit.field.url']}</span>
-          <input bind:value={sourceUrl} placeholder="https://" type="url" class="font-dmmono" style="padding:8px 10px; background:var(--k-paper-soft); border:1px solid var(--k-rule); border-radius:var(--k-radius-md);" />
-        </label>
         <label class="flex flex-col" style="gap:6px;">
           <span class="font-dmmono uppercase" style="font-size:10px; letter-spacing:0.12em; font-weight:700;">{$t['news.submit.field.source']}</span>
           <input bind:value={sourceName} placeholder={$t['news.submit.ph.source']} maxlength="100" class="font-bricolage" style="padding:8px 10px; background:var(--k-paper-soft); border:1px solid var(--k-rule); border-radius:var(--k-radius-md);" />
