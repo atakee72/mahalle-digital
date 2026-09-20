@@ -114,3 +114,19 @@ unhandled rejections) and against a permanent outage (error after 2 attempts).
 row means both attempts failed — that is no longer a cold-start blip; check
 Atlas status and the region pin before anything else.
 
+### Same afternoon, 17:02 — two FREEZE artifacts on the previous build (not the cold-start connect)
+
+Five minutes before the retry deploy, on release `474cfb70`, one background
+`GET /api/profile/tour` from an open tab produced two issues 30 s apart:
+PROD-4 „MongoNetworkTimeoutError: Socket 'secureConnect' timed out after
+58270ms (connectTimeoutMS: 30000)" and a new PROD-Q „This socket has been ended
+by the other party". Frames: `cmap/connect.js` / `cmap/connection.js`
+(`executeHandshake`, `writeAfterFIN`) — the POOL opening a connection on an
+instance that had been frozen ~17 min after the 16:45 deploy; elapsed 58 s
+against a 30 s budget is the freeze signature. Per the playbook above these do
+not count, and `connectWithRetry()` does not cover them (it wraps the initial
+`MongoClient.connect`, not pooled operations). 9 events since July. If they ever
+become frequent, THIS is the signal `maxIdleTimeMS` was meant for (pooled
+sockets that did not survive a freeze) — it was only wrong for the cold-start
+connect. Not applied; nothing user-visible (background fetch).
+
