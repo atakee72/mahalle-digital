@@ -2,6 +2,8 @@
   // Single-row filter bar — Editorial Kiosk canvas:
   //   Alle | Diskussion | Ankündigung | Empfehlung │ Gespeichert | Meine
   //                                               TAGS  #kita #verkehr …
+  //   Phones (< md): [ Alle | Diskussion | … scrolls … ] [# Tags ▾]
+  //                  tag row only after a tap on the chip
   //
   // Two color tones:
   //   - tone="paper" (default) — ink text on paper bg, ink fill when active
@@ -14,6 +16,7 @@
 
   import { t } from '../../../lib/kiosk-i18n';
   import { scrollFade } from '../../../lib/scrollFade';
+  import { tagsChipLabel } from '../../../lib/forum/mobileChrome';
 
   export type Filter =
     | 'all'
@@ -38,6 +41,12 @@
     onFilterChange?: (f: Filter) => void;
     onTagChange?: (tag: string | null) => void;
   }>();
+
+  // Phones (< md): the tag row is folded behind a "# Tags" chip at the end
+  // of the filter row (2026-09-20 — brings the first post up by one row).
+  // Per-visit view state only. From md up the row is always visible and
+  // the chip is display:none, so this flag has no effect there.
+  let tagsOpen = $state(false);
 
   // Pill chrome — outlined rounded-full, two color states per tone.
   function pillClass(active: boolean): string {
@@ -85,12 +94,17 @@
   tags below. `lg:contents` dissolves each row wrapper on desktop so
   the children re-flow into the original single `flex flex-wrap`
   parent (preserves the design's inline TAGS-after-filters look).
+  Below md the tag row is folded behind the "# Tags" chip (tagsOpen).
 -->
 <div class="lg:flex lg:flex-wrap lg:items-center lg:gap-2">
-  <!-- Row 1: filters (type + personal). -->
+  <!-- Row 1: filters (type + personal) in a scroller; on phones the
+       "# Tags" chip sits OUTSIDE the scroller so it is always in view
+       (the pills alone are wider than a 390px screen). Both wrappers
+       dissolve at lg. -->
+  <div class="flex items-center gap-2 lg:contents">
   <div
     use:scrollFade
-    class="kiosk-scroll-fade flex items-center gap-2 overflow-x-auto no-scrollbar lg:contents"
+    class="kiosk-scroll-fade flex-1 min-w-0 flex items-center gap-2 overflow-x-auto no-scrollbar lg:contents"
   >
     {#each filters as f (f.key)}
       <button
@@ -114,12 +128,33 @@
       >{$t[f.labelKey]}</button>
     {/each}
   </div>
+    {#if tags.length}
+      <!-- data-tour: on phones the tour's "Tags" stop lands here (first
+           visible match); from md up this button is display:none and the
+           stop lands on the first tag, as before. -->
+      <button
+        type="button"
+        data-tags-chip
+        data-tour="forum-tag"
+        aria-expanded={tagsOpen}
+        aria-controls="forum-tag-row"
+        onclick={() => (tagsOpen = !tagsOpen)}
+        class={`md:hidden shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full font-bricolage font-medium text-sm transition-colors duration-150 ${pillClass(!!activeTag)}`}
+      >
+        <span class="truncate max-w-[7rem]">{tagsChipLabel(activeTag, $t['filter.tagsChip'])}</span>
+        <span aria-hidden="true" class="text-[10px]">{tagsOpen ? '▴' : '▾'}</span>
+      </button>
+    {/if}
+  </div>
 
   <!-- Row 2: tags. -->
   {#if tags.length}
+    <!-- 'hidden md:flex' must stay a literal string — Tailwind only
+         generates classes it can read in the source. -->
     <div
+      id="forum-tag-row"
       use:scrollFade
-      class="kiosk-scroll-fade flex items-center gap-2 overflow-x-auto no-scrollbar mt-2 lg:mt-0 lg:contents"
+      class={`kiosk-scroll-fade items-center gap-2 overflow-x-auto no-scrollbar mt-2 lg:mt-0 lg:contents ${tagsOpen ? 'flex' : 'hidden md:flex'}`}
     >
       <span class={`shrink-0 lg:ml-2 ${tagsLabelClass}`}>{$t['filter.tagsLabel']}</span>
       {#each tags as tag, i (tag)}

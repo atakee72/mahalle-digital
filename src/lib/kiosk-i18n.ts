@@ -190,6 +190,7 @@ const de = {
   'filter.saved': 'Gespeichert',
   'filter.mine': 'Meine',
   'filter.tagsLabel': 'TAGS',
+  'filter.tagsChip': '# Tags',
 
   // pinned block + post-card straps
   'pinned.banner.label': 'OFFIZIELLE ANKÜNDIGUNG · MAHALLE-TEAM',
@@ -1939,6 +1940,7 @@ const de = {
   'tour.forum.s5.body': 'Deine eigenen Beiträge und ihr Status — auch die, die gerade noch geprüft werden.',
   'tour.forum.s6.title': 'Tags',
   'tour.forum.s6.body': 'Ein Klick auf einen Tag filtert den Kiez nach diesem Thema. Noch ein Klick auf denselben Tag — und alles kommt zurück.',
+  'tour.forum.s6.bodyMobile': 'Tags filtern Beiträge nach einem bestimmten Thema. Ein Tipp genügt, um die Auswahl ein- oder auszublenden.',
   'tour.forum.s7.title': 'Neues Thema',
   'tour.forum.s7.body': 'Wenn du so weit bist: dein erster Beitrag. Eine „Hallo Kiez"-Vorlage liegt bereit — er wird kurz geprüft und ist meist in Minuten sichtbar.',
   'tour.forum.end.note': 'Das war das Forum. Die anderen Bereiche haben eigene, kürzere Kapitel.',
@@ -2153,6 +2155,7 @@ const en: Dict = {
   'filter.saved': 'Saved',
   'filter.mine': 'Mine',
   'filter.tagsLabel': 'TAGS',
+  'filter.tagsChip': '# Tags',
 
   'pinned.banner.label': 'OFFICIAL ANNOUNCEMENT · MAHALLE-TEAM',
   'card.strap.announcement': 'ANNOUNCEMENT BY USERS',
@@ -3824,6 +3827,7 @@ const en: Dict = {
   'tour.forum.s5.body': 'Your own posts and their status — including the ones still being reviewed.',
   'tour.forum.s6.title': 'Tags',
   'tour.forum.s6.body': 'One click on a tag filters the Kiez by that topic. Click the same tag again — and everything comes back.',
+  'tour.forum.s6.bodyMobile': 'Tags filter posts by a specific topic. One tap is enough to show or hide the selection.',
   'tour.forum.s7.title': 'New topic',
   'tour.forum.s7.body': 'When you’re ready: your first post. A “Hello Kiez” template is waiting — it gets a quick review and is usually visible within minutes.',
   'tour.forum.end.note': 'That was the forum. The other areas have their own, shorter chapters.',

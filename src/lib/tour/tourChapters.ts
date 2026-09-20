@@ -36,7 +36,7 @@ export const CHAPTERS_BY_PAGE: Record<string, TourChapter> = {
       { anchor: '[data-tour="forum-filter-recommendation"]', titleKey: 'tour.forum.s3.title', bodyKey: 'tour.forum.s3.body' },
       { anchor: '[data-tour="forum-filter-saved"]',          titleKey: 'tour.forum.s4.title', bodyKey: 'tour.forum.s4.body' },
       { anchor: '[data-tour="forum-filter-mine"]',           titleKey: 'tour.forum.s5.title', bodyKey: 'tour.forum.s5.body' },
-      { anchor: '[data-tour="forum-tag"]',                   titleKey: 'tour.forum.s6.title', bodyKey: 'tour.forum.s6.body' },
+      { anchor: '[data-tour="forum-tag"]',                   titleKey: 'tour.forum.s6.title', bodyKey: 'tour.forum.s6.body', bodyMobileKey: 'tour.forum.s6.bodyMobile' },
       { anchor: '[data-tour="forum-new-topic"]',             titleKey: 'tour.forum.s7.title', bodyKey: 'tour.forum.s7.body',
         link: { labelKey: 'tour.template.open', hrefBase: '/topics/create', prefillTitleKey: 'tour.template.title', prefillBodyKey: 'tour.template.body', prefillTags: 'neu-hier' } },
     ],
