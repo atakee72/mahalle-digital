@@ -33,9 +33,13 @@ const initialData = await fetchListingsForSSR(ssrInput, userId);
 ---
 
 <KioskLayout title="Markt — Mahalle" description="Stöbern im Kiez-Markt." page="marketplace">
-  <MarketplaceBrowseInner
-    client:only="svelte"
-    initialData={initialData}
-    currentUserId={userId}
-  />
+  <!-- Same centred 1280 px page column as the masthead, the forum and Kiez-Daten
+       (plain block: no transform/filter, so fixed + sticky children keep working). -->
+  <div class="mx-auto w-full max-w-[1280px]">
+    <MarketplaceBrowseInner
+      client:only="svelte"
+      initialData={initialData}
+      currentUserId={userId}
+    />
+  </div>
 </KioskLayout>

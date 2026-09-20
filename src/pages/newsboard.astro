@@ -21,11 +21,15 @@ const initialArticles = await fetchNewsForSSR(userId);
 ---
 
 <KioskLayout title="News — Mahalle" description="Schillerkiez Kurier — die tägliche Zusammenfassung aus dem Kiez." page="newsboard">
-  <NewsboardIndexInner
-    client:load
-    issue={issue}
-    degraded={degraded}
-    currentUserId={userId}
-    initialArticles={initialArticles}
-  />
+  <!-- Same centred 1280 px page column as the masthead, the forum and Kiez-Daten
+       (plain block: no transform/filter, so fixed + sticky children keep working). -->
+  <div class="mx-auto w-full max-w-[1280px]">
+    <NewsboardIndexInner
+      client:load
+      issue={issue}
+      degraded={degraded}
+      currentUserId={userId}
+      initialArticles={initialArticles}
+    />
+  </div>
 </KioskLayout>

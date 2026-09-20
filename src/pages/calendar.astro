@@ -20,9 +20,13 @@ try {
 ---
 
 <KioskLayout title="Kalender" page="calendar">
-  <CalendarPage
-    client:only="svelte"
-    initialEvents={initialEvents}
-    currentUserId={session?.user?.id ?? null}
-  />
+  <!-- Same centred 1280 px page column as the masthead, the forum and Kiez-Daten
+       (plain block: no transform/filter, so fixed + sticky children keep working). -->
+  <div class="mx-auto w-full max-w-[1280px]">
+    <CalendarPage
+      client:only="svelte"
+      initialEvents={initialEvents}
+      currentUserId={session?.user?.id ?? null}
+    />
+  </div>
 </KioskLayout>
