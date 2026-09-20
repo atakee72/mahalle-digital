@@ -97,8 +97,9 @@ earns its complexity when there's a hole to cut.
   `getClientRects()`. Every anchor lookup in `TourController.svelte`
   (`waitForAnchor`, `startChapter`, `showStop`, the scroll/resize re-measure)
   goes through it.
+- **Forum „Tags" stop on phones (2026-09-20):** `[data-tour="forum-tag"]` exists twice — on the „# Tags" chip (phones, first in the DOM) and on the first tag pill. Visible-first lookup puts the ring on the chip below md and on the first tag from md up. The stop has a `bodyMobileKey` (the user's own wording) whose sentence is true with AND without the chip, because the mobile-copy breakpoint (< 1024 px) also covers tablets, which have no chip — and it deliberately does not say „on your phone". Both anchors share one condition (`tags.length`), so the „anchors must be unconditional" rule is no worse off than before. Still 7 forum stops.
 - **`TourStop.bodyMobileKey?: string`** — optional alternate body copy shown
-  under a mobile breakpoint instead of `bodyKey`. Used once: Kalender S2,
+  under a mobile breakpoint instead of `bodyKey`. Used twice: Forum S6 (above) and Kalender S2,
   where the desktop body describes click-then-second-click range selection
   (two discrete clicks, no drag) and the mobile body describes a single tap
   (no range gesture on mobile — different interaction, same anchor).

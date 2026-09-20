@@ -4,7 +4,7 @@ export interface TourStop {
   anchor: string;
   titleKey: string;
   bodyKey: string;
-  bodyMobileKey?: string;               // used once (Kalender S2)
+  bodyMobileKey?: string;               // used twice (Forum S6, Kalender S2)
   link?: {                              // used once (Forum S7 template)
     labelKey: string;
     hrefBase: string;                   // e.g. '/topics/create'
