@@ -256,24 +256,54 @@
   const pinMode = $derived(pinStackMode(pinnedOfficials.length, pinsUnfolded));
   // The tapped button leaves the DOM on both switches — hand the focus on,
   // or keyboard and screen-reader users are dropped back to <body>.
+  // The posts below follow smoothly: the pin cell's height is animated between
+  // the two layouts (Web Animations, overflow-y clipped meanwhile so nothing
+  // hangs over the first post). Skipped under reduced motion.
+  let pinCellEl = $state<HTMLElement | null>(null);
+  function animatePinCell(from: number, to: number, ms: number): Animation | null {
+    if (!pinCellEl || pinSlideMs === 0 || from === to || !pinCellEl.animate) return null;
+    pinCellEl.style.overflowY = 'clip';
+    return pinCellEl.animate([{ height: `${from}px` }, { height: `${to}px` }], {
+      duration: ms,
+      easing: 'cubic-bezier(.2,.7,.3,1)',
+      fill: 'forwards'
+    });
+  }
+  function releasePinCell(a: Animation | null) {
+    a?.cancel();
+    if (pinCellEl) pinCellEl.style.overflowY = '';
+  }
   async function unfoldPins() {
+    const from = pinCellEl?.offsetHeight ?? 0;
     pinsUnfolded = true;
     await tick();
     document.querySelector<HTMLElement>('#forum-pin-stack button')?.focus();
+    const a = animatePinCell(from, pinCellEl?.offsetHeight ?? 0, 280);
+    if (a) {
+      await a.finished.catch(() => {});
+      releasePinCell(a);
+    }
   }
   // Folding plays the unfold in reverse first (.pin-fold-out, last bar leaves
-  // first), then the summary bar takes over. Instant under reduced motion.
+  // first) while the cell shrinks to one bar, then the summary bar takes over.
+  // Instant under reduced motion.
   let pinsFolding = $state(false);
   async function foldPins() {
     if (pinsFolding) return;
+    const from = pinCellEl?.offsetHeight ?? 0;
+    const oneBar = document.querySelector<HTMLElement>('#forum-pin-stack button')?.offsetHeight ?? 36;
     expandedPinId = null; // a card must not stay open inside a hidden stack
+    let a: Animation | null = null;
     if (pinSlideMs > 0) {
+      const ms = 200 + 40 * (pinnedOfficials.length - 1);
+      a = animatePinCell(from, oneBar, ms);
       pinsFolding = true;
-      await new Promise((r) => setTimeout(r, 200 + 40 * (pinnedOfficials.length - 1)));
+      await new Promise((r) => setTimeout(r, ms));
       pinsFolding = false;
     }
     pinsUnfolded = false;
     await tick();
+    releasePinCell(a);
     document.querySelector<HTMLElement>('[data-pin-summary]')?.focus();
   }
 
@@ -582,7 +612,8 @@
 <!-- pt-5 md:pt-6 matches the kicker rhythm of calendar/news/market (20/24px under the masthead rule; user, 2026-09-10) — was py-8 md:py-10. -->
 <main class="max-w-7xl mx-auto px-4 md:px-9 lg:px-10 pt-5 md:pt-6 pb-8 md:pb-10">
   <!-- ── Header section ─────────────────────────────────────────── -->
-  <section class="mb-5 pb-4 border-b border-dashed border-rule">
+  <!-- mb-3 on phones: the filter row sits 12 px under the rule (was 20; user, 2026-09-20). -->
+  <section class="mb-3 md:mb-5 pb-4 border-b border-dashed border-rule">
     <p class="font-dmmono text-[11px] uppercase tracking-[0.18em] text-wine mb-2">
       FORUM · {dayOfWeek.toUpperCase()} <span class="min-[410px]:hidden">{dayMonthShort.toUpperCase()}</span><span class="hidden min-[410px]:inline">{dayMonth.toUpperCase()}</span> · {hhmm}
     </p>
@@ -672,7 +703,7 @@
            tap unfolds these bars, "einklappen" folds them (pinMode /
            pinsUnfolded). -->
       {#if (activeFilter === 'all' || activeFilter === 'announcement') && pinnedOfficials.length}
-        <div class="md:col-span-2 lg:col-span-3">
+        <div bind:this={pinCellEl} class="md:col-span-2 lg:col-span-3">
           {#if pinMode === 'folded'}
             <!-- Phones only: one bar for all pins. Same chrome and height as
                  a pin bar; the relative time gives way to the "+n" badge. -->
