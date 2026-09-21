@@ -423,6 +423,7 @@ export async function runDeletionPipeline(
           userPicture: '',
           hobbies: '',
           handle: '',
+          handleChosen: '',
           verified: '',
           emailVerified: '',
           roleBadge: '',

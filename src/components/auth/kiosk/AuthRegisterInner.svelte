@@ -2,12 +2,16 @@
   import { signIn } from 'auth-astro/client';
   import { t } from '../../../lib/kiosk-i18n';
   import { cleanDisplayName, isValidDisplayName } from '../../../lib/profile/nameRules';
+  import { slugifyHandle, normalizeChosenHandle, chosenHandleProblem } from '../../../lib/profile/handle';
   import AuthField from './primitives/AuthField.svelte';
   import AuthPrimaryBtn from './primitives/AuthPrimaryBtn.svelte';
   import AuthBanner from './primitives/AuthBanner.svelte';
   import AuthStrength from './primitives/AuthStrength.svelte';
 
   let name = $state('');
+  // Optional one-time handle choice; empty → the server assigns the automatic one.
+  let handle = $state('');
+  let handleErr = $state<string | null>(null);
   let email = $state('');
   let password = $state('');
   let password2 = $state('');
@@ -34,6 +38,9 @@
     if (classes === 3) return 3;
     return 4;
   }
+  const chosen = $derived(normalizeChosenHandle(handle));
+  // Preview of the automatic handle, shown as the placeholder (a number may be added on a clash).
+  const autoHandle = $derived(isValidDisplayName(cleanDisplayName(name)) ? slugifyHandle(cleanDisplayName(name)) : '');
   const pwScore = $derived(scorePw(password));
   // "valid enough" = min 8 + at least lower, upper, digit (mirrors RegisterSchema).
   const pwOk = $derived(password.length >= 8 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password));
@@ -41,12 +48,16 @@
 
   async function submit(e: Event) {
     e.preventDefault();
-    nameErr = null; emailErr = null; pwErr = null; pw2Err = null; termsErr = false; emailTaken = false;
+    nameErr = null; handleErr = null; emailErr = null; pwErr = null; pw2Err = null; termsErr = false; emailTaken = false;
 
     let bad = false;
     const cleanName = cleanDisplayName(name);
     if (!cleanName) { nameErr = $t['auth.err.nameShort']; bad = true; }
     else if (!isValidDisplayName(cleanName)) { nameErr = $t['auth.err.nameInvalid']; bad = true; }
+    if (chosen) {
+      const p = chosenHandleProblem(chosen);
+      if (p) { handleErr = p === 'format' ? $t['auth.err.handleInvalid'] : $t['auth.err.handleReserved']; bad = true; }
+    }
     if (!emailOk) { emailErr = $t['auth.err.emailInvalid']; bad = true; }
     if (!pwOk) { pwErr = $t['auth.err.pwWeak']; bad = true; }
     // Both empty: the password error already covers it — „stimmen nicht überein" would be false.
@@ -59,13 +70,17 @@
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: cleanName, email: email.trim(), password }),
+        body: JSON.stringify({ name: cleanName, email: email.trim(), password, ...(chosen ? { handle: chosen } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const code = String(data?.error ?? '');
         if (code === 'name_invalid') { nameErr = $t['auth.err.nameInvalid']; status = 'idle'; return; }
         if (code === 'name_protected') { nameErr = $t['auth.err.nameProtected']; status = 'idle'; return; }
+        // 409 is ALSO the e-mail-taken status — the handle codes must be read first.
+        if (code === 'handle_taken') { handleErr = $t['auth.err.handleTaken']; status = 'idle'; return; }
+        if (code === 'handle_invalid') { handleErr = $t['auth.err.handleInvalid']; status = 'idle'; return; }
+        if (code === 'handle_reserved') { handleErr = $t['auth.err.handleReserved']; status = 'idle'; return; }
         if (res.status === 409) { emailTaken = true; status = 'idle'; return; }
         if (res.status === 429) { nameErr = $t['auth.err.tooMany']; status = 'idle'; return; }
         // 400 (e.g. profanity) or 500 → inline on the relevant field / generic
@@ -108,6 +123,10 @@
     <AuthField label={$t['auth.register.name']} placeholder={$t['auth.register.namePh']}
       name="name" autocomplete="nickname" value={name} error={nameErr}
       success={isValidDisplayName(cleanDisplayName(name))} oninput={(v) => { name = v; nameErr = null; }} />
+    <AuthField label={$t['auth.register.handle']} placeholder={autoHandle ? `@${autoHandle}` : $t['auth.register.handlePh']}
+      name="handle" autocomplete="off" value={handle} error={handleErr}
+      hint={$t['auth.register.handleHint']}
+      success={!!chosen && !chosenHandleProblem(chosen)} oninput={(v) => { handle = v; handleErr = null; }} />
     <AuthField label={$t['auth.register.email']} placeholder={$t['auth.register.emailPh']}
       type="email" name="email" autocomplete="email" value={email}
       error={emailErr} success={emailOk && !emailTaken} oninput={(v) => { email = v; emailErr = null; }} />

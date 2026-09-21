@@ -6,14 +6,14 @@ import { createEmailVerifyToken } from "../../../lib/auth/emailVerify";
 import { sendVerifyEmail } from "../../../lib/auth/sendVerifyEmail";
 import { getTrustedBaseUrl } from "../../../lib/auth/baseUrl";
 import { consumeRateLimit, hashIp, clientIpFrom } from "../../../lib/auth/rateLimit";
-import { slugifyHandle } from "../../../lib/profile/handle";
+import { slugifyHandle, normalizeChosenHandle, chosenHandleProblem, HANDLE_FALLBACK } from "../../../lib/profile/handle";
 import { cleanDisplayName, isValidDisplayName, isProtectedName } from "../../../lib/profile/nameRules";
 import { isAdminLookalike } from "../../../lib/profile/protectedNamesStore";
 import { alertNewMember } from "../../../lib/adminAlerts";
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
     try {
-        const { name: rawName, email, password } = await request.json();
+        const { name: rawName, email, password, handle: rawHandle } = await request.json();
         // Whitespace collapsed, invisible characters stripped — a name of only
         // spaces / zero-width characters ends up '' and is refused right below.
         const name = cleanDisplayName(rawName);
@@ -111,6 +111,36 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
             );
         }
 
+        // Optional handle choice — ONCE, here at signup (2026-09-21). No choice →
+        // the automatic slug below. Same order of gates as the name: format and
+        // reserved words first (free), then uniqueness, then the paid profanity check.
+        const chosenHandle = normalizeChosenHandle(rawHandle);
+        if (chosenHandle) {
+            const problem = chosenHandleProblem(chosenHandle);
+            if (problem) {
+                return new Response(
+                    JSON.stringify({ error: problem === 'format' ? 'handle_invalid' : 'handle_reserved' }),
+                    { status: 400, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+            const taken = await db.collection('users').findOne({ handle: chosenHandle }, { projection: { _id: 1 } });
+            if (taken) {
+                return new Response(
+                    JSON.stringify({ error: 'handle_taken' }),
+                    { status: 409, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+            // „_" → space so the blocklists' word-boundary matching works. An
+            // OpenAI outage never refuses (shortTextVerdict inside).
+            const handleCheck = await checkNameProfanity(chosenHandle.replace(/_/g, ' '));
+            if (!handleCheck.clean) {
+                return new Response(
+                    JSON.stringify({ error: 'handle_invalid' }),
+                    { status: 400, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+        }
+
         // Check display name for profanity (Turkish + English + German + OpenAI)
         const nameCheck = await checkNameProfanity(name);
         if (!nameCheck.clean) {
@@ -154,13 +184,19 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         // Never read `keyValue`: for a collated index the server reports the
         // raw ICU sort key, which is not valid UTF-8 (SERVER-50454) — so it is
         // useless for branching and garbage in logs.
-        const baseHandle = slugifyHandle(name);
+        // A CHOSEN handle gets one attempt and no suffix (a lost race → 409
+        // handle_taken); the automatic base must never be a reserved word
+        // (a member called „Forum" gets @nachbar…, not @forum).
+        let baseHandle = slugifyHandle(name);
+        if (chosenHandleProblem(baseHandle) === 'reserved') baseHandle = HANDLE_FALLBACK;
         let result: { insertedId: any } | null = null;
         let finalHandle = '';
         let emailTaken = false;
-        for (let attempt = 0; attempt < 6 && !result; attempt++) {
+        let handleTaken = false;
+        const maxAttempts = chosenHandle ? 1 : 6;
+        for (let attempt = 0; attempt < maxAttempts && !result; attempt++) {
             const suffix = attempt === 0 ? '' : String(attempt + 1);
-            const handle = baseHandle.slice(0, 20 - suffix.length) + suffix;
+            const handle = chosenHandle || baseHandle.slice(0, 20 - suffix.length) + suffix;
             try {
                 finalHandle = handle;
                 result = await db.collection('users').insertOne({
@@ -172,6 +208,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
                     roleBadge: 'resident',
                     hobbies: [],
                     handle,
+                    ...(chosenHandle ? { handleChosen: true } : {}),
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                 });
@@ -179,11 +216,18 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
                 if (e?.code !== 11000) throw e;
                 if (e?.keyPattern?.email !== undefined) { emailTaken = true; break; }
                 if (e?.keyPattern?.handle === undefined) throw e;
+                if (chosenHandle) { handleTaken = true; break; }
             }
         }
         if (emailTaken) {
             return new Response(
                 JSON.stringify({ error: 'User with this email already exists' }),
+                { status: 409, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+        if (handleTaken) {
+            return new Response(
+                JSON.stringify({ error: 'handle_taken' }),
                 { status: 409, headers: { 'Content-Type': 'application/json' } }
             );
         }
