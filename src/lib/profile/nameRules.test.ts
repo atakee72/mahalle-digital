@@ -12,12 +12,12 @@ test('cleaning trims, collapses whitespace and strips invisible characters', () 
 });
 
 test('names real neighbours use are valid', () => {
-  for (const n of ['Jo', 'Petra M.', "O'Neill", 'Jean-Luc', 'Emre Aydın', 'Müller_73', 'Ömer', 'Зоя'])
+  for (const n of ['Jo', 'Petra M.', "O'Neill", 'Jean-Luc', 'Emre Aydın', 'Müller_73', 'Ömer', 'Зоя', 'STK Schillerpromenade/Neukölln'])
     assert.equal(isValidDisplayName(n), true, n);
 });
 
 test('too short, too long, emoji, leading punctuation and markup are refused', () => {
-  for (const n of ['J', 'x'.repeat(31), 'Petra 🌻', '.Petra', '-Petra', '<b>Petra</b>', 'Petra@home', ''])
+  for (const n of ['J', 'x'.repeat(31), 'Petra 🌻', '.Petra', '-Petra', '/Petra', 'Petra/', '<b>Petra</b>', 'Petra@home', ''])
     assert.equal(isValidDisplayName(n), false, n);
 });
 

@@ -19,7 +19,7 @@ export function cleanDisplayName(raw: unknown): string {
 }
 
 // First char letter/digit; last char letter/digit/mark/dot („Petra M.").
-export const DISPLAY_NAME_REGEX = /^[\p{L}\p{N}][\p{L}\p{M}\p{N} ._'’-]{0,28}[\p{L}\p{M}\p{N}.]$/u;
+export const DISPLAY_NAME_REGEX = /^[\p{L}\p{N}][\p{L}\p{M}\p{N} ._'’/-]{0,28}[\p{L}\p{M}\p{N}.]$/u;
 
 export function isValidDisplayName(name: string): boolean {
   return DISPLAY_NAME_REGEX.test(name);
