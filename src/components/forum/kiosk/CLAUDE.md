@@ -16,6 +16,9 @@ propagate to the preview/submit mirror automatically via ComposeForm's
 `$effect(() => onChange(...))`, which fires on mount. (Bug fixed 2026-06-22 — both
 paths were dead because the compute lived in onMount.)
 
+### The compose page publishes the chosen kind (fixed 2026-09-21)
+Until that day `ComposePageInner.onPublish()` sent `{ title, body, tags, images }` and `createTopicReq()` always POSTed to `/api/topics/create` — a member could pick Empfehlung or Ankündigung, and a DISCUSSION was published (no kiosk code called the other two create routes; found while planning server-side drafts, the user was about to post an announcement). Now `CreateTopicInput.kind` routes through `createEndpointForKind()` / `createdDocKeyForKind()` (`src/lib/forum/postKind.ts`, tested); the response is normalised to `{ topic }` with `kind` stamped, and the optimistic card uses the chosen kind. Each kind has its OWN daily limit of 5 (three collections, three counters). Recommendations get `category: 'other'` from the schema default — the form has no category field. Probe (DEV ONLY, creates + deletes three posts): `scratchpad/compose-kind-probe.cjs` (18 checks).
+
 ### Multi-collection feed on `/forum`
 - **Index route moved to `/forum`** with the Aug 2026 landing release — `/` is now the public landing page (Das Schaufenster), which SSR-redirects logged-in members straight to `/forum`. `KioskNav.svelte`'s `FORUM_MATCH` no longer contains `/` (`['/forum', '/topics', '/announcements', '/recommendations']`).
 - The forum index merges **topics + announcements + recommendations** into a single date-desc feed via `Promise.allSettled` parallel fetch (both SSR in `src/pages/forum.astro` and the client query in `ForumIndexInner.svelte`). Each item is decorated with `kind: 'discussion' | 'announcement' | 'recommendation'`. queryKey is `['forum', 'all']`.

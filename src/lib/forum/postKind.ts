@@ -44,6 +44,18 @@ export function hrefForPost(c: PostCollection, id: string): string {
   return `/${c}/${id}`;
 }
 
+/** Where the compose page creates a post of this kind. Until 2026-09-21 it
+ *  always used /api/topics/create, so „Empfehlung" and „Ankündigung" were
+ *  published as discussions. */
+export function createEndpointForKind(kind: PostKind): string {
+  return `/api/${collectionForKind(kind)}/create`;
+}
+
+/** The three create endpoints name the created document differently. */
+export function createdDocKeyForKind(kind: PostKind): PostContentType {
+  return contentTypeForCollection(collectionForKind(kind));
+}
+
 /**
  * The document as it should look in the target collection. Keeps _id,
  * author, engagement (likes/likedBy/views/comments), moderation state and

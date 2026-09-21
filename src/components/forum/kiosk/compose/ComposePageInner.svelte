@@ -199,7 +199,8 @@
         title: values.title.trim(),
         body: values.body.trim(),
         tags: values.tags,
-        images: allImages
+        images: allImages,
+        kind: values.kind
       });
 
       topicDraft.clearDraft();

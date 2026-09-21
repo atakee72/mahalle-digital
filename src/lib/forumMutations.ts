@@ -40,6 +40,7 @@ function flagLive() {
 // (`import { RateLimitError } from '../lib/forumMutations'`) keep working.
 export { RateLimitError } from './errors';
 import { RateLimitError } from './errors';
+import { createEndpointForKind, createdDocKeyForKind, type PostKind } from './forum/postKind';
 
 // ─── Topic create ──────────────────────────────────────────────────────
 
@@ -48,14 +49,20 @@ export type CreateTopicInput = {
   body: string;
   tags?: string[];
   images?: { url: string; publicId: string }[];
+  /** Which collection the post goes to. Absent = discussion (old callers). */
+  kind?: PostKind;
 };
 
+// Until 2026-09-21 this always POSTed to /topics/create: the compose page let a
+// member pick Empfehlung / Ankündigung, and published a discussion anyway.
 async function createTopicReq(input: CreateTopicInput) {
-  const res = await fetch(`${API_URL}/topics/create`, {
+  const kind: PostKind = input.kind ?? 'discussion';
+  const { kind: _kind, ...payload } = input;
+  const res = await fetch(createEndpointForKind(kind), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify(input)
+    body: JSON.stringify(payload)
   });
 
   if (!res.ok) {
@@ -64,18 +71,21 @@ async function createTopicReq(input: CreateTopicInput) {
       throw new RateLimitError(
         error.dailyLimit ?? 5,
         error.currentCount ?? 0,
-        error.message ?? 'Daily topic limit reached'
+        error.message ?? 'Daily limit reached'
       );
     }
     const details = error.details ? Object.values(error.details).join(', ') : '';
-    throw new Error(details || error.error || 'Failed to create topic');
+    throw new Error(details || error.error || 'Failed to create post');
   }
 
-  return res.json() as Promise<{
-    topic: any;
-    message: string;
-    moderationStatus?: 'pending' | 'approved' | 'rejected';
-  }>;
+  const json = await res.json();
+  // The three endpoints name the created doc differently; callers read `.topic`.
+  // `kind` is stamped here because the merged feed decorates items with it.
+  return {
+    topic: { ...json[createdDocKeyForKind(kind)], kind },
+    message: json.message as string,
+    moderationStatus: json.moderationStatus as 'pending' | 'approved' | 'rejected' | undefined
+  };
 }
 
 export function createTopicMutation(currentUser: { id: string; name?: string; image?: string | null }) {
@@ -104,12 +114,8 @@ export function createTopicMutation(currentUser: { id: string; name?: string; im
         views: 0,
         date: new Date().toISOString(),
         moderationStatus: 'pending',
-        // Discussion is the only kind currently created from kiosk
-        // compose. The merged feed reads `kind` to choose the
-        // ForumPostCard treatment, so the optimistic insert needs it
-        // too — otherwise the temp card briefly renders without the
-        // wine-accent discussion treatment.
-        kind: 'discussion',
+        // The merged feed reads `kind` to choose the card treatment.
+        kind: input.kind ?? 'discussion',
         author: {
           _id: currentUser.id,
           name: currentUser.name ?? 'du',

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   POST_COLLECTIONS, isPostCollection, collectionForKind, kindForCollection,
   contentTypeForCollection, hrefForPost, buildMovedDoc,
+  createEndpointForKind, createdDocKeyForKind,
 } from './postKind';
 
 test('kind ↔ collection round-trips for all three kinds', () => {
@@ -68,4 +69,13 @@ test('buildMovedDoc strips announcement-only and recommendation-only fields', ()
 test('buildMovedDoc gives a recommendation the default category', () => {
   const out = buildMovedDoc({ _id: 'x', title: 'T' }, 'topics', 'recommendations', new Date());
   assert.equal(out.category, 'other');
+});
+
+test('each kind has its own create endpoint and response key', () => {
+  assert.equal(createEndpointForKind('discussion'), '/api/topics/create');
+  assert.equal(createEndpointForKind('announcement'), '/api/announcements/create');
+  assert.equal(createEndpointForKind('recommendation'), '/api/recommendations/create');
+  assert.equal(createdDocKeyForKind('discussion'), 'topic');
+  assert.equal(createdDocKeyForKind('announcement'), 'announcement');
+  assert.equal(createdDocKeyForKind('recommendation'), 'recommendation');
 });
