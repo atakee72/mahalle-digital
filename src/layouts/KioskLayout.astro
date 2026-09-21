@@ -33,6 +33,9 @@ export interface Props {
   page?: 'forum' | 'calendar' | 'marketplace' | 'newsboard' | 'profile' | 'blog' | 'admin' | 'schillerkiez' | 'auth';
   type?: 'website' | 'article';
   noindex?: boolean;
+  /** false = no spotlight tour on this page. For pages that carry a chapter's
+   *  `page` name (for the accent) but none of its anchors, e.g. /entwuerfe. */
+  tour?: boolean;
   canonicalPath?: string | null;
   article?: { publishedTime: string; modifiedTime?: string; author?: string; tags?: string[] };
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
@@ -48,6 +51,7 @@ const {
   page,
   type = 'website',
   noindex = false,
+  tour = true,
   canonicalPath,
   article,
   jsonLd,
@@ -93,7 +97,7 @@ const {
     {session?.user && <SuspendedBanner client:load />}
     {session?.user && session.user.emailVerified !== true && <VerifyEmailBanner client:load />}
     <ToastProvider client:load />
-    <TourController client:load user={session?.user ?? null} page={page} />
+    {tour && <TourController client:load user={session?.user ?? null} page={page} />}
 
     <main class="flex-1">
       <slot />

@@ -1,0 +1,58 @@
+---
+// /entwuerfe — everything the member has left unfinished: forum drafts
+// (`postDrafts`) and marketplace draft listings (`listings`, status 'draft').
+// A read-only union: saving, resuming and deleting use the two existing flows.
+// Each source is fetched in its own try — one failing must not blank the page.
+// Plan: docs/superpowers/plans/2026-09-21-drafts-page.md
+import KioskLayout from '../layouts/KioskLayout.astro';
+import DraftsPage from '../components/drafts/DraftsPage.svelte';
+import { getSession } from 'auth-astro/server';
+import * as Sentry from '@sentry/astro';
+import { connectDB } from '../lib/mongodb';
+import { listDrafts } from '../lib/forum/postDraftsStore';
+import { fromListingDraft, fromPostDraft, mergeDrafts, type UnifiedDraft } from '../lib/drafts/unifiedDrafts';
+
+const session = await getSession(Astro.request);
+if (!session?.user?.id) {
+  return Astro.redirect('/login?redirect=/entwuerfe');
+}
+// Per-member page: never cache it.
+Astro.response.headers.set('Cache-Control', 'no-store');
+const userId = session.user.id;
+
+let forum: UnifiedDraft[] = [];
+let markt: UnifiedDraft[] = [];
+let partial = false;
+
+try {
+  forum = (await listDrafts(userId)).map(fromPostDraft);
+} catch (err) {
+  partial = true;
+  // Swallowed on purpose (decision 6) — so it must reach Sentry itself, or the
+  // page degrades in silence; flush, Vercel freezes the function after the response.
+  Sentry.captureException(err, { extra: { where: 'entwuerfe.forumDrafts' } });
+}
+try {
+  const db = await connectDB();
+  const rows = await db
+    .collection('listings')
+    .find({ sellerId: userId, status: 'draft' }, { projection: { title: 1, listingType: 1, images: 1, updatedAt: 1, createdAt: 1 } })
+    .sort({ updatedAt: -1 })
+    .limit(50)
+    .toArray();
+  markt = rows.map((r) => fromListingDraft(r as any));
+} catch (err) {
+  partial = true;
+  Sentry.captureException(err, { extra: { where: 'entwuerfe.draftListings' } });
+}
+if (partial) await Sentry.flush(2000);
+
+const initialDrafts = mergeDrafts(forum, markt);
+---
+
+<KioskLayout title="Mahalle · Entwürfe" description="Deine gespeicherten Entwürfe." page="profile" tour={false} noindex>
+  <!-- Same centred 1280 px page column as every main section. -->
+  <div class="mx-auto w-full max-w-[1280px]">
+    <DraftsPage client:only="svelte" initialDrafts={initialDrafts} partial={partial} />
+  </div>
+</KioskLayout>
