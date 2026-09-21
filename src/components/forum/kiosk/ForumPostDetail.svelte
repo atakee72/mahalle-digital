@@ -83,6 +83,8 @@
 
   const authorId = $derived(authorIdOf(topic.author));
   const authorName = $derived(topic.author?.name ?? 'anonym');
+  // Names may repeat — the handle tells two „Petra"s apart (2026-09-21).
+  const authorHandle = $derived(typeof topic.author?.handle === 'string' ? topic.author.handle : null);
   const viewProfileLabel = $derived(tStr($t['profile.public.viewprofile'], { name: authorName }));
 
   // Map plural collectionType → singular API contentType for /api/reports/submit.
@@ -739,9 +741,10 @@
               {authorName}
             </span>
           {/if}
-          {#if memberSince}
-            <span class="font-dmmono text-[10px] uppercase tracking-[0.05em] text-ink-mute">
-              {memberSince}
+          {#if authorHandle || memberSince}
+            <!-- the handle is an identifier and must never be uppercased -->
+            <span class="font-dmmono text-[10px] tracking-[0.05em] text-ink-mute">
+              {#if authorHandle}<span data-author-handle>@{authorHandle}</span>{/if}{#if authorHandle && memberSince}{' · '}{/if}{#if memberSince}<span class="uppercase">{memberSince}</span>{/if}
             </span>
           {/if}
         </div>

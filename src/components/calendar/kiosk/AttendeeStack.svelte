@@ -14,6 +14,7 @@
   type AttendeeUser = {
     id: string;
     name: string;
+    handle?: string | null;
     image: string | null;
   };
 
@@ -50,7 +51,7 @@
 {#if hasRealAvatars}
   <div class="flex flex-wrap items-center">
     {#each visibleUsers as u, i (u.id)}
-      <span title={u.name} class={i === 0 ? '' : '-ml-2'}>
+      <span title={u.handle ? `${u.name} · @${u.handle}` : u.name} class={i === 0 ? '' : '-ml-2'}>
         <KioskAvatar name={u.name} image={u.image} size="sm" />
       </span>
     {/each}

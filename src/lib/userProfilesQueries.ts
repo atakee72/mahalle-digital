@@ -15,6 +15,7 @@ import { createQuery } from '@tanstack/svelte-query';
 export type UserProfile = {
   id: string;
   name: string;
+  handle: string | null;
   image: string | null;
 };
 

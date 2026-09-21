@@ -36,7 +36,7 @@
       _id: string;
       body?: string;
       content?: string;
-      author?: { name?: string; image?: string | null; _id?: string } | string | null;
+      author?: { name?: string; image?: string | null; _id?: string; handle?: string | null } | string | null;
       date?: string | number;
       likes?: number;
       editedAt?: string | Date | null;
@@ -95,6 +95,10 @@
   );
   const viewProfileLabel = $derived(
     tStr($t['profile.public.viewprofile'], { name: commentAuthorName })
+  );
+  // Names may repeat — the handle tells two „Petra"s apart (2026-09-21).
+  const commentAuthorHandle = $derived(
+    typeof comment.author === 'object' ? (comment.author?.handle ?? null) : null
   );
   const inTimeWindow = $derived(
     Date.now() - commentDateMs(comment.date) < EDIT_WINDOW_MS
@@ -233,6 +237,9 @@
         <span class="font-bricolage font-bold text-sm text-ink">
           {commentAuthorName}
         </span>
+      {/if}
+      {#if commentAuthorHandle}
+        <span class="font-dmmono text-[10px] text-ink-mute">@{commentAuthorHandle}</span>
       {/if}
       {#if isOP}
         <span class="inline-flex items-center px-1.5 py-0.5 rounded font-dmmono text-[9px] uppercase tracking-[0.1em] bg-wine text-paper font-medium">

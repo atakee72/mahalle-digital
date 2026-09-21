@@ -403,6 +403,7 @@
       <SellerCard
         sellerId={String(listing.sellerId)}
         sellerName={listing.sellerName}
+        sellerHandle={listing.sellerHandle}
         sellerImage={listing.sellerImage}
         listingCount={0}
         isVerified={listing.sellerVerified === true}

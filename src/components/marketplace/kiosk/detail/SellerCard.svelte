@@ -5,6 +5,7 @@
   let {
     sellerId,
     sellerName,
+    sellerHandle,
     sellerImage,
     listingCount = 0,
     memberSince,
@@ -13,6 +14,7 @@
   }: {
     sellerId: string;
     sellerName?: string | null;
+    sellerHandle?: string | null;
     sellerImage?: string | null;
     listingCount?: number;
     memberSince?: string | null;
@@ -34,7 +36,7 @@
   );
 
   const metaLine = $derived(
-    [sinceLabel, listingsLabel].filter(Boolean).join(' · ') || null
+    [sellerHandle ? `@${sellerHandle}` : null, sinceLabel, listingsLabel].filter(Boolean).join(' · ') || null
   );
 
   const viewProfileLabel = $derived(

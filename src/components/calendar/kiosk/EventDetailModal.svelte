@@ -187,6 +187,13 @@
       : ''
   );
 
+  // @handle next to the name (2026-09-21) — names may repeat, the handle tells two apart.
+  const authorHandle = $derived(
+    typeof event?.author === 'object' && event?.author !== null && typeof (event.author as any).handle === 'string'
+      ? ((event.author as any).handle as string)
+      : null
+  );
+
   // Author photo — already joined server-side (`populateAuthors` normalizes
   // `image || userPicture`). The BY slab had passed a hardcoded null since the
   // prototype, so authors showed initials while the attendee disc next to it
@@ -464,6 +471,9 @@
                   >{authorName}</a>
                 {:else}
                   <div class="font-bricolage font-semibold text-[13px]">{authorName}</div>
+                {/if}
+                {#if authorHandle}
+                  <div class="font-dmmono text-[10px] text-ink-mute">@{authorHandle}</div>
                 {/if}
                 {#if typeof event?.author === 'object' && event?.author !== null && (event.author as any).verified === true}
                   <div class="font-dmmono text-[10px] text-ink-mute">

@@ -21,7 +21,8 @@ import type { Listing } from '../types/listing';
 // consumer (same discipline as populateAuthors in topicsQuery.ts).
 // `verified` is public-by-display: it drives the seller card's
 // "Verifiziert im Kiez" badge.
-const SELLER_PROJECTION = { name: 1, image: 1, userPicture: 1, verified: 1 } as const;
+// `handle` (2026-09-21): shown next to the seller's name — names may repeat, the handle tells two „Petra"s apart.
+const SELLER_PROJECTION = { name: 1, image: 1, userPicture: 1, verified: 1, handle: 1 } as const;
 
 /**
  * Resolve seller name + avatar for a batch of listings with ONE $in query.
@@ -82,6 +83,7 @@ export async function populateSellers<T extends Record<string, any>>(
       sellerName: u?.name ?? null,
       sellerImage: u?.userPicture ?? u?.image ?? null,
       sellerVerified: u?.verified === true,
+      sellerHandle: typeof u?.handle === 'string' ? u.handle : null,
     };
   });
 }

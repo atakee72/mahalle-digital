@@ -83,6 +83,7 @@ export interface Listing {
   images: string[];
   sellerId: ObjectId | string;
   sellerName?: string | null;
+  sellerHandle?: string | null;
   sellerImage?: string | null;
   sellerVerified?: boolean;
   status: ListingStatus;

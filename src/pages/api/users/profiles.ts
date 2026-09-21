@@ -39,12 +39,13 @@ export const GET: APIRoute = async ({ url }) => {
     const docs = await db
       .collection('users')
       .find({ _id: { $in: validIds.map((s) => new ObjectId(s)) } })
-      .project({ name: 1, userPicture: 1, image: 1 })
+      .project({ name: 1, userPicture: 1, image: 1, handle: 1 })
       .toArray();
 
     const users = docs.map((d) => ({
       id: String(d._id),
       name: (d.name as string) ?? '',
+      handle: typeof d.handle === 'string' ? d.handle : null,
       image: ((d.userPicture as string | undefined) ?? (d.image as string | undefined) ?? null) as string | null
     }));
 
