@@ -18,7 +18,7 @@
 4. No „veröffentlichen" button on this page — publishing needs the form (validation, moderation modal). The market's own section keeps its publish pill; this page does not copy it.
 5. Empty state: one sentence + two buttons („+ neues Thema" → `/topics/create`, „+ neue Anzeige" → `/marketplace/create`).
 6. If ONE source fails on the server, the page shows the other and a one-line note („Ein Teil der Entwürfe ließ sich gerade nicht laden."); if both fail, the note plus the empty-state buttons. Never a 500 page for a list.
-7. Accent: ochre (`page="profile"` — it is a personal page). The tour must NOT run here: `CHAPTERS_BY_PAGE['profile']` would show the „Neu hier?" offer for the Profil chapter although none of its anchors exist on this page (starting it does nothing). `KioskLayout` gets an optional prop `tour` (default `true`); `/entwuerfe` passes `tour={false}`. (`/bookmarks` and `/search` have the same latent problem with `page="forum"` — NOT in this plan, recorded as an observation.)
+7. Accent: ochre (`page="profile"` — it is a personal page). The tour must NOT run here: `CHAPTERS_BY_PAGE['profile']` would show the „Neu hier?" offer for the Profil chapter although none of its anchors exist on this page (starting it does nothing). `KioskLayout` gets an optional prop `tour` (default `true`); `/entwuerfe` passes `tour={false}`. (`/bookmarks` and `/search` have the same latent problem with `page="forum"` — NOT in this plan, recorded as an observation.) Known cost: the account menu's „Führung" row calls `window.__mahalleTourStart?.()`, which does not exist without the controller, so on `/entwuerfe` that row does nothing — exactly what it already does on every page without tour anchors (detail pages, compose pages, `/bookmarks`, `/search`: `startChapter()` returns when no stop is available). Not made worse, not fixed here.
 8. Layout rules of the house: the 1280 px column (`<div class="mx-auto w-full max-w-[1280px]">`), side inset `px-4 md:px-9 lg:px-10`, kicker 20/24 px under the masthead (`pt-5 md:pt-6`), title 34 px below 380 px / 36 px from 380 px / larger from `md`.
 9. Entry points: account menu „Meine Entwürfe" → `/entwuerfe` (was `/forum?kind=mine`); profile Archive, own view only: a link chip „Entwürfe →" after „◈ Gespeichert" → `/entwuerfe` (a LINK, not a data filter — the ledger's API stays untouched). The forum's and the market's own „Entwürfe" sections stay where they are.
 10. After „als Entwurf speichern" the forum still goes to `/forum?kind=mine&draft_saved=1` (its toast says „du findest ihn hier unter ‚Meine'" and that stays true). No change to either compose flow.
@@ -201,6 +201,7 @@ Read the file first: keep the exact existing `TourController` line and only wrap
 import KioskLayout from '../layouts/KioskLayout.astro';
 import DraftsPage from '../components/drafts/DraftsPage.svelte';
 import { getSession } from 'auth-astro/server';
+import * as Sentry from '@sentry/astro';
 import { connectDB } from '../lib/mongodb';
 import { listDrafts } from '../lib/forum/postDraftsStore';
 import { fromListingDraft, fromPostDraft, mergeDrafts, type UnifiedDraft } from '../lib/drafts/unifiedDrafts';
@@ -219,7 +220,9 @@ try {
   forum = (await listDrafts(userId)).map(fromPostDraft);
 } catch (err) {
   partial = true;
-  console.error('[entwuerfe] forum drafts failed:', err);
+  // Swallowed on purpose (decision 6) — so it must reach Sentry itself, or the
+  // page degrades in silence; flush, Vercel freezes the function after the response.
+  Sentry.captureException(err, { extra: { where: 'entwuerfe.forumDrafts' } });
 }
 try {
   const db = await connectDB();
@@ -232,8 +235,9 @@ try {
   markt = rows.map((r) => fromListingDraft(r as any));
 } catch (err) {
   partial = true;
-  console.error('[entwuerfe] draft listings failed:', err);
+  Sentry.captureException(err, { extra: { where: 'entwuerfe.draftListings' } });
 }
+if (partial) await Sentry.flush(2000);
 
 const initialDrafts = mergeDrafts(forum, markt);
 ---
@@ -258,6 +262,7 @@ Audited: `/bookmarks` sets no cache header and no `noindex`. This page is per-me
   import { relTime } from '../../lib/relTime';
   import { confirmAction, showError } from '../../utils/toast';
   import KioskBtn from '../forum/kiosk/KioskBtn.svelte';
+  import { optimizeCloudinary } from '../../utils/cloudinary';
   import type { UnifiedDraft } from '../../lib/drafts/unifiedDrafts';
 
   let { initialDrafts = [], partial = false } = $props<{ initialDrafts?: UnifiedDraft[]; partial?: boolean }>();
@@ -304,7 +309,7 @@ Audited: `/bookmarks` sets no cache header and no `noindex`. This page is per-me
       {#each drafts as d (d.source + d.id)}
         <li data-draft-row data-source={d.source} class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 rounded-lg border-[1.5px] border-dashed border-ink/50 bg-paper-warm">
           {#if d.thumb}
-            <img src={d.thumb} alt="" loading="lazy" class="shrink-0 w-11 h-11 rounded-md object-cover border border-ink" />
+            <img src={optimizeCloudinary(d.thumb)} alt="" loading="lazy" class="shrink-0 w-11 h-11 rounded-md object-cover border border-ink" />
           {/if}
           <span class={`shrink-0 px-[9px] py-[3px] rounded-lg border border-wine font-dmmono text-[10px] font-medium tracking-[0.08em] ${d.source === 'forum' ? 'bg-wine text-paper' : 'bg-transparent text-wine'}`}>
             {$t[d.source === 'forum' ? 'draftsPage.source.forum' : 'draftsPage.source.markt']}
@@ -325,14 +330,14 @@ Audited: `/bookmarks` sets no cache header and no `noindex`. This page is per-me
       <p class="font-instrument italic text-[17px] text-ink-soft mb-5">{$t['draftsPage.empty']}</p>
       <div class="flex flex-wrap justify-center gap-3">
         <KioskBtn href="/topics/create">{$t['forum.cta.newTopic']}</KioskBtn>
-        <KioskBtn variant="secondary" href="/marketplace/create">{$t['draftsPage.empty.newListing']}</KioskBtn>
+        <KioskBtn variant="secondary" href="/marketplace/create">{$t['market.cta.newListing']}</KioskBtn>
       </div>
     </div>
   {/if}
 </div>
 ```
 
-Verify before writing: `grep -n "'forum.cta.newTopic'" src/lib/kiosk-i18n.ts` (exists: „+ neues thema"); `grep -n "border-warn\|warn:" tailwind.config.*` (the `warn` colour exists — the forum's own-status wrappers use `border-warn`); `KioskBtn` accepts `href` + `variant` (it does — `NewsTitleBlock.svelte` uses both).
+Audited: both button texts exist already — `forum.cta.newTopic` („+ neues thema") and `market.cta.newListing` („+ neue anzeige"), same lower-case style, so the empty state needs no new button key; `grep -n "border-warn\|warn:" tailwind.config.*` (the `warn` colour exists — the forum's own-status wrappers use `border-warn`); `KioskBtn` accepts `href` + `variant` (it does — `NewsTitleBlock.svelte` uses both).
 
 - [ ] **Step 5: Copy (OFFER)** — add next to the `drafts.*` keys, both dictionaries:
 
@@ -345,7 +350,6 @@ Verify before writing: `grep -n "'forum.cta.newTopic'" src/lib/kiosk-i18n.ts` (e
   'draftsPage.source.markt': 'MARKT',
   'draftsPage.partial': 'Ein Teil der Entwürfe ließ sich gerade nicht laden. Lade die Seite später noch einmal.',
   'draftsPage.empty': 'Hier liegt gerade nichts. Was du als Entwurf speicherst, findest du hier wieder.',
-  'draftsPage.empty.newListing': '+ neue Anzeige',
 ```
 
 ```ts
@@ -357,7 +361,6 @@ Verify before writing: `grep -n "'forum.cta.newTopic'" src/lib/kiosk-i18n.ts` (e
   'draftsPage.source.markt': 'MARKET',
   'draftsPage.partial': 'Some of your drafts could not be loaded just now. Please reload the page later.',
   'draftsPage.empty': 'Nothing here right now. Whatever you save as a draft shows up here.',
-  'draftsPage.empty.newListing': '+ new listing',
 ```
 
 - [ ] **Step 6: Gates, then commit**
@@ -395,7 +398,7 @@ Audited: these are `PFilterChip`'s own span values (padding 5px 13px, 12.5px / 6
 - [ ] **Step 3: Probe** — `scratchpad/drafts-page-probe.cjs` (standalone Playwright, `NODE_PATH="$(npm root -g)/@playwright/cli/node_modules"`, dev :4655, `PROBE_WIDTHS` default `1280,390`, run under `timeout 280`). Setup inside the page after login as `admin@mahalle-dev.test`: delete every existing draft of the account (`GET /api/posts/drafts` + `GET /api/listings/my-listings` → delete each), then create through the APIs one forum draft (`POST /api/posts/drafts` `{kind:'announcement', title:'Probe Forum-Entwurf <ts>', body:'', tags:[], images:[]}`), wait 1.1 s, one draft listing (`POST /api/listings/draft` `{title:'Probe Anzeigen-Entwurf <ts>', listingType:'gift'}`). Checks:
   1. logged out: `GET /entwuerfe` ends on `/login` with `redirect=%2Fentwuerfe` in the URL.
   2. the page shows exactly 2 rows; the FIRST is the listing (newer), `data-source="markt"`, kind word „Verschenken"; the second `data-source="forum"`, „Ankündigung".
-  3. kicker and the italic title accent compute to the ochre accent colour (compare with `getComputedStyle(document.documentElement).getPropertyValue('--k-ochre')`), and NO tour offer strip is in the DOM (`document.body.innerText` has no „Neu hier").
+  3. kicker and the italic title accent compute to the ochre accent colour (compare with `getComputedStyle(document.documentElement).getPropertyValue('--k-ochre')`), and the tour is structurally absent: `document.querySelector('astro-island[component-url*="TourController"]') === null` (a text check for „Neu hier" would pass vacuously for an account that has already seen the Profil chapter), while the same selector DOES match on `/profile`.
   4. „weiterschreiben" of the listing row → URL `/marketplace/create?draft=<id>` and the title field holds the probe title; back; „weiterschreiben" of the forum row → `/topics/create?draft=<id>` with the title restored.
   5. delete the forum row (confirm dialog → confirm) → 1 row left; `fetch('/api/posts/drafts')` inside the page lists 0.
   6. delete the listing row → `[data-drafts-empty]` visible with two links (`/topics/create`, `/marketplace/create`); `my-listings` reports 0 drafts.
@@ -419,7 +422,7 @@ git add src/components/forum/kiosk/AvatarMenu.svelte src/components/profile/kios
 git commit -m "drafts page: account menu and profile archive link to /entwuerfe, docs"
 ```
 
-- [ ] **Step 7: Hand over** — what was built, the new copy keys (`draftsPage.*`, `profile.filter.entwuerfe`) for the user's wording, the two observations (tour offer on `/bookmarks` + `/search`; deleting a draft LISTING does not destroy its Cloudinary images — check `src/pages/api/listings/delete/[id].ts` and report what it does, do not change it), and that merge + push wait for his word. After deploy: read-only prod check — logged-out `/entwuerfe` → 302 to login; with `atakee+lasttest@gmail.com` the page renders its empty state (no write).
+- [ ] **Step 7: Hand over** — what was built, the new copy keys (`draftsPage.*`, `profile.filter.entwuerfe`) for the user's wording, the three observations (tour offer on `/bookmarks` + `/search`; the menu's „Führung" row is dead on every anchor-less page; deleting a LISTING — draft or published — never destroys its Cloudinary images, audited in `src/pages/api/listings/delete/[id].ts`; change none of them), and that merge + push wait for his word. After deploy: read-only prod check — logged-out `/entwuerfe` → 302 to login; with `atakee+lasttest@gmail.com` the page renders its empty state (no write).
 
 ---
 
@@ -429,4 +432,5 @@ git commit -m "drafts page: account menu and profile archive link to /entwuerfe,
 - **Names used identically everywhere:** `UnifiedDraft`, `ListingDraftLike`, `fromPostDraft`, `fromListingDraft`, `mergeDrafts`, `initialDrafts`, `partial`, `data-draft-row`, `data-draft-resume`, `data-draft-delete`, `data-drafts-empty`, `data-drafts-partial`, `data-profile-drafts-link`.
 - **Verified against the code while planning:** `GET /api/listings/my-listings` returns `{ listings, drafts, stats }`; the market deletes a draft with `DELETE /api/listings/delete/<id>` and resumes with `/marketplace/create?draft=<id>`; `listingType` is `sell | exchange | gift` with labels `market.filter.kind.verkaufen|tausch|verschenken`; listing `images` are plain URL strings, forum draft images are `{url, publicId}`; `KioskLayout`'s `page` union has no drafts value and `[data-page="profile"]` sets the ochre accent; `TourController` shows the offer for ANY page whose name has a chapter, whether or not the anchors exist; `/bookmarks` is the closest existing page (SSR list + island, own redirect).
 - **Audit, same hour (fixed in place):** the island had its own `<main>` inside `KioskLayout`'s `<main>` (copied from `BookmarksPage`, which has that flaw) → a `<div>`; the page is per-member → `no-store` + `noindex`; the profile link now carries `PFilterChip`'s exact span values. Confirmed: `KioskLayout` destructures `page` and renders `TourController` on one line (easy to wrap); `warn` and `--k-accent` exist; `BookmarksPage` is mounted `client:only="svelte"` with SSR-fetched props — this page does the same (my first draft said `client:load`; wrong, and it would have server-rendered the German texts for English readers).
-- **To verify while executing:** what the listing delete route does with images (T3 step 7).
+- **Second audit (user: „audit the plan"), fixed in place:** (1) the two swallowed database failures only `console.error`ed — against the house rule that a graceful degradation must reach Sentry and be flushed → `captureException` + `flush(2000)`. (2) The tour check in the probe would have passed for any account that had already seen the Profil chapter → structural check on the island. (3) A new button key duplicated the market's own `market.cta.newListing` → reused. (4) Thumbnails now go through `optimizeCloudinary` like everywhere else. (5) `tour={false}` leaves the menu's „Führung" row without effect on this page — same as on every anchor-less page today; recorded, not fixed. Confirmed: the listing field is `listingType` (`sell|exchange|gift`), draft listings carry `updatedAt`, `POST /api/listings/draft` needs only a title (ban-guarded), the delete route lets an owner delete a draft freely (`canMutateListing`), cascades `listingContacts`, stamps `flaggedContent.contentDeleted` — and does NOT destroy the listing's Cloudinary images (pre-existing, for published listings too; observation for the hand-over).
+- **To verify while executing:** nothing left open.
