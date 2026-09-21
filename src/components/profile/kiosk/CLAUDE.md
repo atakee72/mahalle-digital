@@ -67,7 +67,7 @@ All under `src/pages/api/profile/*` (session-gated, `getSession(request)`,
   notes inline in `PActivityLedger.svelte` / `src/lib/profile/profileShared.ts`
   for the full per-kind field mapping — not duplicated here.
 - **`POST /api/users/update`** → body `{ name, hobbies }`, returns the
-  echoed `{ name, hobbies }` on success. Validates `PROFILE_NAME_REGEX`
+  echoed `{ name, hobbies }` on success. Validates `PROFILE_NAME_REGEX` (since 2026-09-21 an alias of `DISPLAY_NAME_REGEX` in `src/lib/profile/nameRules.ts` — ONE rule for signup and profile, name cleaned first; also refuses team/admin lookalikes with `name_protected`, admins exempt — see `src/components/auth/kiosk/CLAUDE.md`)
   server-side too (client validates first to save the round-trip).
 - **`POST /api/profile/avatar`** → `multipart/form-data` with an `image`
   field. Returns `{ url }` on success or `{ error: 'no_file' | 'bad_type' |
