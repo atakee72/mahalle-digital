@@ -211,3 +211,20 @@ export type EventUpdate = z.infer<typeof EventUpdateSchema>;
 export type LikeAction = z.infer<typeof LikeActionSchema>;
 export type ViewCount = z.infer<typeof ViewCountSchema>;
 export type SearchFilter = z.infer<typeof SearchFilterSchema>;
+// Forum draft (server-side, several per member — 2026-09-21). Same UPPER limits
+// as publishing, no lower limits: a draft may be unfinished. Emptiness is checked
+// by draftIsEmpty() in the endpoint, not here.
+export const PostDraftSaveSchema = z.object({
+  id: ObjectIdSchema.optional(),
+  kind: z.enum(['discussion', 'recommendation', 'announcement']),
+  title: z.string().max(200, 'Title must be less than 200 characters').trim().default(''),
+  body: z.string().max(5000, 'Content must be less than 5000 characters').trim().default(''),
+  tags: z.array(z.string().max(30)).max(5, 'Maximum 5 tags allowed').default([]),
+  // Stricter than PostImageSchema: a draft's images can be DESTROYED later, so
+  // they must be our own uploads (folder of /api/posts/upload, url ↔ publicId).
+  images: z.array(z.object({
+    url: z.string().url().startsWith('https://res.cloudinary.com/'),
+    publicId: z.string().startsWith('mahalle/posts/').max(200)
+  }).refine((img) => img.url.includes(img.publicId), { message: 'image url and publicId do not belong together' }))
+    .max(5, 'Maximum 5 images allowed').default([])
+});
