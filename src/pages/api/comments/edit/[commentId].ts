@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../../lib/mongodb';
+import { resolveMentions, notifyMentions, findCommentParent } from '../../../../lib/mentions/mentionsStore';
+import { commentTarget } from '../../../../lib/notifications';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
 import type { Comment } from '../../../../types';
@@ -97,11 +99,15 @@ export const PUT: APIRoute = async ({ request, params }) => {
     }
     const newModerationStatus = mergedResult ? 'pending' : 'approved';
 
+    // „@handle" mentions are re-resolved on every save (src/lib/mentions).
+    const mentions = await resolveMentions(db, body);
+
     const updateResult = await commentsCollection.findOneAndUpdate(
       { _id: new ObjectId(commentId) },
       {
         $set: {
           body,
+          mentions,
           editedAt: new Date(),
           updatedAt: new Date(),
           moderationStatus: newModerationStatus
@@ -115,6 +121,19 @@ export const PUT: APIRoute = async ({ request, params }) => {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Newly added mentions notify only while the comment is public. A comment
+    // stores no parent collection, so it is looked up. Idempotent, never throws.
+    if (newModerationStatus === 'approved' && mentions.length > 0 && existingComment.relevantPostId) {
+      const parent = await findCommentParent(db, String(existingComment.relevantPostId));
+      if (parent) {
+        await notifyMentions(db, {
+          actorId: userId, mentions, sourceId: String(commentId), kind: 'comment',
+          target: commentTarget(parent.collection, String(existingComment.relevantPostId), parent.title),
+          skipUserIds: parent.author ? [parent.author] : [],
+        });
+      }
     }
 
     if (mergedResult) {

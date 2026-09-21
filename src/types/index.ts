@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import type { MentionRef } from '../lib/mentions/mentions';
 
 // User Types
 export interface User {
@@ -45,6 +46,8 @@ export interface EditHistory {
 
 // Topic Types
 export interface Topic {
+  /** „@handle" mentions resolved at save time — see src/lib/mentions. */
+  mentions?: MentionRef[];
   _id?: ObjectId | string;
   title: string;
   body: string;
@@ -73,6 +76,8 @@ export interface Topic {
 
 // Comment Types
 export interface Comment {
+  /** „@handle" mentions resolved at save time — see src/lib/mentions. */
+  mentions?: MentionRef[];
   _id?: ObjectId | string;
   body: string;
   author: ObjectId | string | User;
@@ -94,6 +99,8 @@ export interface Comment {
 
 // Announcement Types
 export interface Announcement {
+  /** „@handle" mentions resolved at save time — see src/lib/mentions. */
+  mentions?: MentionRef[];
   _id?: ObjectId | string;
   title: string;
   content: string;
@@ -127,6 +134,8 @@ export interface Announcement {
 
 // Recommendation Types
 export interface Recommendation {
+  /** „@handle" mentions resolved at save time — see src/lib/mentions. */
+  mentions?: MentionRef[];
   _id?: ObjectId | string;
   title: string;
   content: string;

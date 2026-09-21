@@ -62,6 +62,11 @@ export function buildPushPayload(
     case 'market_contact':
       body = `Neue Anfrage zu deinem Angebot \u201A${t}\u2018`;
       break;
+    case 'mention':
+      body = meta?.contentKind === 'comment'
+        ? `Du wurdest in einem Kommentar erw\u00e4hnt: \u201a${t}\u2018`
+        : `Du wurdest erw\u00e4hnt: \u201a${t}\u2018`;
+      break;
     case 'moderation': {
       const noun = meta?.contentKind === 'comment' ? 'Kommentar' : 'Beitrag';
       if (meta?.outcome === 'rejected') body = `Dein ${noun} wurde abgelehnt — Details in deinem Profil`;

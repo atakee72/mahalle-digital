@@ -166,6 +166,7 @@
   // ⇄ for market — NOT ◈, which means „Gespeichert" in the avatar menu.
   const GLYPH: Record<string, { g: string; c: string }> = {
     comment: { g: '✎', c: 'var(--k-ink)' },
+    mention: { g: '@', c: 'var(--k-ink)' },
     market_contact: { g: '⇄', c: 'var(--k-ink)' },
     moderation: { g: '§', c: 'var(--k-plum, #6f2f59)' },
     official: { g: '◉', c: 'var(--k-teal, #3f8f9f)' },
@@ -179,6 +180,10 @@
         // Per-contentType variants (CD: „DE-Artikel je contentType als Key-Varianten").
         const key = `nc.comment.${it.target?.contentType}`;
         return tStr($t[key] ?? $t['nc.comment.topic'], { actor, title });
+      }
+      case 'mention': {
+        const actor = it.actorName ?? $t['nc.tombstone'];
+        return tStr(it.meta?.contentKind === 'comment' ? $t['nc.mention.comment'] : $t['nc.mention.post'], { actor, title });
       }
       case 'official':
         return tStr($t['nc.official'], { title });

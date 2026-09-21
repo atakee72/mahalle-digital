@@ -1,6 +1,6 @@
 import type { ObjectId } from 'mongodb';
 
-export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact';
+export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention';
 
 export interface NotificationTarget {
   /** The page kind the row deep-links to (mirrors the href, not necessarily
@@ -19,6 +19,9 @@ export interface NotificationMeta {
    *  for comments (it points at the PARENT page the row links to). Drives the
    *  „Beitrag" vs „Kommentar" copy variants. */
   contentKind?: string;
+  /** mention only: id of the post/comment that CONTAINS the mention — the idempotency
+   *  key (target.contentId is the PARENT page for comments, so it cannot serve). */
+  sourceId?: string;
 }
 
 /** DB shape — one doc per recipient per event. */

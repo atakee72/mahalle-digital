@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../../lib/mongodb';
+import { resolveMentions, notifyMentions } from '../../../../lib/mentions/mentionsStore';
+import { moderationTarget } from '../../../../lib/notifications';
 import { invalidateKiezKontext } from '../../../../lib/kiez/kontext';
 import { ObjectId } from 'mongodb';
 import type { Topic, EditHistory, FlaggedContent } from '../../../../types';
@@ -134,7 +136,9 @@ export const PUT: APIRoute = async ({ request, params }) => {
       isEdited: true,
       lastEditedAt: new Date(),
       updatedAt: new Date(),
-      moderationStatus: newModerationStatus
+      moderationStatus: newModerationStatus,
+      // „@handle" mentions are re-resolved on every save (src/lib/mentions).
+      mentions: await resolveMentions(db, body)
     };
 
     // Clear rejection reason if going back to pending (new review needed)
@@ -176,6 +180,15 @@ export const PUT: APIRoute = async ({ request, params }) => {
       return new Response(JSON.stringify({ error: 'Failed to update topic' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Newly added mentions notify only while the topic is public; an edit that
+    // fell back to pending is picked up on approval. Idempotent, never throws.
+    if (newModerationStatus === 'approved') {
+      await notifyMentions(db, {
+        actorId: userId, mentions: updateData.mentions, sourceId: String(topicId), kind: 'post',
+        target: moderationTarget('topic', String(topicId), title),
       });
     }
 

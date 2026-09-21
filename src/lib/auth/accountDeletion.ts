@@ -20,6 +20,7 @@ import { randomBytes, createHash } from 'crypto';
 import { ObjectId } from 'mongodb';
 import { v2 as cloudinary } from 'cloudinary';
 import { deleteAllDraftsOf } from '../forum/postDraftsStore';
+import { removeMentionsOf } from '../mentions/mentionsResolve';
 import { connectDB } from '../mongodb';
 import * as Sentry from '@sentry/astro';
 import { hashContactEmail } from '../listings/contactHash';
@@ -268,6 +269,15 @@ export async function runDeletionPipeline(
     steps.postDraftImages = delDrafts.imagesDestroyed;
   } catch (err) {
     fail('postDrafts', err);
+  }
+
+  // „@handle" mentions OF this member in other people's posts and comments
+  // (2026-09-21): the stored reference is pulled, so the text reads as plain
+  // text again and never links to a tombstone.
+  try {
+    steps.mentions = await removeMentionsOf(db, userId);
+  } catch (err) {
+    fail('mentions', err);
   }
 
   // Received notifications are orphaned junk once the account tombstones;

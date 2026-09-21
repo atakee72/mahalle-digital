@@ -9,6 +9,7 @@ import { parseRequestBody } from '../../../schemas/validation.utils';
 import { moderateText, checkSpamWithGPT, createFlaggedContentRecord, mergeModerationResults } from '../../../lib/moderation';
 import { rejectIfBanned } from '../../../lib/auth/banGuard';
 import { notify, commentTarget } from '../../../lib/notifications';
+import { resolveMentions, notifyMentions } from '../../../lib/mentions/mentionsStore';
 import { alertComment, alertModerationFlagged } from '../../../lib/adminAlerts';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -57,6 +58,9 @@ export const POST: APIRoute = async ({ request }) => {
     const db = await connectDB();
     const commentsCollection = db.collection<Comment>('comments');
 
+    // „@handle" mentions are resolved NOW and stored by user id (src/lib/mentions).
+    const mentions = await resolveMentions(db, body);
+
     // Create new comment
     const newComment: Comment = {
       body,
@@ -64,6 +68,7 @@ export const POST: APIRoute = async ({ request }) => {
       relevantPostId: new ObjectId(topicId),
       date: Date.now(),
       upvotes: 0,
+      mentions,
       moderationStatus,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -122,6 +127,14 @@ export const POST: APIRoute = async ({ request }) => {
           target: commentTarget(parentCollection, topicId, parentDoc.title ?? ''),
         });
       }
+
+      // Mentioned members — the comment is public. The parent's author just got
+      // the „replied" notification above, so no second one. Never throws.
+      await notifyMentions(db, {
+        actorId: userId, mentions, sourceId: result.insertedId.toString(), kind: 'comment',
+        target: commentTarget(parentCollection, topicId, parentDoc?.title ?? ''),
+        skipUserIds: parentDoc?.author ? [String(parentDoc.author)] : [],
+      });
 
       if (!skipModeration) {
         await alertComment({ authorName: session.user.name, parentTitle: parentDoc?.title ?? '' });

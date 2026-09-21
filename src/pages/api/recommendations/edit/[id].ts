@@ -2,6 +2,8 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../../lib/mongodb';
+import { resolveMentions, notifyMentions } from '../../../../lib/mentions/mentionsStore';
+import { moderationTarget } from '../../../../lib/notifications';
 import { ObjectId } from 'mongodb';
 import type { Recommendation, EditHistory } from '../../../../types';
 import { RecommendationUpdateSchema } from '../../../../schemas/forum.schema';
@@ -79,6 +81,9 @@ export const PUT: APIRoute = async ({ request, params }) => {
       editedBy: userId
     };
 
+    // „@handle" mentions are re-resolved on every save (src/lib/mentions).
+    const mentions = await resolveMentions(db, body ?? '');
+
     const updateResult = await recommendationsCollection.findOneAndUpdate(
       { _id: new ObjectId(recommendationId) },
       {
@@ -88,6 +93,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
           description: body,
           tags: tags || [],
           images: images || [],
+          mentions,
           isEdited: true,
           lastEditedAt: new Date(),
           updatedAt: new Date()
@@ -105,6 +111,13 @@ export const PUT: APIRoute = async ({ request, params }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    // The gate above guarantees the post is public → newly added mentions notify
+    // right away. Idempotent (already-notified members are skipped), never throws.
+    await notifyMentions(db, {
+      actorId: userId, mentions, sourceId: String(recommendationId), kind: 'post',
+      target: moderationTarget('recommendation', String(recommendationId), title ?? ''),
+    });
 
     // Construct author object from session
     const author = {

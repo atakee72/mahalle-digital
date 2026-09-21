@@ -6,6 +6,7 @@
 import { ObjectId, type Db } from 'mongodb';
 import type { FlaggedContent, User } from '../types';
 import { notify, commentTarget, moderationTarget } from './notifications';
+import { notifyMentionsOnApproval } from './mentions/mentionsStore';
 import { invalidateKiezKontext } from './kiez/kontext';
 
 const MAX_STRIKES = 3;
@@ -154,6 +155,13 @@ export async function processReviewAction(
           }
         }
       }
+    }
+
+    // „@handle" mentions were held back while the item was pending (create/edit
+    // notify only when public). Reads the LIVE doc, skips user reports, is
+    // idempotent and never throws — see src/lib/mentions/mentionsStore.ts.
+    if (!isRejection) {
+      await notifyMentionsOnApproval(db, flaggedContent);
     }
 
     // Handle strike system on rejection

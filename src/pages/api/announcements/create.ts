@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../lib/publicAuthor';
+import { resolveMentions, notifyMentions } from '../../../lib/mentions/mentionsStore';
+import { moderationTarget } from '../../../lib/notifications';
 import { ObjectId } from 'mongodb';
 import type { Announcement, FlaggedContent } from '../../../types';
 import { AnnouncementCreateSchema } from '../../../schemas/forum.schema';
@@ -87,6 +89,9 @@ export const POST: APIRoute = async ({ request }) => {
       mergedResult = mergeModerationResults(...resultsToMerge);
     }
 
+    // „@handle" mentions are resolved NOW and stored by user id (src/lib/mentions).
+    const mentions = await resolveMentions(db, body);
+
     // Determine moderation status
     const moderationStatus = mergedResult ? 'pending' : 'approved';
 
@@ -97,6 +102,7 @@ export const POST: APIRoute = async ({ request }) => {
       author: userId as any, // Save author as ID string
       tags: tags || [],
       images: images || [],
+      mentions,
       comments: [],
       views: 0,
       likes: 0,
@@ -134,6 +140,15 @@ export const POST: APIRoute = async ({ request }) => {
       } else {
         await alertContentNew({ type: 'announcement', title, authorName: session.user.name, pending: false });
       }
+    }
+
+    // Mentions notify only once the post is public; a pending post is picked up
+    // by notifyMentionsOnApproval() in reviewAction.ts. Never throws.
+    if (!mergedResult) {
+      await notifyMentions(db, {
+        actorId: userId, mentions, sourceId: result.insertedId.toString(), kind: 'post',
+        target: moderationTarget('announcement', result.insertedId.toString(), title),
+      });
     }
 
     // Fetch author info to return with the created announcement
