@@ -421,7 +421,7 @@ Each main page has its own accent color used for **kickers** (mono-uppercase eye
 | Newsboard (Kurier) | ink | ink-only surface — its "newspaper" identity, no color accent |
 | Auth / Profile | ochre | `--k-ochre` |
 
-When migrating a surface into kiosk, swap kicker + italic-accent text to the page's color. **Don't touch:** live-now indicators, today indicator, weekend day labels, required-field asterisks, compose step numbers (`01`, `02`, …), CTA wine-shadows, modal wine-shadows — those are semantic/sticker accents, not brand accent, and stay wine across all surfaces. **Exception since 2026-09-20 (user decision): the floating „+" button on phones takes the page colour** — forum + market wine, calendar teal, News ink (with the wine print shadow); all four surfaces have one now, see `src/components/forum/kiosk/CLAUDE.md` → „Floating „+" on phones".
+When migrating a surface into kiosk, swap kicker + italic-accent text to the page's color. **Don't touch:** live-now indicators, today indicator, weekend day labels, required-field asterisks, compose step numbers (`01`, `02`, …), CTA wine-shadows, modal wine-shadows — those are semantic/sticker accents, not brand accent, and stay wine across all surfaces. **Exception since 2026-09-20 (user decision): the floating „+" button on phones takes the page colour** — forum wine, market a DARKER ochre `#b97a1a` with a paper plus since 2026-09-22 (user trial: plain ochre `#e8a53a` had no contrast for a paper plus and vanished against the ochre bottom bar), calendar teal, News ink (with the wine print shadow); all four surfaces have one now, see `src/components/forum/kiosk/CLAUDE.md` → „Floating „+" on phones".
 
 ## Common Errors to Avoid
 

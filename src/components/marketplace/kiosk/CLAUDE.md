@@ -71,7 +71,7 @@ Loaded lazily when Claude reads/edits files in `src/components/marketplace/kiosk
 
 ### Page-accent rule (dual accent)
 - Marketplace uses **two** accents — not one:
-  - `--k-accent: var(--k-wine)` — kickers (mono-uppercase eyebrows like `MARKTPLATZ`) and default surface accents. Wine is also the marketplace FAB color.
+  - `--k-accent: var(--k-wine)` — kickers (mono-uppercase eyebrows like `MARKTPLATZ`) and default surface accents. The phone FAB (floating plus) is NOT wine since 2026-09-22: `bg-[#b97a1a]` (dark ochre, user trial) with a paper plus; details in the forum area file under the floating-plus section.
   - `--k-accent-italic: var(--k-ochre)` — italic verb emphasis ONLY in headlines. Per Decision A10.
 - The `.kiosk-headline em` CSS rule in `global.css` auto-applies the ochre + italic to `<em>` inside `.kiosk-headline` elements. Don't manually write `text-ochre italic` — let the rule do it.
 - **Don't extend `--k-accent-italic`** (ochre italic) to other pages. It's a marketplace-only design decision. Forum stays wine-italic, calendar stays teal-italic.
