@@ -20,8 +20,8 @@ const zipCity = import.meta.env.IMPRESSUM_ZIP_CITY || 'Berlin';
     <h2 class="font-bricolage">2. Welche Daten wir verarbeiten</h2>
     <p>
       <strong>Konto:</strong> Name, E-Mail-Adresse und Passwort (verschlüsselt gespeichert
-      als bcrypt-Hash). <strong>Inhalte:</strong> Beiträge, Kommentare, Termine, Inserate
-      und hochgeladene Bilder, die du selbst veröffentlichst. <strong>Technisch:</strong>
+      als bcrypt-Hash). <strong>Inhalte:</strong> Beiträge (auch gespeicherte Entwürfe), Kommentare, Termine, Inserate
+      und hochgeladene Bilder, die du selbst veröffentlichst oder als Entwurf speicherst. <strong>Technisch:</strong>
       Session-Cookies für den Login (JWT), Spracheinstellung im lokalen Speicher deines
       Browsers, sowie gekürzte/gehashte IP-Adressen zur Missbrauchsabwehr (Rate-Limiting).
       Es gibt kein Werbe-Tracking und keine Analyse-Cookies.
@@ -51,7 +51,7 @@ const zipCity = import.meta.env.IMPRESSUM_ZIP_CITY || 'Berlin';
       Deine Daten bleiben gespeichert, solange dein Konto besteht. Du kannst dein
       Konto jederzeit selbst löschen (Profil → Konto): nach einer 7-tägigen
       Widerrufsfrist werden Name, E-Mail, Passwort und Profildaten entfernt bzw.
-      anonymisiert. Beim Kontakt über den Marktplatz speichern wir nur Metadaten
+      anonymisiert; gespeicherte Entwürfe werden dabei gelöscht. Beim Kontakt über den Marktplatz speichern wir nur Metadaten
       (keine Nachrichtentexte).
     </p>
 
