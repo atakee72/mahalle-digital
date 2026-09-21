@@ -9,6 +9,7 @@ import KioskLayout from '../../layouts/KioskLayout.astro';
 import ComposePage from '../../components/forum/kiosk/compose/ComposePage.svelte';
 import { getSession } from 'auth-astro/server';
 import { isUserBanned } from '../../lib/auth/banGuard';
+import { getDraft } from '../../lib/forum/postDraftsStore';
 
 const session = await getSession(Astro.request);
 
@@ -27,8 +28,16 @@ const currentUser = {
   name: session.user.name ?? undefined,
   image: session.user.image ?? null
 };
+
+// Resume a server-side draft (?draft=<id>): owner-checked here, so the island
+// never sees a foreign one. Unknown or foreign id → the plain compose page.
+const draftParam = Astro.url.searchParams.get('draft');
+const initialDraft = draftParam ? await getDraft(draftParam, session.user.id) : null;
+if (draftParam && !initialDraft) {
+  return Astro.redirect('/topics/create', 302);
+}
 ---
 
 <KioskLayout title="Mahalle · neues Thema" description="Schreibe einen neuen Beitrag im Mahalle-Forum." page="forum">
-  <ComposePage client:only="svelte" currentUser={currentUser} />
+  <ComposePage client:only="svelte" currentUser={currentUser} initialDraft={initialDraft} />
 </KioskLayout>

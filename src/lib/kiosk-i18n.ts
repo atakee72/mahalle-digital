@@ -349,6 +349,9 @@ const de = {
     'Dein Beitrag wird kurz auf Sprache und Inhalt geprüft, bevor er veröffentlicht wird. Die Prüfung ist anonym — keine persönlichen Daten werden verwendet, nur der Text und die Bilder.',
   'compose.cta.publish': 'veröffentlichen →',
   'compose.cta.draft': 'als Entwurf speichern',
+  'drafts.error.empty': 'Ein leerer Entwurf lässt sich nicht speichern.',
+  'drafts.error.limit': 'Du hast schon 20 Entwürfe. Lösche einen, dann kannst du diesen speichern.',
+  'drafts.error.save': 'Der Entwurf wurde nicht gespeichert. Dein Text ist noch da.',
   'compose.cta.discard': 'verwerfen',
   'compose.draft.saved': 'Entwurf wird gesichert',
   'compose.terms':
@@ -2306,6 +2309,9 @@ const en: Dict = {
     'Your post is briefly checked for language and content before going live. The check is anonymous — no personal data is used, only the text and images.',
   'compose.cta.publish': 'publish →',
   'compose.cta.draft': 'save as draft',
+  'drafts.error.empty': 'An empty draft cannot be saved.',
+  'drafts.error.limit': 'You already have 20 drafts. Delete one, then you can save this one.',
+  'drafts.error.save': 'The draft was not saved. Your text is still here.',
   'compose.cta.discard': 'discard',
   'compose.draft.saved': 'draft auto-saved',
   'compose.terms':

@@ -37,10 +37,18 @@
     RateLimitError
   } from '../../../../lib/forumMutations';
   import { t } from '../../../../lib/kiosk-i18n';
+  import { draftIsEmpty, type PostDraftDTO } from '../../../../lib/forum/postDrafts';
 
-  let { currentUser } = $props<{
+  let { currentUser, initialDraft = null } = $props<{
     currentUser: { id: string; name?: string; image?: string | null };
+    initialDraft?: PostDraftDTO | null;
   }>();
+
+  // A server-side draft is open (resumed via ?draft=<id>). Drafts live on the
+  // server since 2026-09-21: several per member, on every device, listed under
+  // the forum's "Meine" filter. The local slot below stays as a crash safety net.
+  // svelte-ignore state_referenced_locally
+  let draftId = $state<string | null>(initialDraft?.id ?? null);
 
   // ─── Form state ─────────────────────────────────────────────────────
   // The form bubbles values up via onChange. We mirror them here so the
@@ -62,6 +70,19 @@
   // "im Forum diskutieren" CTA) over a saved draft.
   function computeInitialValues(): Partial<ComposeValues> | undefined {
     let result: Partial<ComposeValues> | undefined;
+
+    // A resumed server draft wins over everything — prefill params and the
+    // local slot belong to a different piece of writing.
+    if (initialDraft) {
+      return {
+        title: initialDraft.title,
+        body: initialDraft.body,
+        kind: initialDraft.kind,
+        tags: initialDraft.tags,
+        pendingFiles: [],
+        existingImages: initialDraft.images
+      };
+    }
 
     let saved: DraftValues | null = null;
     topicDraft.subscribe((v) => (saved = v))();
@@ -110,6 +131,9 @@
   // files are local object URLs that don't survive a reload anyway.
   let draftTimer: ReturnType<typeof setTimeout> | null = null;
   $effect(() => {
+    // Server draft open — the single local slot stays someone else's
+    // (marketplace precedent: a resumed draft must not pollute it).
+    if (draftId) return;
     const snapshot: DraftValues = {
       title: values.title,
       body: values.body,
@@ -204,6 +228,11 @@
       });
 
       topicDraft.clearDraft();
+      if (draftId) {
+        // Best effort: the post exists; a leftover draft is only clutter. The
+        // server keeps the images because the new post references them.
+        await fetch(`/api/posts/drafts/${draftId}`, { method: 'DELETE', credentials: 'include', keepalive: true }).catch(() => {});
+      }
       modalOpen = false;
       // Navigate to the forum index with a marker so ForumIndexInner can
       // show a success toast on arrival (the compose page unmounts before its
@@ -224,19 +253,48 @@
     }
   }
 
-  function onSaveDraft() {
-    topicDraft.setDraft({
-      title: values.title,
-      body: values.body,
-      kind: values.kind,
-      tags: values.tags
-    });
-    if (typeof window !== 'undefined') window.location.href = '/forum';
+  let savingDraft = $state(false);
+
+  // Saves to the SERVER (uploads pending images first), then shows the draft
+  // in its list. Until 2026-09-21 this wrote one local-storage slot and went
+  // to /forum without a word — the user could not find his own draft.
+  async function onSaveDraft() {
+    if (savingDraft || submitting) return;
+    inlineError = null;
+    const candidate = { kind: values.kind, title: values.title, body: values.body, tags: values.tags, images: values.existingImages };
+    if (draftIsEmpty(candidate) && values.pendingFiles.length === 0) {
+      inlineError = $t['drafts.error.empty'] as string;
+      return;
+    }
+    if (values.existingImages.length + values.pendingFiles.length > 5) {
+      inlineError = 'Zu viele Bilder (max. 5).';
+      return;
+    }
+    savingDraft = true;
+    try {
+      const uploaded = values.pendingFiles.length ? await uploadPendingFiles(values.pendingFiles) : [];
+      const res = await fetch('/api/posts/drafts', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...(draftId ? { id: draftId } : {}), ...candidate, images: [...values.existingImages, ...uploaded] })
+      });
+      if (res.status === 409) throw new Error($t['drafts.error.limit'] as string);
+      if (!res.ok) throw new Error($t['drafts.error.save'] as string);
+      draftId = (await res.json()).draft.id;
+      topicDraft.clearDraft();
+      window.location.href = '/forum?kind=mine&draft_saved=1';
+    } catch (caught) {
+      savingDraft = false;
+      inlineError = caught instanceof Error ? caught.message : ($t['drafts.error.save'] as string);
+    }
   }
 
+  // With a server draft open, "verwerfen" leaves WITHOUT saving changes and keeps
+  // the draft — deleting happens in the list, behind a confirm.
   function onDiscard() {
-    topicDraft.clearDraft();
-    if (typeof window !== 'undefined') window.location.href = '/forum';
+    if (!draftId) topicDraft.clearDraft();
+    if (typeof window !== 'undefined') window.location.href = draftId ? '/forum?kind=mine' : '/forum';
   }
 </script>
 
@@ -252,7 +310,7 @@
     <ComposePreview
       values={values}
       currentUser={{ name: currentUser.name, image: currentUser.image }}
-      submitting={submitting}
+      submitting={submitting || savingDraft}
       onPublish={onPublish}
       onSaveDraft={onSaveDraft}
       onDiscard={onDiscard}
@@ -296,7 +354,7 @@
       variant="secondary"
       size="lg"
       onclick={onSaveDraft}
-      disabled={submitting}
+      disabled={submitting || savingDraft}
       class="w-full"
     >
       {$t['compose.cta.draft']}

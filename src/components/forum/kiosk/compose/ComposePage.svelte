@@ -6,8 +6,11 @@
   import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
   import ComposePageInner from './ComposePageInner.svelte';
 
-  let { currentUser } = $props<{
+  import type { PostDraftDTO } from '../../../../lib/forum/postDrafts';
+
+  let { currentUser, initialDraft = null } = $props<{
     currentUser: { id: string; name?: string; image?: string | null };
+    initialDraft?: PostDraftDTO | null;
   }>();
 
   const client = new QueryClient({
@@ -18,5 +21,5 @@
 </script>
 
 <QueryClientProvider {client}>
-  <ComposePageInner {currentUser} />
+  <ComposePageInner {currentUser} {initialDraft} />
 </QueryClientProvider>
