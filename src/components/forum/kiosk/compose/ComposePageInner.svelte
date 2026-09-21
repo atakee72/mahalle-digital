@@ -36,6 +36,7 @@
     createTopicMutation,
     RateLimitError
   } from '../../../../lib/forumMutations';
+  import { tick, untrack } from 'svelte';
   import { t } from '../../../../lib/kiosk-i18n';
   import { draftIsEmpty, type PostDraftDTO } from '../../../../lib/forum/postDrafts';
 
@@ -151,8 +152,20 @@
     };
   });
 
+  // Called from INSIDE ComposeForm's `$effect(() => onChange(...))`. Anything
+  // reactive read here becomes a dependency of THAT effect — reading errorKey
+  // made the effect re-run the moment an error was set, and this function then
+  // cleared it again at once (the error never appeared). So: untrack, and clear
+  // only when the member really changed something.
+  const sig = (v: ComposeValues) => `${v.kind}|${v.title}|${v.body}|${v.tags.join(',')}|${v.pendingFiles.length}|${v.existingImages.length}`;
+  let lastSig = '';
   function handleChange(next: ComposeValues) {
     values = next;
+    const s = sig(next);
+    if (s !== lastSig) {
+      if (lastSig) untrack(clearError); // the member is fixing it — do not nag
+      lastSig = s;
+    }
   }
 
   // ─── Mutation ───────────────────────────────────────────────────────
@@ -166,7 +179,26 @@
   let submitting = $state(false);
   let modalOpen = $state(false);
   let rateLimited = $state(false);
-  let inlineError = $state<string | null>(null);
+  // The error line sits NEXT TO THE BUTTONS (user, 2026-09-21; it used to be a
+  // block under the whole form). It stores a dictionary KEY, not a finished
+  // sentence — a stored sentence stayed English after the member switched to
+  // German — and it clears as soon as the member types. `errorText` is only
+  // for free text from the server (validation details of a failed publish).
+  type ErrorKey = 'compose.error.titleShort' | 'compose.error.titleLong' | 'compose.error.bodyShort' | 'compose.error.bodyLong'
+    | 'compose.error.tags' | 'compose.error.images' | 'compose.error.publish'
+    | 'drafts.error.empty' | 'drafts.error.limit' | 'drafts.error.save';
+  let errorKey = $state<ErrorKey | null>(null);
+  let errorText = $state<string | null>(null);
+  const inlineError = $derived(errorKey ? ($t[errorKey] as string) : errorText);
+
+  async function raiseError(key: ErrorKey | null, text: string | null = null) {
+    errorKey = key;
+    errorText = key ? null : text;
+    await tick();
+    // Two copies exist (desktop sidebar, phone flow) — scroll the visible one into view.
+    [...document.querySelectorAll<HTMLElement>('[data-compose-error]')].find((e) => e.getClientRects().length)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  const clearError = () => { errorKey = null; errorText = null; };
 
   // Image upload (lazy — fires only on submit).
   async function uploadPendingFiles(files: File[]) {
@@ -189,24 +221,23 @@
     return uploaded;
   }
 
-  function validate(v: ComposeValues): string | null {
-    if (v.title.trim().length < 5) return 'Titel zu kurz (mind. 5 Zeichen).';
-    if (v.title.length > 80) return 'Titel zu lang (max. 80 Zeichen).';
-    if (v.body.trim().length < 10) return 'Text zu kurz (mind. 10 Zeichen).';
-    if (v.body.length > 2000) return 'Text zu lang (max. 2000 Zeichen).';
-    if (v.tags.length > 3) return 'Zu viele Tags (max. 3).';
-    if (v.existingImages.length + v.pendingFiles.length > 5)
-      return 'Zu viele Bilder (max. 5).';
+  function validate(v: ComposeValues): ErrorKey | null {
+    if (v.title.trim().length < 5) return 'compose.error.titleShort';
+    if (v.title.length > 80) return 'compose.error.titleLong';
+    if (v.body.trim().length < 10) return 'compose.error.bodyShort';
+    if (v.body.length > 2000) return 'compose.error.bodyLong';
+    if (v.tags.length > 3) return 'compose.error.tags';
+    if (v.existingImages.length + v.pendingFiles.length > 5) return 'compose.error.images';
     return null;
   }
 
   async function onPublish() {
     if (submitting) return;
-    inlineError = null;
+    clearError();
 
     const err = validate(values);
     if (err) {
-      inlineError = err;
+      void raiseError(err);
       return;
     }
 
@@ -247,8 +278,9 @@
       if (caught instanceof RateLimitError) {
         rateLimited = true;
       } else {
-        inlineError =
-          caught instanceof Error ? caught.message : 'Veröffentlichen fehlgeschlagen.';
+        // Server text (validation details) is shown as it comes; without one, our own sentence.
+        const msg = caught instanceof Error ? caught.message : '';
+        void raiseError(msg ? null : 'compose.error.publish', msg || null);
       }
     }
   }
@@ -260,14 +292,14 @@
   // to /forum without a word — the user could not find his own draft.
   async function onSaveDraft() {
     if (savingDraft || submitting) return;
-    inlineError = null;
+    clearError();
     const candidate = { kind: values.kind, title: values.title, body: values.body, tags: values.tags, images: values.existingImages };
     if (draftIsEmpty(candidate) && values.pendingFiles.length === 0) {
-      inlineError = $t['drafts.error.empty'] as string;
+      void raiseError('drafts.error.empty');
       return;
     }
     if (values.existingImages.length + values.pendingFiles.length > 5) {
-      inlineError = 'Zu viele Bilder (max. 5).';
+      void raiseError('compose.error.images');
       return;
     }
     savingDraft = true;
@@ -279,14 +311,16 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...(draftId ? { id: draftId } : {}), ...candidate, images: [...values.existingImages, ...uploaded] })
       });
-      if (res.status === 409) throw new Error($t['drafts.error.limit'] as string);
-      if (!res.ok) throw new Error($t['drafts.error.save'] as string);
+      if (res.status === 409) throw new Error('drafts.error.limit');
+      if (!res.ok) throw new Error('drafts.error.save');
       draftId = (await res.json()).draft.id;
       topicDraft.clearDraft();
       window.location.href = '/forum?kind=mine&draft_saved=1';
     } catch (caught) {
       savingDraft = false;
-      inlineError = caught instanceof Error ? caught.message : ($t['drafts.error.save'] as string);
+      // Our own throws carry a key; anything else (upload failure, network) → the generic draft sentence.
+      const k = caught instanceof Error && caught.message === 'drafts.error.limit' ? 'drafts.error.limit' : 'drafts.error.save';
+      void raiseError(k);
     }
   }
 
@@ -314,19 +348,10 @@
       onPublish={onPublish}
       onSaveDraft={onSaveDraft}
       onDiscard={onDiscard}
+      error={inlineError}
     />
   </div>
 
-  {#if inlineError}
-    <div class="px-6 md:px-9 pb-6">
-      <p
-        class="font-bricolage text-sm text-danger px-3.5 py-2 bg-danger/10 border border-danger rounded-md"
-        role="alert"
-      >
-        {inlineError}
-      </p>
-    </div>
-  {/if}
 
   <!-- Mobile-only flow: mirrors the desktop sidebar order (preview →
        moderation → submit row) but split between inline (Save Draft +
@@ -350,6 +375,9 @@
   </div>
 
   <div class="lg:hidden px-6 pt-4 flex flex-col gap-2.5">
+    {#if inlineError}
+      <p data-compose-error role="alert" class="font-bricolage text-sm text-danger px-3.5 py-2 bg-danger/10 border border-danger rounded-md">{inlineError}</p>
+    {/if}
     <KioskBtn
       variant="secondary"
       size="lg"

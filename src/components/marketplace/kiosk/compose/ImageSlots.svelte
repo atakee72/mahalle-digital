@@ -123,7 +123,11 @@
       {@const isUploading = uploading.has(i)}
 
       {#if hasImage}
-        <!-- Filled slot -->
+        <!-- Filled slot. The stripe tint uses color-mix, NOT catColor + '33': catColor
+             is always a CSS variable (var(--cat-…)), and a variable with two hex digits
+             glued on is invalid CSS — the browser then drops the WHOLE background
+             declaration, photo included. The preview never showed until 2026-09-21.
+             (Keep comments OUT of the style attribute: a double quote in there breaks it.) -->
         <div
           draggable={true}
           ondragstart={(e: DragEvent) => onDragStart(e, i)}
@@ -137,7 +141,7 @@
             background:
               repeating-linear-gradient(
                 45deg,
-                {catColor}33 0 8px,
+                color-mix(in srgb, {catColor} 20%, transparent) 0 8px,
                 var(--k-paper-warm) 8px 16px
               ),
               url('{images[i]}') center/cover;

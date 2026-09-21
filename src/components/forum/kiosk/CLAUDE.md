@@ -2,6 +2,10 @@
 
 Loaded lazily when Claude reads/edits files in `src/components/forum/kiosk/` (or any subtree). The root `CLAUDE.md` keeps a pointer to this file so it can be pulled in even when working on related files outside this directory (e.g. `src/pages/api/topics/`, `src/lib/topicsQuery.ts`).
 
+### Compose error line: next to the buttons, stores a KEY, clears on typing (2026-09-21)
+User report: „An empty draft cannot be saved." stood in English on a German page, far below the form. Three causes, three fixes in `ComposePageInner.svelte`: (1) the page stored the finished SENTENCE — a message set while the locale was EN stayed English after switching; it now stores `errorKey` (typed union of `compose.error.*` / `drafts.error.*`) and derives the text from `$t`, so the language follows; free server text (validation details of a failed publish) goes to `errorText`. The old hard-coded German validation sentences became keys too. (2) It never cleared — now it does as soon as the member changes anything. (3) It was a block under the whole form — it is now rendered right above the buttons: `ComposePreview`'s new `error` prop (desktop) and a copy in the `lg:hidden` flow (phones), both `[data-compose-error]`; `raiseError()` scrolls the visible one into view.
+**Svelte 5 trap hit on the way:** `handleChange` runs INSIDE `ComposeForm`'s `$effect(() => onChange(...))`. Reading `errorKey` there made it a dependency of the CHILD's effect: setting an error re-ran the effect, which called `handleChange`, which cleared the error in the same tick — it never appeared. Fix: `untrack(clearError)` and only when a value signature really changed. Rule: a callback a child calls from an effect must not read the parent's reactive state untracked-ly. Probe: `scratchpad/photo-preview-and-errors-probe.cjs` (14 checks, DEV ONLY).
+
 ### Compose `initialValues` must be computed synchronously (NOT in onMount)
 `ComposeForm.svelte` snapshots the `initialValues` prop into local `$state` at
 init (`let title = $state(initialValues?.title ?? '')`). It does **not** re-read

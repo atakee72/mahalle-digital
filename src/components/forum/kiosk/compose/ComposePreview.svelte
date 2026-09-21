@@ -36,6 +36,7 @@
     values,
     currentUser,
     submitting = false,
+    error = null,
     onPublish,
     onSaveDraft,
     onDiscard
@@ -43,6 +44,8 @@
     values: Values;
     currentUser: { name?: string; image?: string | null };
     submitting?: boolean;
+    /** Error line shown right above the buttons (2026-09-21: it used to sit under the whole form). */
+    error?: string | null;
     onPublish: () => void;
     onSaveDraft?: () => void;
     onDiscard: () => void;
@@ -68,6 +71,9 @@
 
   <!-- Submit row -->
   <div class="mt-auto flex flex-col gap-2.5">
+    {#if error}
+      <p data-compose-error role="alert" class="font-bricolage text-sm text-danger px-3.5 py-2 bg-danger/10 border border-danger rounded-md">{error}</p>
+    {/if}
     <KioskBtn
       variant="primary"
       size="md"
