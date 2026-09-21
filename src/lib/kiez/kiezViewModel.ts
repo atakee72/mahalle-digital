@@ -2,6 +2,7 @@
 // this must stay client-safe (imported by both server-rendered .astro
 // frontmatter and client-hydrated Svelte islands).
 import type { AgeDistributionEntry, DynamikClass, KiezStatsResponse, PlrAreaDetail } from '../../types/kiezStats';
+import { periodTime } from './trendAxis';
 
 export const KZ_PLR_SHORT: Record<string, string> = {
   '08100102': 'Schiller. N',
@@ -61,7 +62,7 @@ export interface KzAreaVM {
   ageAbs: number[]; // 7 groups, counts
   mig: { a: number; mh: number; o: number } | null; // non-overlapping percentages (1 decimal)
   social: { alq: number; ka: number; tr: number; status: number; dyn: number; dynClass: DynamikClass | null } | null;
-  trend: { label: string; value: number }[]; // population per period, "H2 '21" labels
+  trend: { label: string; value: number; t: number }[]; // population per period, "H2 '21" labels; t = reference date as fractional year (trendAxis.periodTime) — charts place points by t, never by index
 }
 
 export interface KiezVM {
@@ -69,7 +70,7 @@ export interface KiezVM {
   lastUpdated: string;
   ageLabels: string[]; // ['0–5','6–17','18–26','27–44','45–54','55–64','65+']
   areas: KzAreaVM[]; // [0] = 'all' aggregate, then the 4 PLRs in code order
-  divTrend: { label: string; a: number; mh: number; o: number }[]; // Gesamt diversity % over periods
+  divTrend: { label: string; a: number; mh: number; o: number; t: number }[]; // Gesamt diversity % over periods (t: see trend)
   socialPeriod: string | null; // raw latest MSS period, e.g. "2023" (Kanal 04 right meta "MSS 2023")
   socTrend: {
     years: string[]; // "'13" … "'23"
@@ -100,7 +101,7 @@ function buildArea(
   social: SocialCounts,
   trendPoints: { period: string; population: number }[]
 ): KzAreaVM {
-  const trend = trendPoints.map((p) => ({ label: periodLabel(p.period), value: p.population }));
+  const trend = trendPoints.map((p) => ({ label: periodLabel(p.period), value: p.population, t: periodTime(p.period) }));
   let delta: string | null = null;
   let deltaVsLabel: string | null = null;
   if (trend.length >= 2) {
@@ -145,11 +146,12 @@ function buildArea(
   };
 }
 
-function buildDivTrend(trend: KiezStatsResponse['trend']): { label: string; a: number; mh: number; o: number }[] {
+function buildDivTrend(trend: KiezStatsResponse['trend']): { label: string; a: number; mh: number; o: number; t: number }[] {
   return trend.map((t) => {
     const sum = t.foreignNationals + t.germanWithMigBg + t.withoutMigBg;
     return {
       label: periodLabel(t.period),
+      t: periodTime(t.period),
       a: pctOf(t.foreignNationals, sum),
       mh: pctOf(t.germanWithMigBg, sum),
       o: pctOf(t.withoutMigBg, sum),

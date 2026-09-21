@@ -11,6 +11,7 @@
   import KzDonut from './primitives/KzDonut.svelte';
   import KzGrid from './primitives/KzGrid.svelte';
   import KzLine from './primitives/KzLine.svelte';
+  import { trendXs } from '../../../lib/kiez/trendAxis';
   import KzMap from './primitives/KzMap.svelte';
 
   let { area, vm }: { area: KzAreaVM; vm: KiezVM } = $props();
@@ -34,18 +35,15 @@
     { key: 'o', color: 'var(--k-ochre)' },
   ];
 
-  // Generalizes the JSX's fixed 5-point spacing (64 + i*130, span 64–584) to
-  // any trend length, matching KzKanalPop's xAt pattern.
-  function xAt(i: number, n: number, start: number, end: number): number {
-    return n > 1 ? start + i * ((end - start) / (n - 1)) : (start + end) / 2;
-  }
+  // Time-true x positions — same rule and reason as KzKanalPop (trendAxis.ts).
+  const divXs = $derived(trendXs(vm.divTrend.map((d) => d.t), 64, 584));
 
   function toY(v: number): number {
     return 108 - ((v - 18) / 30) * 88;
   }
 
   const trendPts = $derived(
-    trendSeries.map((s) => vm.divTrend.map((d, i) => [xAt(i, vm.divTrend.length, 64, 584), toY(d[s.key])] as [number, number]))
+    trendSeries.map((s) => vm.divTrend.map((d, i) => [divXs[i], toY(d[s.key])] as [number, number]))
   );
 
   const showTrend = $derived(vm.divTrend.length >= 2);
@@ -86,7 +84,7 @@
             <KzLine pts={trendPts[si]} color={s.color} seed={si * 3 + 2} width={2} />
           {/each}
           {#each vm.divTrend as d, i (i)}
-            <text x={xAt(i, vm.divTrend.length, 64, 584)} y="134" text-anchor="middle" font-family="var(--k-font-mono)" font-size="10" fill="var(--k-ink-mute)">{d.label}</text>
+            <text x={divXs[i]} y="134" text-anchor="middle" font-family="var(--k-font-mono)" font-size="10" fill="var(--k-ink-mute)">{d.label}</text>
           {/each}
         </svg>
         {#if area.mig}

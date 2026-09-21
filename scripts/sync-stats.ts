@@ -16,6 +16,7 @@
  */
 import 'dotenv/config';
 import { MongoClient } from 'mongodb';
+import { afsImportProblems } from '../src/lib/kiez/syncChecks';
 import ExcelJS from 'exceljs';
 
 // Schillerkiez Planungsraum codes (2021 LOR system)
@@ -81,6 +82,13 @@ function findSheet(workbook: ExcelJS.Workbook, keywords: string[], contentKeywor
     }
   }
   return null;
+}
+
+/** A file that is not what we expect must END the run with exit code 1 — never
+ *  a red cross followed by "✓ Sync complete" (that was the behaviour until
+ *  2026-09-21; a scheduled run against a changed file stayed green). */
+function fail(message: string): never {
+  throw new Error(message);
 }
 
 async function downloadXlsx(url: string): Promise<ExcelJS.Workbook> {
@@ -154,12 +162,10 @@ async function syncAfS(db: any) {
   const t2 = workbook.getWorksheet('T2');
   const t1 = workbook.getWorksheet('T1');
   if (!t2) {
-    console.error('  ✗ Sheet "T2" not found');
-    return;
+    fail('AfS: sheet "T2" not found — wrong report series? The import needs A I 16 (LOR-Planungsräume), not A I 5');
   }
-  if (!t1) {
-    console.log('  ⚠ Sheet "T1" not found — migration background data will be 0');
-  }
+  // Without T1 the origin figures would be stored as 0 and shown as a finding.
+  if (!t1) fail('AfS: sheet "T1" (origin / migration background) not found');
 
   // T2 column layout (positional — verified from actual XLSX):
   // 1: Bezirk, 2: Prognoseraum, 3: Bezirksregion, 4: Planungsraum
@@ -186,8 +192,7 @@ async function syncAfS(db: any) {
 
   const firstRow = findFirstDataRow(t2);
   if (firstRow < 0) {
-    console.error('  ✗ Could not find first data row in T2');
-    return;
+    fail('AfS: could not find the first data row in T2');
   }
   console.log(`  T2 data starts at row ${firstRow}`);
 
@@ -251,6 +256,27 @@ async function syncAfS(db: any) {
   for (const row of rows) {
     console.log(`    ${row.plr_code} — ${row.plr_name}: ${row.total} residents`);
   }
+
+  // Refuse to write anything that does not add up (pure, tested: src/lib/kiez/syncChecks.ts):
+  // file date vs period, all areas found, totals > 0, age groups = total, origin plausible.
+  // The title cell may be rich text — flatten it, or the date check would be skipped.
+  const rawTitle: any = t2.getRow(1).getCell(1).value;
+  const title = rawTitle?.richText ? rawTitle.richText.map((p: any) => p.text).join('') : String(rawTitle ?? '');
+  if (!/am \d{1,2}\. ?(Juni|Dezember) \d{4}/i.test(title)) fail(`AfS: cannot read the reference date from the T2 title ("${title.slice(0, 80)}")`);
+  const problems = afsImportProblems({
+    period,
+    title,
+    expectedAreas: PLR_CODES.length,
+    rows: rows.map((r) => ({
+      plr_code: r.plr_code,
+      total: r.total,
+      ageSum: r.u6 + r.u18 + r.u27 + r.u45 + r.u55 + r.u65 + r.a65,
+      foreign: r.foreign_nationals,
+      mh: r.migration_background,
+    })),
+  });
+  if (problems.length) fail(`AfS: refusing to import —\n    · ${problems.join('\n    · ')}`);
+  console.log(`  ✓ Checks passed (file date matches ${period}, ${rows.length} areas, sums add up)`);
 
   if (isDryRun) {
     console.log('  [DRY RUN] No database writes');
@@ -355,9 +381,7 @@ async function syncMSS(db: any) {
   const workbook = await downloadXlsx(url);
   const ws = findDataSheet(workbook);
   if (!ws) {
-    console.error('  ✗ Could not find data sheet with PLR codes in indicators file');
-    console.log(`  Available sheets: ${workbook.worksheets.map(s => s.name).join(', ')}`);
-    return;
+    fail(`MSS: could not find the data sheet with PLR codes (sheets: ${workbook.worksheets.map(s => s.name).join(', ')})`);
   }
   console.log(`  Indicators sheet: "${ws.name}" (${ws.rowCount} rows)`);
 
@@ -368,8 +392,7 @@ async function syncMSS(db: any) {
     if (/^\d{8}$/.test(v)) { dataStart = r; break; }
   }
   if (dataStart < 0) {
-    console.error('  ✗ Could not find first data row in indicators file');
-    return;
+    fail('MSS: could not find the first data row in the indicators file');
   }
   console.log(`  Data starts at row ${dataStart}`);
 
@@ -442,6 +465,7 @@ async function syncMSS(db: any) {
   }
 
   console.log(`  Matched ${rows.length} of ${matchCodes.length} PLR areas`);
+  if (rows.length !== matchCodes.length) fail(`MSS: matched ${rows.length} of ${matchCodes.length} planning areas — refusing to import a partial social index`);
   for (const row of rows) {
     console.log(`    ${row.plr_code} — ${row.plr_name}: unemployment ${row.unemployment_rate}%, child poverty ${row.child_poverty_rate}%, transfers ${row.transfer_benefit_rate}%`);
   }
@@ -505,8 +529,7 @@ async function syncReference(db: any) {
     }
   }
   if (!ws || dataStart < 0) {
-    console.error('  ✗ Could not find Bezirk data rows — reference sync skipped');
-    return;
+    fail('Reference: could not find the Bezirk data rows');
   }
   console.log(`  Sheet "${ws.name}", data starts at row ${dataStart}`);
 
@@ -530,14 +553,12 @@ async function syncReference(db: any) {
 
   const nk = rows.find((r) => r.code === '08');
   if (!nk) {
-    console.error('  ✗ Neukölln (code 08) not found — reference sync skipped');
-    return;
+    fail('Reference: Neukölln (code 08) not found');
   }
 
   const totalEw = rows.reduce((s, r) => s + r.ew, 0);
   if (totalEw <= 0) {
-    console.error('  ✗ Resident counts are zero — reference sync skipped');
-    return;
+    fail('Reference: resident counts are zero');
   }
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const weighted = (pick: (r: BezirkRow) => number) =>

@@ -12,6 +12,7 @@
   import KzKanal from './KzKanal.svelte';
   import KzGrid from './primitives/KzGrid.svelte';
   import KzLine from './primitives/KzLine.svelte';
+  import { trendXs } from '../../../lib/kiez/trendAxis';
 
   let { area, vm }: { area: KzAreaVM; vm: KiezVM } = $props();
 
@@ -20,12 +21,10 @@
   const color = $derived(KZ_SERIES_COLORS[area.code] ?? KZ_SERIES_COLORS.all);
   const overlay = $derived(vm.areas.filter((a) => a.code !== 'all'));
 
-  // Generalizes the JSX's fixed 5-point spacing (70 + i*190, span 70–830) to
-  // any trend length so real data (which may have fewer periods than the
-  // seed's 5) still lays out evenly across the same axis bounds.
-  function xAt(i: number, n: number, start: number, end: number): number {
-    return n > 1 ? start + i * ((end - start) / (n - 1)) : (start + end) / 2;
-  }
+  // Points sit where their reference DATE is (trendXs), not at i/(n-1): the
+  // imported editions are unevenly spaced (2022h1 + 2024h2 are missing), and
+  // even spacing drew a full year as wide as a half year (fixed 2026-09-21).
+  const mainXs = $derived(trendXs(area.trend.map((p) => p.t), 70, 830));
 
   const trendPts = $derived.by(() => {
     const trend = area.trend;
@@ -35,7 +34,7 @@
     const max = Math.max(...values);
     const span = max - min || 1;
     const toY = (v: number) => 118 - ((v - min) / span) * 82;
-    return trend.map((p, i) => [xAt(i, trend.length, 70, 830), toY(p.value)] as [number, number]);
+    return trend.map((p, i) => [mainXs[i], toY(p.value)] as [number, number]);
   });
 
   // "H2 '21" / "'21" → 2021, used only to build the "2021–2025" course range.
@@ -59,7 +58,8 @@
     const mn = Math.min(...values);
     const mx = Math.max(...values);
     const span = mx - mn || 1;
-    return trend.map((p, i) => [xAt(i, trend.length, 8, 120), 19 - ((p.value - mn) / span) * 14] as [number, number]);
+    const xs = trendXs(trend.map((p) => p.t), 8, 120);
+    return trend.map((p, i) => [xs[i], 19 - ((p.value - mn) / span) * 14] as [number, number]);
   }
 </script>
 
@@ -95,8 +95,8 @@
           <KzLine pts={trendPts} {color} seed={4} />
         {/if}
         {#each area.trend as p, i (i)}
-          <text x={xAt(i, area.trend.length, 70, 830)} y="144" text-anchor="middle" font-family="var(--k-font-mono)" font-size="10.5" fill="var(--k-ink-mute)">{p.label}</text>
-          <text x={xAt(i, area.trend.length, 70, 830)} y={trendPts[i][1] - 11} text-anchor="middle" font-family="var(--k-font-mono)" font-size="10.5" fill="var(--k-ink)" font-weight="500">{fmtNum(p.value)}</text>
+          <text x={mainXs[i]} y="144" text-anchor="middle" font-family="var(--k-font-mono)" font-size="10.5" fill="var(--k-ink-mute)">{p.label}</text>
+          <text x={mainXs[i]} y={trendPts[i][1] - 11} text-anchor="middle" font-family="var(--k-font-mono)" font-size="10.5" fill="var(--k-ink)" font-weight="500">{fmtNum(p.value)}</text>
         {/each}
       </svg>
     </div>
