@@ -19,6 +19,7 @@
 
   import { linkifySegments, displayUrl } from '../../../lib/linkify';
   import KioskAvatar from './KioskAvatar.svelte';
+  import MentionPopup from './compose/MentionPopup.svelte';
   import TranslateControl from './TranslateControl.svelte';
   import KioskReportModal from './KioskReportModal.svelte';
   import { t, tStr } from '../../../lib/kiosk-i18n';
@@ -42,6 +43,8 @@
       editedAt?: string | Date | null;
       moderationStatus?: 'approved' | 'pending' | 'rejected';
       hasWarningLabel?: boolean;
+      /** „@handle" mentions the server resolved at save time — linked by user id. */
+      mentions?: { handle: string; userId: string }[];
     };
     isOP?: boolean;
     isLatest?: boolean;
@@ -121,6 +124,8 @@
   // ─── Edit mode ──────────────────────────────────────────────────────
   let editing = $state(false);
   let draft = $state('');
+  // „@" autocomplete in the edit box (2026-09-21).
+  let editEl = $state<HTMLTextAreaElement | null>(null);
   let saving = $state(false);
 
   function enterEdit() {
@@ -303,13 +308,17 @@
     </header>
 
     {#if editing}
+      <div class="relative">
       <textarea
         bind:value={draft}
+        bind:this={editEl}
         onkeydown={onTextareaKeydown}
         maxlength={COMMENT_MAX_LEN}
         rows="3"
         class="w-full bg-paper-soft border-[1.5px] border-ink rounded-md px-3 py-2 font-bricolage text-sm leading-relaxed text-ink outline-none focus:border-wine resize-y min-h-[72px]"
       ></textarea>
+      <MentionPopup textarea={editEl} onPick={(v) => (draft = v)} />
+      </div>
       <div class="mt-2 flex items-center gap-2">
         <button
           type="button"
@@ -333,7 +342,7 @@
       </div>
     {:else}
       <p class="font-bricolage text-sm text-ink leading-relaxed whitespace-pre-line"
-      >{#each linkifySegments(body) as seg}{#if seg.type === 'link'}<a href={seg.value} title={seg.value} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 decoration-[1.5px] break-words hover:text-wine">{displayUrl(seg.value)}<span aria-hidden="true" class="text-[0.8em] ml-0.5">↗</span></a>{:else}{seg.value}{/if}{/each}</p>
+      >{#each linkifySegments(body, comment.mentions ?? []) as seg}{#if seg.type === 'link'}<a href={seg.value} title={seg.value} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 decoration-[1.5px] break-words hover:text-wine">{displayUrl(seg.value)}<span aria-hidden="true" class="text-[0.8em] ml-0.5">↗</span></a>{:else if seg.type === 'mention'}<a href={`/nachbarn/id/${seg.userId}`} data-mention class="font-semibold text-wine hover:underline underline-offset-2">@{seg.value}</a>{:else}{seg.value}{/if}{/each}</p>
       <div class="mt-1.5">
         <TranslateControl
           contentType="comment"

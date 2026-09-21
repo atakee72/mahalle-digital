@@ -21,6 +21,7 @@
   // POST /api/posts/upload happens on submit, in the parent.
 
   import { t } from '../../../../lib/kiosk-i18n';
+  import MentionPopup from './MentionPopup.svelte';
 
   type Kind = 'discussion' | 'recommendation' | 'announcement';
 
@@ -80,6 +81,9 @@
   const titleCount = $derived(`${title.length} / ${TITLE_MAX}`);
 
   // ─── Body ───────────────────────────────────────────────────────────
+  // „@" autocomplete (2026-09-21) — the popup listens on this element.
+  let bodyEl = $state<HTMLTextAreaElement | null>(null);
+
   const BODY_MAX = 2000;
   const bodyCount = $derived(`${body.length} / ${BODY_MAX}`);
 
@@ -222,14 +226,18 @@
         <span>{'· { } ·'}</span>
       </span>
     </div>
+    <div class="relative">
     <textarea
       maxlength={BODY_MAX}
       bind:value={body}
+      bind:this={bodyEl}
       placeholder={$t['compose.body.placeholder']}
       aria-required="true"
       rows="6"
       class="w-full bg-paper-soft border-[1.5px] border-ink rounded-md px-4 py-3.5 font-bricolage text-[14px] leading-relaxed text-ink placeholder:text-ink-mute/55 outline-none focus:border-wine resize-y min-h-[130px]"
     ></textarea>
+    <MentionPopup textarea={bodyEl} onPick={(v) => (body = v)} />
+    </div>
     <div
       class="flex justify-between font-dmmono text-[10px] text-ink-mute mt-1.5"
     >

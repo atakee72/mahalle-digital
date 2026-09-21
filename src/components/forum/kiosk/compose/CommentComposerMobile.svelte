@@ -12,6 +12,7 @@
   // right-rail composer.
 
   import KioskAvatar from '../KioskAvatar.svelte';
+  import MentionPopup from './MentionPopup.svelte';
   import { t } from '../../../../lib/kiosk-i18n';
   import { COMMENT_MAX_LEN, commentCounterVisible } from '../../../../lib/forum/commentLimits';
 
@@ -133,7 +134,9 @@
     class={`${visibilityClass} ${positionClass} border-t-[1.5px] border-ink bg-paper px-3.5 pt-2.5 flex flex-col gap-2`}
     style="padding-bottom: max(0.625rem, env(safe-area-inset-bottom));"
   >
-    <div class="flex gap-2">
+    <!-- relative: the „@" suggestion list is anchored here and opens upward -->
+    <div class="relative flex gap-2">
+      <MentionPopup textarea={textareaEl} onPick={(v) => (body = v)} placement="above" />
       <KioskAvatar
         name={currentUser.name ?? 'du'}
         image={currentUser.image ?? null}

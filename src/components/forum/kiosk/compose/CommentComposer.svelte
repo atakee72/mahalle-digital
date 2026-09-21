@@ -15,6 +15,7 @@
   // mounting this component.
 
   import KioskAvatar from '../KioskAvatar.svelte';
+  import MentionPopup from './MentionPopup.svelte';
   import KioskBtn from '../KioskBtn.svelte';
   import { t } from '../../../../lib/kiosk-i18n';
   import { COMMENT_MAX_LEN, commentCounterVisible } from '../../../../lib/forum/commentLimits';
@@ -31,6 +32,8 @@
   }>();
 
   let body = $state('');
+  // „@" autocomplete (2026-09-21) — the popup listens on this element.
+  let taEl = $state<HTMLTextAreaElement | null>(null);
   const counterVisible = $derived(commentCounterVisible(body.length));
 
   // Clear the draft ONLY on success. The earlier version cleared whenever
@@ -62,9 +65,10 @@
       image={currentUser.image ?? null}
       size="sm"
     />
-    <div class="flex-1 min-w-0">
+    <div class="relative flex-1 min-w-0">
       <textarea
         bind:value={body}
+        bind:this={taEl}
         onkeydown={onKey}
         placeholder={$t['detail.compose.placeholder']}
         rows="3"
@@ -72,6 +76,7 @@
         maxlength={COMMENT_MAX_LEN}
         disabled={submitting}
       ></textarea>
+      <MentionPopup textarea={taEl} onPick={(v) => (body = v)} />
     </div>
   </div>
 
