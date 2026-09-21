@@ -7,16 +7,31 @@ import { sendVerifyEmail } from "../../../lib/auth/sendVerifyEmail";
 import { getTrustedBaseUrl } from "../../../lib/auth/baseUrl";
 import { consumeRateLimit, hashIp, clientIpFrom } from "../../../lib/auth/rateLimit";
 import { slugifyHandle } from "../../../lib/profile/handle";
+import { cleanDisplayName, isValidDisplayName, isProtectedName } from "../../../lib/profile/nameRules";
+import { isAdminLookalike } from "../../../lib/profile/protectedNamesStore";
 import { alertNewMember } from "../../../lib/adminAlerts";
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
     try {
-        const { name, email, password } = await request.json();
+        const { name: rawName, email, password } = await request.json();
+        // Whitespace collapsed, invisible characters stripped — a name of only
+        // spaces / zero-width characters ends up '' and is refused right below.
+        const name = cleanDisplayName(rawName);
 
         // Validate input
         if (!name || !email || !password) {
             return new Response(
                 JSON.stringify({ error: 'Missing required fields' }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
+        // Same rule as the profile edit (src/lib/profile/nameRules.ts). Until
+        // 2026-09-21 signup checked only „not empty + profanity": a direct call
+        // could register any length, emoji, markup or line breaks.
+        if (!isValidDisplayName(name)) {
+            return new Response(
+                JSON.stringify({ error: 'name_invalid' }),
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
@@ -82,6 +97,20 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
             );
         }
 
+        // Connect to MongoDB using singleton (moved up 2026-09-21: the protected-
+        // name check needs it, and it must run BEFORE the OpenAI calls below).
+        const client = await clientPromise;
+        const db = client.db();
+
+        // Nobody poses as the team: official-sounding names and lookalikes of an
+        // admin's own display name are refused (after both rate limits).
+        if (isProtectedName(name) || await isAdminLookalike(db, name)) {
+            return new Response(
+                JSON.stringify({ error: 'name_protected' }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
         // Check display name for profanity (Turkish + English + German + OpenAI)
         const nameCheck = await checkNameProfanity(name);
         if (!nameCheck.clean) {
@@ -90,10 +119,6 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
-
-        // Connect to MongoDB using singleton
-        const client = await clientPromise;
-        const db = client.db();
 
         // Check if user already exists (case-insensitive — catches legacy
         // mixed-case docs too)

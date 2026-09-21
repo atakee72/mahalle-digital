@@ -100,7 +100,8 @@ export function formatDdMmYyyy(iso: string, locale: 'de' | 'en'): string {
   return `${day}.${month}.${year}`;
 }
 
-export const PROFILE_NAME_REGEX = /^[\p{L}\p{N} _-]{3,30}$/u;
+// One rule for signup and profile edit lives in nameRules.ts (2026-09-21).
+export { DISPLAY_NAME_REGEX as PROFILE_NAME_REGEX } from './nameRules';
 export const HOBBY_MAX_COUNT = 10;
 export const HOBBY_MAX_LEN = 50;
 export const MOTTO_MAX_LEN = 80;

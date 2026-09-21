@@ -21,6 +21,7 @@
   // §04 (speichert) / §05 (save failed).
 
   import { onDestroy } from 'svelte';
+  import { cleanDisplayName } from '../../../lib/profile/nameRules';
   import type { ProfileMe } from '../../../lib/profile/profileShared';
   import {
     PROFILE_NAME_REGEX,
@@ -266,7 +267,12 @@
         optimisticOverride = null;
         editing = true;
         saveState = 'failed';
-        saveError = msg;
+        // Machine codes from /api/users/update get real copy; anything else
+        // (e.g. the moderation lib's English reason) passes through as before.
+        saveError =
+          msg === 'name_protected' ? $t['auth.err.nameProtected']
+          : msg === 'name_invalid' ? $t['profile.edit.name.hint']
+          : msg;
         return;
       }
       const json = await res.json();
@@ -293,7 +299,7 @@
   }
 
   function handleSave() {
-    const trimmed = editName.trim();
+    const trimmed = cleanDisplayName(editName);
     if (!PROFILE_NAME_REGEX.test(trimmed)) {
       nameError = $t['profile.edit.name.hint'];
       return;

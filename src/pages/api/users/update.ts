@@ -6,9 +6,12 @@ import { ObjectId } from 'mongodb';
 import { rejectIfBanned } from '../../../lib/auth/banGuard';
 import { checkNameProfanity, checkMottoProfanity } from '../../../lib/moderation';
 import { PROFILE_NAME_REGEX, HOBBY_MAX_COUNT, HOBBY_MAX_LEN, MOTTO_MAX_LEN } from '../../../lib/profile/profileShared';
+import { cleanDisplayName, isProtectedName } from '../../../lib/profile/nameRules';
+import { isAdminLookalike } from '../../../lib/profile/protectedNamesStore';
 
 const BodySchema = z.object({
-  name: z.string().regex(PROFILE_NAME_REGEX, 'Invalid display name').optional(),
+  // Cleaned first (whitespace collapsed, invisible characters stripped), then the shared rule.
+  name: z.string().transform((s) => cleanDisplayName(s)).pipe(z.string().regex(PROFILE_NAME_REGEX, 'name_invalid')).optional(),
   hobbies: z.array(z.string().trim().min(1).max(HOBBY_MAX_LEN)).max(HOBBY_MAX_COUNT).optional(),
   // '' is a valid, meaningful value here (explicit clear -> $unset below) —
   // do NOT add .min(1), that would reject the clear-motto request with a 400.
@@ -39,7 +42,18 @@ export const POST: APIRoute = async ({ request }) => {
     }
     const { name, hobbies, motto } = parsed.data;
 
+    const client = await clientPromise;
+    const db = client.db();
+
     if (name !== undefined) {
+      // Nobody poses as the team. Admins are exempt: an admin's real display
+      // name may legitimately be „Mahalle Team".
+      if (session.user.role !== 'admin' && (isProtectedName(name) || await isAdminLookalike(db, name, session.user.id))) {
+        return new Response(JSON.stringify({ error: 'name_protected' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       const nameCheck = await checkNameProfanity(name);
       if (!nameCheck.clean) {
         return new Response(JSON.stringify({ error: nameCheck.reason || 'Invalid display name' }), {
@@ -62,8 +76,6 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    const client = await clientPromise;
-    const db = client.db();
     const users = db.collection('users');
 
     const setFields: Record<string, unknown> = { updatedAt: new Date().toISOString() };

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { signIn } from 'auth-astro/client';
   import { t } from '../../../lib/kiosk-i18n';
+  import { cleanDisplayName, isValidDisplayName } from '../../../lib/profile/nameRules';
   import AuthField from './primitives/AuthField.svelte';
   import AuthPrimaryBtn from './primitives/AuthPrimaryBtn.svelte';
   import AuthBanner from './primitives/AuthBanner.svelte';
@@ -43,7 +44,9 @@
     nameErr = null; emailErr = null; pwErr = null; pw2Err = null; termsErr = false; emailTaken = false;
 
     let bad = false;
-    if (name.trim().length < 2) { nameErr = $t['auth.err.nameShort']; bad = true; }
+    const cleanName = cleanDisplayName(name);
+    if (!cleanName) { nameErr = $t['auth.err.nameShort']; bad = true; }
+    else if (!isValidDisplayName(cleanName)) { nameErr = $t['auth.err.nameInvalid']; bad = true; }
     if (!emailOk) { emailErr = $t['auth.err.emailInvalid']; bad = true; }
     if (!pwOk) { pwErr = $t['auth.err.pwWeak']; bad = true; }
     // Both empty: the password error already covers it — „stimmen nicht überein" would be false.
@@ -56,10 +59,13 @@
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+        body: JSON.stringify({ name: cleanName, email: email.trim(), password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        const code = String(data?.error ?? '');
+        if (code === 'name_invalid') { nameErr = $t['auth.err.nameInvalid']; status = 'idle'; return; }
+        if (code === 'name_protected') { nameErr = $t['auth.err.nameProtected']; status = 'idle'; return; }
         if (res.status === 409) { emailTaken = true; status = 'idle'; return; }
         if (res.status === 429) { nameErr = $t['auth.err.tooMany']; status = 'idle'; return; }
         // 400 (e.g. profanity) or 500 → inline on the relevant field / generic
@@ -101,7 +107,7 @@
   <form onsubmit={submit} style="display:flex; flex-direction:column; gap:14px; margin-top:20px;">
     <AuthField label={$t['auth.register.name']} placeholder={$t['auth.register.namePh']}
       name="name" autocomplete="nickname" value={name} error={nameErr}
-      success={name.trim().length >= 2} oninput={(v) => { name = v; nameErr = null; }} />
+      success={isValidDisplayName(cleanDisplayName(name))} oninput={(v) => { name = v; nameErr = null; }} />
     <AuthField label={$t['auth.register.email']} placeholder={$t['auth.register.emailPh']}
       type="email" name="email" autocomplete="email" value={email}
       error={emailErr} success={emailOk && !emailTaken} oninput={(v) => { email = v; emailErr = null; }} />
