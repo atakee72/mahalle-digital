@@ -4,9 +4,12 @@
 // Only http(s) URLs are recognized, so javascript:/data: URIs can never
 // become hrefs.
 
+import { splitMentions, type MentionRef } from './mentions/mentions';
+
 export interface LinkifySegment {
-  type: 'text' | 'link';
-  value: string;
+  type: 'text' | 'link' | 'mention';
+  value: string; // mention: the bare handle (no „@")
+  userId?: string; // mention only — the link goes by id, so a handle change never breaks it
 }
 
 const URL_RE = /https?:\/\/[^\s<>"']+/g;
@@ -15,8 +18,15 @@ const URL_RE = /https?:\/\/[^\s<>"']+/g;
 // than part of the URL („… siehe https://example.com/pfad.")
 const TRAILING_PUNCT = /[.,!?;:)\]]+$/;
 
-export function linkifySegments(text: string): LinkifySegment[] {
+// `mentions` = what the SERVER resolved when the text was saved (post/comment
+// field `mentions`). Without it the output is exactly what it always was.
+export function linkifySegments(text: string, mentions: readonly MentionRef[] = []): LinkifySegment[] {
   const segments: LinkifySegment[] = [];
+  // Mentions are looked for in TEXT runs only — never inside a URL.
+  const pushText = (value: string) => {
+    if (mentions.length === 0) segments.push({ type: 'text', value });
+    else segments.push(...splitMentions(value, mentions));
+  };
   let last = 0;
   for (const match of text.matchAll(URL_RE)) {
     let url = match[0].replace(TRAILING_PUNCT, '');
@@ -32,11 +42,11 @@ export function linkifySegments(text: string): LinkifySegment[] {
       stripped = stripped.slice(1);
     }
     const start = match.index ?? 0;
-    if (start > last) segments.push({ type: 'text', value: text.slice(last, start) });
+    if (start > last) pushText(text.slice(last, start));
     segments.push({ type: 'link', value: url });
     last = start + url.length;
   }
-  if (last < text.length) segments.push({ type: 'text', value: text.slice(last) });
+  if (last < text.length) pushText(text.slice(last));
   return segments;
 }
 
@@ -65,6 +75,6 @@ export function displayUrl(url: string, max = DISPLAY_URL_MAX): string {
 // body is rendered as text (no anchors): every URL becomes its label.
 export function shortenUrlsInText(text: string, max = DISPLAY_URL_MAX): string {
   return linkifySegments(text)
-    .map((seg) => (seg.type === 'link' ? displayUrl(seg.value, max) : seg.value))
+    .map((seg) => (seg.type === 'link' ? displayUrl(seg.value, max) : seg.type === 'mention' ? `@${seg.value}` : seg.value))
     .join('');
 }

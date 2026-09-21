@@ -37,3 +37,13 @@ test('href segments are untouched by display shortening', () => {
   const segs = linkifySegments(`hi ${u}`);
   assert.equal(segs[1].value, u);
 });
+
+test('mentions are linked inside text, never inside a URL', () => {
+  const segs = linkifySegments('@petra2 siehe https://x.example/@petra2', [{ handle: 'petra2', userId: 'u1' }]);
+  assert.deepEqual(segs.map((s) => s.type), ['mention', 'text', 'link']);
+  assert.equal(segs[0].userId, 'u1');
+});
+
+test('without mentions the output is unchanged', () => {
+  assert.deepEqual(linkifySegments('Hallo @petra2'), [{ type: 'text', value: 'Hallo @petra2' }]);
+});
