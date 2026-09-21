@@ -157,6 +157,11 @@
         active={showSaved}
         onclick={() => selectFilter('gespeichert')}
       />
+      <!-- Not a filter: drafts are not activity. A plain link to the one drafts
+           page (forum + market), styled like the neighbouring chips. -->
+      <a href="/entwuerfe" data-profile-drafts-link class="shrink-0 kiosk-tap-box" style="display: inline-flex; align-items: center; text-decoration: none;">
+        <span style="padding: 5px 13px; font-family: var(--k-font-display); font-size: 12.5px; font-weight: 600; background: transparent; color: var(--k-ink); border: 1.5px dashed var(--k-ink); border-radius: var(--k-radius-pill); display: inline-flex; align-items: center; white-space: nowrap;">{$t['profile.filter.entwuerfe']}</span>
+      </a>
     {/if}
   </div>
 

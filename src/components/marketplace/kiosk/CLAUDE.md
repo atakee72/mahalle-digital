@@ -40,6 +40,7 @@ Loaded lazily when Claude reads/edits files in `src/components/marketplace/kiosk
   the banner survives the save itself. Why: unlike publish (which redirects with a
   flash param), draft-save stays on an unchanged-looking form, so the transient
   toast alone was a weak signal — the banner is the durable one.
+- **Also listed on `/entwuerfe` (2026-09-21)** together with forum drafts — one page for everything unfinished (`src/pages/entwuerfe.astro`; details in `src/components/forum/kiosk/CLAUDE.md` → „Drafts"). It uses the SAME two routes as this section: resume `/marketplace/create?draft=<id>`, delete `DELETE /api/listings/delete/<id>`; it has no publish pill. Observation from that work, unchanged: deleting a listing (draft or published) never destroys its Cloudinary images.
 - **Resume**: `/marketplace/create?draft=<id>` → `create.astro` owner-gates +
   loads the draft via `fetchListingForSSR`, passes it as `initialListing`
   (mode stays `create`). The compose detects `status:'draft'` → tracks `draftId`.

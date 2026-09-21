@@ -447,6 +447,7 @@ overall `ok` to `false`, but does NOT stop the remaining steps):
    userId })` (this user's own bookmarks) + `listings.updateMany({ savedBy:
    userId }, { $pull: { savedBy: userId } })` (this user removed from
    OTHER people's saved-listing arrays).
+   *(Archive note, 2026-09-21: the „Entwürfe →" pill after „◈ Gespeichert" in `PActivityLedger.svelte` is a LINK to `/entwuerfe`, not an `ActivityFilter` — drafts are not activity; do not add it to `FILTERS` or to the activity API. It copies `PFilterChip`'s span metrics, dashed border = „leads elsewhere".)*
    **2b. Forum drafts (2026-09-21)**: `deleteAllDraftsOf(userId)`
    (`src/lib/forum/postDraftsStore.ts`) removes every row of the member in
    `postDrafts` and destroys their Cloudinary images — except an image some

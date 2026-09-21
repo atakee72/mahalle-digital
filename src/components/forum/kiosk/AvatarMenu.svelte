@@ -137,7 +137,7 @@
     <div class="am-group">
       <a role="menuitem" href="/profile" class="am-row font-bricolage">{$t['nav.menu.profil']}<span class="am-icon font-dmmono">→</span></a>
       <a role="menuitem" href="/profile?filter=forum" class="am-row font-bricolage">{$t['nav.menu.beitraege']}</a>
-      <a role="menuitem" href="/forum?kind=mine" class="am-row font-bricolage">{$t['nav.menu.entwuerfe']}</a>
+      <a role="menuitem" href="/entwuerfe" class="am-row font-bricolage">{$t['nav.menu.entwuerfe']}</a>
       <a role="menuitem" href="/profile?filter=gespeichert" class="am-row font-bricolage">{$t['nav.menu.gespeichert']}<span class="am-icon font-dmmono">◈</span></a>
       <button role="menuitem" class="am-row font-bricolage" onclick={() => { close(); (window as any).__mahalleTourStart?.(); }}>{$t['nav.menu.tour']}<span class="am-icon font-dmmono">◎</span></button>
       <a role="menuitem" href="/blog" class="am-row font-bricolage">{$t['nav.menu.beilage']}<span class="am-icon font-dmmono">❡</span></a>
