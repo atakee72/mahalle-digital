@@ -15,6 +15,18 @@ export interface FetchEventsResult<T> {
   pagination: ReturnType<typeof buildPaginationMeta>;
 }
 
+// applyQueryOptions' own default (queryUtils.ts) is 20 — fine for the forum
+// and other paginated lists, but a calendar month must never be paginated:
+// neither the SSR fetch (fetchEventsForSSR) nor the client fetch
+// (CalendarPageInner.svelte → GET /api/events) pass an explicit `limit`, so
+// events were silently capped at 20/month sorted by startDate asc. Dated
+// 2026-09-21: September was the first month with more than 20 events;
+// events 21+ vanished from the calendar; found when a saved, approved event
+// never appeared. Used as the fallback below AND fed into the pagination
+// meta so `hasMore`/`totalPages` stay truthful; an explicit `?limit=` from
+// a caller still wins (parseInt below only falls back when it's absent).
+export const EVENTS_DEFAULT_LIMIT = 500;
+
 /**
  * Standard events-collection fetch: parses query params, applies the
  * moderation filter, runs paginated find + count in parallel, and
@@ -29,6 +41,9 @@ export async function fetchEventsWithAuthors<T extends Document>(
   currentUserId?: string
 ): Promise<FetchEventsResult<T>> {
   const options = parseQueryParams(url);
+  if (!options.limit) {
+    options.limit = EVENTS_DEFAULT_LIMIT;
+  }
   const filter = buildFilter(options) as Filter<T>;
 
   mergeModerationFilter(filter as Record<string, any>, buildModerationFilter(currentUserId));
@@ -38,7 +53,7 @@ export async function fetchEventsWithAuthors<T extends Document>(
     getTotalCount(collection, filter),
   ]);
 
-  const limit = parseInt(options.limit as unknown as string) || 20;
+  const limit = parseInt(options.limit as unknown as string) || EVENTS_DEFAULT_LIMIT;
   const offset = parseInt(options.offset as unknown as string) || 0;
   const pagination = buildPaginationMeta(total, limit, offset);
 
