@@ -6,7 +6,7 @@
 
 **Architecture:** A read-only union page. Both kinds already have storage, a resume URL and a delete route (`postDrafts` + `/api/posts/drafts/<id>` since 2026-09-21; `listings` with `status:'draft'` + `/api/listings/delete/<id>`). A pure mapper turns both shapes into one `UnifiedDraft` row; the `.astro` page SSR-fetches both lists (each in its own `try`, so one failing source never blanks the page) and hands the merged list to one Svelte island. Nothing about saving, publishing or the two existing in-place sections (forum „Meine", market „Meine") changes.
 
-**Tech Stack:** Astro 5 SSR page, Svelte 5 island (`client:load`), MongoDB driver (server only), Tailwind, `node:test` via `npx tsx --test`, standalone Playwright probe.
+**Tech Stack:** Astro 5 SSR page, Svelte 5 island (`client:only="svelte"`, like every kiosk island — the locale lives in localStorage, so server-rendering the texts would flash German at English readers), MongoDB driver (server only), Tailwind, `node:test` via `npx tsx --test`, standalone Playwright probe.
 
 **Spec:** none — decided in chat on 2026-09-21. User: „you put it under the my drafts menu item - but it brings one to forum again -- what about draft listing?" → I named two fixes → user: „that ‚the menu row points at only one of them' is not good ui" → `/superpowers:writing-plans do the better option: a single drafts page with both kinds`. The „Design decisions" below are the binding authority.
 
@@ -241,7 +241,7 @@ const initialDrafts = mergeDrafts(forum, markt);
 <KioskLayout title="Mahalle · Entwürfe" description="Deine gespeicherten Entwürfe." page="profile" tour={false} noindex>
   <!-- Same centred 1280 px page column as every main section. -->
   <div class="mx-auto w-full max-w-[1280px]">
-    <DraftsPage client:load initialDrafts={initialDrafts} partial={partial} />
+    <DraftsPage client:only="svelte" initialDrafts={initialDrafts} partial={partial} />
   </div>
 </KioskLayout>
 ```
@@ -428,5 +428,5 @@ git commit -m "drafts page: account menu and profile archive link to /entwuerfe,
 - **Coverage:** both kinds on one page (T1/T2), resume + delete for both (T2, decision 3), menu row fixed (T3), profile entry (T3), existing in-place sections untouched (decision 9, probe check 9), gate (T2 step 2 + probe check 1), house layout rules (decision 8, probe check 7), tour trap (decision 7, probe check 3).
 - **Names used identically everywhere:** `UnifiedDraft`, `ListingDraftLike`, `fromPostDraft`, `fromListingDraft`, `mergeDrafts`, `initialDrafts`, `partial`, `data-draft-row`, `data-draft-resume`, `data-draft-delete`, `data-drafts-empty`, `data-drafts-partial`, `data-profile-drafts-link`.
 - **Verified against the code while planning:** `GET /api/listings/my-listings` returns `{ listings, drafts, stats }`; the market deletes a draft with `DELETE /api/listings/delete/<id>` and resumes with `/marketplace/create?draft=<id>`; `listingType` is `sell | exchange | gift` with labels `market.filter.kind.verkaufen|tausch|verschenken`; listing `images` are plain URL strings, forum draft images are `{url, publicId}`; `KioskLayout`'s `page` union has no drafts value and `[data-page="profile"]` sets the ochre accent; `TourController` shows the offer for ANY page whose name has a chapter, whether or not the anchors exist; `/bookmarks` is the closest existing page (SSR list + island, own redirect).
-- **Audit, same hour (fixed in place):** the island had its own `<main>` inside `KioskLayout`'s `<main>` (copied from `BookmarksPage`, which has that flaw) → a `<div>`; the page is per-member → `no-store` + `noindex`; the profile link now carries `PFilterChip`'s exact span values. Confirmed: `KioskLayout` destructures `page` and renders `TourController` on one line (easy to wrap); `warn` and `--k-accent` exist; `BookmarksPage` is mounted `client:load` with SSR props, the same pattern this page uses.
+- **Audit, same hour (fixed in place):** the island had its own `<main>` inside `KioskLayout`'s `<main>` (copied from `BookmarksPage`, which has that flaw) → a `<div>`; the page is per-member → `no-store` + `noindex`; the profile link now carries `PFilterChip`'s exact span values. Confirmed: `KioskLayout` destructures `page` and renders `TourController` on one line (easy to wrap); `warn` and `--k-accent` exist; `BookmarksPage` is mounted `client:only="svelte"` with SSR-fetched props — this page does the same (my first draft said `client:load`; wrong, and it would have server-rendered the German texts for English readers).
 - **To verify while executing:** what the listing delete route does with images (T3 step 7).
