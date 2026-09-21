@@ -131,8 +131,9 @@ export async function processReviewAction(
             );
 
             // The comment just became visible — fire the "someone replied"
-            // notification that create.ts skipped while it was pending.
-            if (parentDoc?.author) {
+            // notification that create.ts skipped while it was pending. A flagged
+            // EDIT (`fromEdit`) was already announced when the comment was created.
+            if (parentDoc?.author && !flaggedAny.fromEdit) {
               await notify({
                 userId: String(parentDoc.author),
                 type: 'comment',

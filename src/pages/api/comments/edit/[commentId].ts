@@ -5,11 +5,11 @@ import { resolveMentions, notifyMentions, findCommentParent } from '../../../../
 import { commentTarget } from '../../../../lib/notifications';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
-import type { Comment } from '../../../../types';
+import type { Comment, FlaggedContent } from '../../../../types';
 import { CommentUpdateSchema } from '../../../../schemas/comment.schema';
 import { parseRequestBody } from '../../../../schemas/validation.utils';
 import { isOwner } from '../../../../utils/authHelpers';
-import { moderateText, checkSpamWithGPT, mergeModerationResults } from '../../../../lib/moderation';
+import { moderateText, checkSpamWithGPT, mergeModerationResults, createFlaggedContentRecord } from '../../../../lib/moderation';
 import { rejectIfBanned } from '../../../../lib/auth/banGuard';
 import { alertModerationFlagged } from '../../../../lib/adminAlerts';
 
@@ -123,10 +123,15 @@ export const PUT: APIRoute = async ({ request, params }) => {
       });
     }
 
-    // Newly added mentions notify only while the comment is public. A comment
-    // stores no parent collection, so it is looked up. Idempotent, never throws.
-    if (newModerationStatus === 'approved' && mentions.length > 0 && existingComment.relevantPostId) {
-      const parent = await findCommentParent(db, String(existingComment.relevantPostId));
+    // A comment stores no parent collection, so it is looked up — needed for the
+    // mention notification (public edit) and for the review-queue record (flagged edit).
+    const parentPostId = existingComment.relevantPostId ? String(existingComment.relevantPostId) : '';
+    const parent = parentPostId && (mergedResult || mentions.length > 0)
+      ? await findCommentParent(db, parentPostId)
+      : null;
+
+    // Newly added mentions notify only while the comment is public. Idempotent, never throws.
+    if (newModerationStatus === 'approved' && mentions.length > 0) {
       if (parent) {
         await notifyMentions(db, {
           actorId: userId, mentions, sourceId: String(commentId), kind: 'comment',
@@ -136,7 +141,27 @@ export const PUT: APIRoute = async ({ request, params }) => {
       }
     }
 
+    // A flagged edit goes into the review queue like a flagged new comment.
+    // Until 2026-09-21 this route set the comment to `pending` but wrote NO
+    // flaggedContent record: the comment vanished from the thread and nobody
+    // could ever approve or reject it. `fromEdit` tells processReviewAction not
+    // to send the „someone replied" notification a second time.
     if (mergedResult) {
+      const flaggedRecord = createFlaggedContentRecord(
+        'comment',
+        { body },
+        {
+          id: userId,
+          name: session.user.name || undefined,
+          email: session.user.email || undefined
+        },
+        mergedResult
+      );
+      flaggedRecord.contentId = String(commentId);
+      (flaggedRecord as any).parentPostId = parentPostId;
+      (flaggedRecord as any).parentCollection = parent?.collection ?? 'topics';
+      (flaggedRecord as any).fromEdit = true;
+      await db.collection<FlaggedContent>('flaggedContent').insertOne(flaggedRecord as FlaggedContent);
       await alertModerationFlagged({ contentType: 'comment', title: body.slice(0, 80), authorName: session.user.name });
     }
 
