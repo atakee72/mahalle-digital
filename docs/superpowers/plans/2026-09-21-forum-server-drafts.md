@@ -21,7 +21,8 @@
 3. A draft may be incomplete (title shorter than 5, body shorter than 10) but not EMPTY (title, body, tags and images all empty → `400 draft_empty`). Upper limits are the publish limits: title ≤ 200, body ≤ 5000, tags ≤ 5 × 30 chars, images ≤ 5.
 4. No AI moderation, no blocklist, no daily limit, no admin alert, no notification on save. Banned accounts cannot save (`rejectIfBanned`). 120 saves per member per hour (`consumeRateLimit('postdraft:<userId>', 120, 3600000)`).
 5. Only the owner can list, read or delete a draft. Every response is `Cache-Control: no-store`. A foreign or unknown id answers `404 not_found` (never 403 — do not confirm existence).
-6. Publishing a draft = the normal create endpoint of its kind (Task 1), then `DELETE /api/posts/drafts/<id>`. The delete destroys a Cloudinary image only if NO published post of this author in `topics` / `announcements` / `recommendations` references its `publicId` — so publishing keeps the images, deleting an unpublished draft removes them. No client flag controls this.
+6. Publishing a draft = the normal create endpoint of its kind (Task 1), then `DELETE /api/posts/drafts/<id>`. A Cloudinary image is destroyed only if NOTHING references its `publicId` any more — no post of ANY author in `topics` / `announcements` / `recommendations` and no draft of ANY member — and only inside our own folder `mahalle/posts/`. So publishing keeps the images and deleting an unpublished draft removes them, with no client flag. **The check must be global, never „this author's posts only" (audit 2026-09-21): a draft's `images` come from the client, so a member could name the `publicId` of someone else's published photo — visible in every image URL — and have it destroyed by deleting the draft.** The same rule runs when an update drops an image from a draft.
+6a. A draft image must be one of OUR uploads: `url` starts with `https://res.cloudinary.com/`, `publicId` starts with `mahalle/posts/`, and the `url` contains the `publicId`. (The publish endpoints accept any URL today; drafts are stricter because drafts trigger deletes.)
 7. Compose: `/topics/create?draft=<id>` resumes (SSR owner check; unknown id → redirect to `/topics/create`). While a server draft is open the local-storage autosave is OFF (marketplace precedent: otherwise the resumed text pollutes the single local slot). Without `?draft=` the local autosave stays exactly as today (crash safety net).
 8. „als Entwurf speichern": uploads pending images, saves, clears the local slot, goes to `/forum?kind=mine&draft_saved=1`; the index shows a success toast and the „Entwürfe" section. „verwerfen" with a server draft open leaves WITHOUT saving changes and keeps the draft (deleting happens in the list, with a confirm).
 9. „Entwürfe" section: only under the „Meine" filter, above the member's posts, hidden when there are none. Row = kind chip · title (or „Ohne Titel") · „zuletzt geändert <relTime>" · „weiterschreiben" link · „löschen" button (`confirmAction`, `variant: 'danger'`).
@@ -208,6 +209,14 @@ test('schema: short text is fine, publish limits are not exceeded', () => {
   const ok = PostDraftSaveSchema.safeParse({ ...base, id: '64f000000000000000000001', title: '  Hi  ' });
   assert.equal(ok.success && ok.data.title, 'Hi');
 });
+
+test('schema: a draft image must be one of our own uploads', () => {
+  const img = (url: string, publicId: string) => PostDraftSaveSchema.safeParse({ ...base, images: [{ url, publicId }] }).success;
+  assert.equal(img('https://res.cloudinary.com/demo/image/upload/v1/mahalle/posts/abc.jpg', 'mahalle/posts/abc'), true);
+  assert.equal(img('https://evil.example/mahalle/posts/abc.jpg', 'mahalle/posts/abc'), false); // foreign host
+  assert.equal(img('https://res.cloudinary.com/demo/image/upload/v1/mahalle/profile/abc.jpg', 'mahalle/profile/abc'), false); // other folder
+  assert.equal(img('https://res.cloudinary.com/demo/image/upload/v1/mahalle/posts/abc.jpg', 'mahalle/posts/other'), false); // url ≠ publicId
+});
 ```
 
 - [ ] **Step 2: Run, expect FAIL** — `npx tsx --test src/lib/forum/postDrafts.test.ts`.
@@ -254,11 +263,17 @@ export const PostDraftSaveSchema = z.object({
   title: z.string().max(200, 'Title must be less than 200 characters').trim().default(''),
   body: z.string().max(5000, 'Content must be less than 5000 characters').trim().default(''),
   tags: z.array(z.string().max(30)).max(5, 'Maximum 5 tags allowed').default([]),
-  images: PostImageSchema
+  // Stricter than PostImageSchema: a draft's images can be DESTROYED later, so
+  // they must be our own uploads (decision 6a).
+  images: z.array(z.object({
+    url: z.string().url().startsWith('https://res.cloudinary.com/'),
+    publicId: z.string().startsWith('mahalle/posts/').max(200)
+  }).refine((img) => img.url.includes(img.publicId), { message: 'image url and publicId do not belong together' }))
+    .max(5, 'Maximum 5 images allowed').default([])
 });
 ```
 
-- [ ] **Step 4: Run, expect PASS (3 tests).**
+- [ ] **Step 4: Run, expect PASS (4 tests).**
 
 - [ ] **Step 5: Commit**
 
@@ -281,7 +296,7 @@ git commit -m "forum drafts: pure rules and the save schema"
 **Interfaces:**
 - Consumes: `PostDraftSaveSchema`, `PostDraftInput`, `PostDraftDTO`, `MAX_POST_DRAFTS`, `draftIsEmpty`, `POST_COLLECTIONS`.
 - Produces: `listDrafts(userId): Promise<PostDraftDTO[]>`, `getDraft(id, userId): Promise<PostDraftDTO | null>`, `saveDraft(userId, input & { id?: string }): Promise<{ ok: true; draft: PostDraftDTO } | { ok: false; reason: 'limit' | 'not_found' }>`, `deleteDraft(id, userId): Promise<{ deleted: boolean; imagesDestroyed: number }>`, `deleteAllDraftsOf(userId): Promise<{ drafts: number; imagesDestroyed: number }>`.
-- HTTP: `GET /api/posts/drafts` → `200 { drafts: PostDraftDTO[] }`; `POST /api/posts/drafts` → `200 { draft }` | `400 draft_empty` | `409 draft_limit` | `404 not_found` | `429 throttled`; `DELETE /api/posts/drafts/<id>` → `200 { deleted: true }` | `404 not_found`. All `401` without a session, all `no-store`.
+- HTTP: `GET /api/posts/drafts` → `200 { drafts: PostDraftDTO[] }`; `POST /api/posts/drafts` → `200 { draft }` | `400 draft_empty` | `409 draft_limit` | `404 not_found` | `429 throttled`; `DELETE /api/posts/drafts/<id>` → `200 { deleted: true, imagesDestroyed: number }` | `404 not_found`. All `401` without a session, all `no-store`.
 
 - [ ] **Step 1: The store** — `src/lib/forum/postDraftsStore.ts`:
 
@@ -343,12 +358,17 @@ export async function saveDraft(
   const fields = { kind: input.kind, title: input.title, body: input.body, tags: input.tags, images: input.images };
 
   if (input.id) {
-    const updated = await col.findOneAndUpdate(
+    // 'before': we need the OLD image list to clean up what this update dropped.
+    const before = await col.findOneAndUpdate(
       { _id: new ObjectId(input.id), userId },
       { $set: { ...fields, updatedAt: now } },
-      { returnDocument: 'after' }
+      { returnDocument: 'before' }
     );
-    return updated ? { ok: true, draft: toDTO(updated as DraftDoc) } : { ok: false, reason: 'not_found' };
+    if (!before) return { ok: false, reason: 'not_found' };
+    const kept = new Set(input.images.map((i) => i.publicId));
+    const dropped = ((before as DraftDoc).images ?? []).map((i) => i.publicId).filter((id) => !kept.has(id));
+    await destroyUnreferencedImages(dropped);
+    return { ok: true, draft: toDTO({ ...(before as DraftDoc), ...fields, updatedAt: now }) };
   }
 
   if ((await col.countDocuments({ userId })) >= MAX_POST_DRAFTS) return { ok: false, reason: 'limit' };
@@ -357,26 +377,27 @@ export async function saveDraft(
   return { ok: true, draft: toDTO({ ...(doc as DraftDoc), _id: res.insertedId }) };
 }
 
-/** Destroy only images that no PUBLISHED post of this author uses — publishing a
- *  draft copies its images into the post, and those must survive the draft. */
-async function destroyUnreferencedImages(userId: string, publicIds: string[]): Promise<number> {
+/** Destroy only images that NOTHING references any more. Publishing a draft
+ *  copies its images into the post, and those must survive the draft.
+ *  SECURITY: the lookup is GLOBAL on purpose — no author / userId filter. A
+ *  draft's image list comes from the client; with an "own posts only" check a
+ *  member could name the publicId of someone else's published photo (it is in
+ *  every image URL) and get it destroyed by deleting the draft. */
+async function destroyUnreferencedImages(publicIds: string[]): Promise<number> {
   if (!publicIds.length) return 0;
   const db = await connectDB();
   const used = new Set<string>();
-  for (const c of POST_COLLECTIONS) {
-    const posts = await db.collection(c).find({ author: userId, 'images.publicId': { $in: publicIds } }, { projection: { images: 1 } }).toArray();
-    for (const p of posts) for (const img of (p as any).images ?? []) used.add(img.publicId);
+  for (const c of [...POST_COLLECTIONS, COLLECTION]) {
+    const docs = await db.collection(c).find({ 'images.publicId': { $in: publicIds } }, { projection: { images: 1 } }).toArray();
+    for (const d of docs) for (const img of (d as any).images ?? []) used.add(img.publicId);
   }
-  // Another draft of the same member may share an image after a "save as new".
-  const others = await db.collection(COLLECTION).find({ userId, 'images.publicId': { $in: publicIds } }, { projection: { images: 1 } }).toArray();
-  for (const d of others) for (const img of (d as any).images ?? []) used.add(img.publicId);
 
   let destroyed = 0;
   for (const id of publicIds) {
     // Only our own upload folder — never destroy an id a client could have typed.
     if (used.has(id) || !id.startsWith('mahalle/posts/')) continue;
     try {
-      await cloudinary.uploader.destroy(id);
+      await cloudinary.uploader.destroy(id, { invalidate: true }); // private working copy — drop it from the CDN too
       destroyed++;
     } catch (err) {
       Sentry.captureException(err, { extra: { where: 'postDraftsStore.destroyUnreferencedImages' } });
@@ -388,10 +409,10 @@ async function destroyUnreferencedImages(userId: string, publicIds: string[]): P
 export async function deleteDraft(id: string, userId: string): Promise<{ deleted: boolean; imagesDestroyed: number }> {
   if (!isId(id)) return { deleted: false, imagesDestroyed: 0 };
   const db = await connectDB();
-  // Delete FIRST, so the "other drafts" lookup above no longer finds this one.
+  // Delete FIRST, so the reference lookup no longer finds this draft itself.
   const doc = await db.collection<DraftDoc>(COLLECTION).findOneAndDelete({ _id: new ObjectId(id), userId });
   if (!doc) return { deleted: false, imagesDestroyed: 0 };
-  const imagesDestroyed = await destroyUnreferencedImages(userId, ((doc as DraftDoc).images ?? []).map((i) => i.publicId));
+  const imagesDestroyed = await destroyUnreferencedImages(((doc as DraftDoc).images ?? []).map((i) => i.publicId));
   return { deleted: true, imagesDestroyed };
 }
 
@@ -402,7 +423,7 @@ export async function deleteAllDraftsOf(userId: string): Promise<{ drafts: numbe
   const docs = await col.find({ userId }, { projection: { images: 1 } }).toArray();
   const ids = [...new Set(docs.flatMap((d) => (d.images ?? []).map((i) => i.publicId)))];
   const res = await col.deleteMany({ userId });
-  return { drafts: res.deletedCount ?? 0, imagesDestroyed: await destroyUnreferencedImages(userId, ids) };
+  return { drafts: res.deletedCount ?? 0, imagesDestroyed: await destroyUnreferencedImages(ids) };
 }
 ```
 
@@ -466,12 +487,14 @@ const json = (body: unknown, status: number) =>
 export const DELETE: APIRoute = async ({ request, params }) => {
   const session = await getSession(request);
   if (!session?.user?.id) return json({ error: 'Unauthorized' }, 401);
-  const { deleted } = await deleteDraft(String(params.id ?? ''), session.user.id);
-  return deleted ? json({ deleted: true }, 200) : json({ error: 'not_found' }, 404);
+  const { deleted, imagesDestroyed } = await deleteDraft(String(params.id ?? ''), session.user.id);
+  // imagesDestroyed is returned so probes can assert on it — the CDN may keep
+  // serving a destroyed image for a while, a 404 check would be unreliable.
+  return deleted ? json({ deleted: true, imagesDestroyed }, 200) : json({ error: 'not_found' }, 404);
 };
 ```
 
-- [ ] **Step 4: Index script** — `scripts/create-post-draft-indexes.ts`. Copy `ensureIndex()` (the 85/86 conflict guard) and the `dotenv` + raw `MongoClient` setup from `scripts/create-notification-indexes.ts` — that script has NO dry-run and NO database interlock, so add both here: read the db name from the URI path (`new URL(uri).pathname.slice(1)`), print it, exit 1 when it does not contain `dev` unless `--prod` is given, and without `--apply` only print „would create postDrafts_user_updated on <db>" and exit 0. The one index:
+- [ ] **Step 4: Index script** — `scripts/create-post-draft-indexes.ts`. Copy `ensureIndex()` (the 85/86 conflict guard) and the `dotenv` + raw `MongoClient` setup from `scripts/create-notification-indexes.ts` — that script has NO dry-run and NO database interlock, so add both here: read the db name from the URI path (`new URL(uri).pathname.slice(1)`), print it, exit 1 when it does not contain `dev` unless `--prod` is given (with `--prod` derive the URI the way the user-run repair scripts do: `const u = new URL(uri); u.pathname = '/mahalle';` — never print the URI), and without `--apply` only print „would create postDrafts_user_updated on <db>" and exit 0. The one index:
 
 ```ts
 await db.collection('postDrafts').createIndex({ userId: 1, updatedAt: -1 }, { name: 'postDrafts_user_updated' });
@@ -479,7 +502,7 @@ await db.collection('postDrafts').createIndex({ userId: 1, updatedAt: -1 }, { na
 
 Run it against dev: `pnpm tsx scripts/create-post-draft-indexes.ts --apply`. Expected output names the database `mahalle-dev` and the index.
 
-- [ ] **Step 5: E2E on dev** — `scratchpad/e2e-post-drafts.mts`, modelled on `scratchpad/e2e-admin-moderation-exemption.mts` (fetch-based login, cookie jar, base `http://localhost:4655`). Two accounts: `admin@mahalle-dev.test` and a second seeded dev member (list them with `scripts/seed-dev-db.ts`'s output or the dev `users` collection — names only, never passwords on screen). Assertions, each printed as PASS/FAIL:
+- [ ] **Step 5: E2E on dev** — `scratchpad/e2e-post-drafts.mts`, modelled on `scratchpad/e2e-admin-moderation-exemption.mts` (fetch-based login, cookie jar, base `http://localhost:4655`). Two accounts: `admin@mahalle-dev.test` and a second seeded dev member (list them with `scripts/seed-dev-db.ts`'s output or the dev `users` collection — names only, never passwords on screen). The script talks to the app over HTTP only and reads the dev DB directly for assertions — it must NOT import `postDraftsStore.ts` or any `src/lib` file that touches `import.meta.env` (undefined under plain `tsx`, the import would throw). Assertions, each printed as PASS/FAIL:
   1. logged out: `GET` and `POST` → 401.
   2. `POST {kind:'discussion', title:'', body:'', tags:[], images:[]}` → 400 `draft_empty`.
   3. `POST {kind:'announcement', title:'Hi'}` → 200, `draft.id` is 24 hex, `draft.kind === 'announcement'`.
@@ -488,7 +511,9 @@ Run it against dev: `pnpm tsx scripts/create-post-draft-indexes.ts --apply`. Exp
   6. `POST` with `title: 'x'.repeat(201)` → 400.
   7. create drafts until 20 exist → the 21st `POST` without id → 409 `draft_limit`; an update of an existing one still → 200.
   8. none of the draft titles appears in `GET /api/topics`, `/api/announcements`, `/api/recommendations` or `/search?q=…` HTML.
-  9. `DELETE` each → 200; `GET` → 0.
+  9. image rules: `POST` with `images:[{url:'https://evil.example/mahalle/posts/x.jpg', publicId:'mahalle/posts/x'}]` → 400.
+  10. SECURITY (decision 6): take a published dev post WITH an image from `GET /api/topics` (any author), note its `url` + `publicId`; as the SECOND account save a draft naming exactly that image, then `DELETE` the draft → `200 { deleted: true, imagesDestroyed: 0 }`, and the post still lists the image. If no dev post has an image, publish one as the first account first (upload through `/api/posts/upload`).
+  11. `DELETE` each remaining draft → 200; `GET` → 0.
 Expected: all PASS.
 
 - [ ] **Step 6: Gates, then commit**
@@ -713,8 +738,8 @@ git commit -m "forum drafts: compose saves to the server with images and resumes
       {#each drafts as d (d.id)}
         <li data-draft-row class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
           <span class={`shrink-0 px-[9px] py-[3px] rounded-lg border border-ink font-dmmono text-[10px] font-medium tracking-[0.08em] text-paper ${chip[d.kind].cls}`}>{$t[chip[d.kind].key]}</span>
-          <a href={draftResumeHref(d.id)} class="min-w-0 flex-1 basis-[12rem] truncate font-bricolage font-bold text-[15px] text-ink hover:underline">
-            {d.title.trim() || $t['drafts.untitled']}
+          <a href={draftResumeHref(d.id)} class="min-w-0 flex-1 basis-[12rem] inline-flex items-center min-h-[36px] font-bricolage font-bold text-[15px] text-ink hover:underline">
+            <span class="truncate">{d.title.trim() || $t['drafts.untitled']}</span>
           </a>
           <span class="shrink-0 font-dmmono text-[10px] text-ink-mute">{$t['drafts.changed']} {relTime(d.updatedAt, $locale)}</span>
           <a href={draftResumeHref(d.id)} class="shrink-0 inline-flex items-center min-h-[36px] font-dmmono text-[11px] uppercase tracking-[0.1em] text-wine underline">{$t['drafts.resume']}</a>
@@ -792,7 +817,8 @@ In `onMount`, next to the `just_posted` block:
   4. Change the title, save again → still ONE row, new title.
   5. `/topics/create?draft=000000000000000000000000` → lands on `/topics/create` (no query).
   6. Resume, publish → `/forum?just_posted=1`; the post is in `/api/announcements` WITH its image; „Meine" shows no drafts section; the image URL still answers 200.
-  7. Save a second draft with an image, delete it in the list (confirm dialog → confirm) → row gone; the image URL answers 404 within 10 s (Cloudinary may cache — accept 404 OR `x-cld-error`; if neither after 10 s report it, do not fail the run silently).
+  7. Save a second draft with an image, delete it in the list (confirm dialog → confirm) → row gone; capture the `DELETE` response with `page.waitForResponse` and assert `imagesDestroyed === 1` (do NOT test the image URL for a 404 — the CDN may serve it for a while). In check 6 the `DELETE` after publishing must report `imagesDestroyed === 0`.
+  7a. Resume a draft with one image, remove the image in the form, save → the `POST` answers 200 and the dev DB row has `images: []` (the dropped image is destroyed server-side by the update path).
   8. 390 px: no sideways scroll, every control in a row ≥ 36 px high.
   9. Account menu has „Meine Entwürfe" → `/forum?kind=mine`.
   Clean up: delete the probe post. Expected: all PASS at both widths.
@@ -813,6 +839,7 @@ git commit -m "forum drafts: Entwürfe section under Meine, saved toast, account
 **Files:**
 - Modify: `src/lib/auth/accountDeletion.ts` (step 2 block, after `savedEvents`)
 - Modify: `CLAUDE.md` (Database Collections), `src/components/forum/kiosk/CLAUDE.md`, `src/components/profile/kiosk/CLAUDE.md` („Account deletion" pipeline list)
+- Modify after the user's wording: `src/pages/datenschutz.astro`
 
 - [ ] **Step 1: Pipeline step** — in `accountDeletion.ts`, import `deleteAllDraftsOf` from `'../forum/postDraftsStore'` and add inside the step-2 `try`, after the `savedEvents` line, following the file's own `steps.<name> = …` bookkeeping:
 
@@ -826,12 +853,13 @@ git commit -m "forum drafts: Entwürfe section under Meine, saved toast, account
 
 Audited: `steps` is `Record<string, number>` (line 166), so the two keys need no type change; a failing step is recorded through the file's own `fail('<name>', err)` helper — wrap these three lines in their own `try { … } catch (err) { fail('postDrafts', err); }` like the neighbouring steps, so a Cloudinary error cannot abort the pipeline. Check that `accountDeletion.ts` is not imported by any island (`grep -rn "accountDeletion" src/components` → no hit) — it now pulls in Cloudinary through the store (it already imports cloudinary itself, so this holds).
 
-- [ ] **Step 2: Test the step on dev** — extend `scratchpad/e2e-post-drafts.mts`: create a throwaway dev user, two drafts, call `executeAccountDeletion`'s exported entry the way its existing test script does (`grep -rn "accountDeletion" scripts scratchpad | head`), assert `postDrafts` has 0 rows for that user.
+- [ ] **Step 2: Test the step on dev** — the pipeline cannot be imported under plain `tsx` (`import.meta.env`), so drive it through its route. Read `src/pages/api/cron/process-deletions.ts` and `executeAccountDeletion`'s claim filter first. In `scratchpad/e2e-post-drafts.mts`: register a throwaway dev member through `/api/auth/register`, log in, save two drafts, then set that user's `deletionScheduledAt` to one hour ago directly in the dev DB (script must refuse a db name without „dev"), call `GET http://localhost:4655/api/cron/process-deletions` with `Authorization: Bearer ${process.env.CRON_SECRET}` (loaded by `dotenv`, never printed), and assert: response `ok`, its `steps.postDrafts === 2`, and `postDrafts.countDocuments({ userId })` is 0. No other dev account may have a past `deletionScheduledAt` when this runs — check first and abort if one does.
 
 - [ ] **Step 3: Docs**
   - Root `CLAUDE.md`, „Database Collections", after `savedPosts`: one bullet for `postDrafts` — shape, „own collection so no feed/search/count query can see a draft", 20 per member, no moderation/limit on save, images destroyed only when unreferenced, removed by account deletion, index script name, and „PROD index run: user".
   - `src/components/forum/kiosk/CLAUDE.md`: new section „Drafts (server-side, 2026-09-21)" — decisions 1–11 in short, the compose `?draft=` flow, „local autosave is OFF while a server draft is open", the two scratch probes, and the Task 1 finding („compose published every kind as a discussion until …").
   - `src/components/profile/kiosk/CLAUDE.md`: add the drafts step to the ordered deletion pipeline.
+  - `src/pages/datenschutz.astro` (legal copy — an OFFER, the user words it; do not commit wording he has not seen): the „Inhalte" sentence lists „Beiträge, Kommentare, Termine, Inserate …" — unpublished drafts are now stored on the server too. Offer: add „(auch gespeicherte Entwürfe)" after „Beiträge", and name drafts in the sentence about what account deletion removes. Show him the two sentences before and after.
 
 - [ ] **Step 4: Full verification** — all unit tests (`npx tsx --test src/lib/forum/*.test.ts`), `scratchpad/e2e-post-drafts.mts`, `scratchpad/forum-drafts-probe.cjs`, `scratchpad/compose-kind-probe.cjs`, plus the regression probes `forum-pin-stack-probe.cjs` (19), `forum-tags-chip-probe.cjs` (14), `fab-probe.cjs` (26). Gates. `fuser -k 4655/tcp`.
 
@@ -851,5 +879,6 @@ git commit -m "forum drafts: removed with the account, docs"
 - **Coverage:** several drafts (T2/T3), cross-device + „come back anytime" (T3/T5), reachable from the account menu (T5), images kept (T3/T4), no moderation/limit until publish (T3 + decision 4), clear saved message (T4/T5), local copy stays as crash net (T4 step 3), deletion pipeline (T6), never in feeds/search/counts (own collection + T3 step 5 check 8), publish-by-kind (T1).
 - **Names:** `PostDraftDTO`, `PostDraftInput`, `MAX_POST_DRAFTS`, `draftIsEmpty`, `draftResumeHref`, `PostDraftSaveSchema`, `listDrafts`, `getDraft`, `saveDraft`, `deleteDraft`, `deleteAllDraftsOf`, `createEndpointForKind`, `createdDocKeyForKind` — used identically in every task.
 - **Audited against the code on 2026-09-21 (fixed in place):** `confirmAction` lives in `utils/toast.ts`, not `utils/confirm.ts`; the notification index script has no dry-run/interlock to copy (the plan now spells both out); the upload folder is `mahalle/posts`; `steps` is an open record and failures go through `fail()`.
+- **Second audit, same day (user: „audit the plan"), fixed in place:** (1) SECURITY — the image reference check was „this author's posts only"; a member could have destroyed other members' published photos by naming their `publicId` in a draft → the check is global now and draft images must be our own uploads (decision 6/6a, schema test, e2e check 10). (2) An update that drops an image left it orphaned on Cloudinary → the update path cleans up. (3) The probe tested a destroyed image for a 404, which the CDN makes unreliable → `DELETE` returns `imagesDestroyed` and the probes assert on that; destroy uses `invalidate: true`. (4) The e2e cannot import server libs under `tsx` → HTTP + direct DB reads, deletion driven through the cron route. (5) The title link was under 36 px on phones. (6) The index script's `--prod` now derives the database like the other user-run scripts. (7) The privacy page names stored content — drafts added as an offer. Confirmed fine: `category` defaults to `other`, the compose form restores `existingImages`, `ComposePreview` disables its buttons on `submitting`, the URL mirror keeps unknown params, MongoDB 6 returns the document from `findOneAndUpdate`, `createTopicMutation` has one caller.
 - **Still to verify while executing:** the deletion pipeline's test entry point (T6 step 2) and whether `postKind.test.ts` already imports `test`/`assert` (T1 step 1).
 - **Open decisions for the user (defaults chosen above):** limit 20; „verwerfen" keeps a server draft; section only under „Meine"; menu label „Meine Entwürfe".
