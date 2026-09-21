@@ -48,6 +48,7 @@
   import OfflineBanner from './states/OfflineBanner.svelte';
   import OwnStatusBanner from './states/OwnStatusBanner.svelte';
   import FeedStatusFooter from './states/FeedStatusFooter.svelte';
+  import ForumDraftsSection from './ForumDraftsSection.svelte';
 
   let { initialItems = [], currentUserId = null } = $props<{
     initialItems?: any[];
@@ -68,6 +69,13 @@
       showToast($t['forum.compose.success'], { type: 'success' });
       url.searchParams.delete('just_posted');
       // Keep Astro's ClientRouter state ({ index, scrollX, scrollY }) intact.
+      window.history.replaceState(window.history.state, '', url.toString());
+    }
+    // Same flash pattern for "als Entwurf speichern" (?kind=mine stays — it is
+    // real view state and opens the list the draft is in).
+    if (url.searchParams.get('draft_saved') === '1') {
+      showToast($t['drafts.saved.toast'], { type: 'success' });
+      url.searchParams.delete('draft_saved');
       window.history.replaceState(window.history.state, '', url.toString());
     }
 
@@ -662,6 +670,12 @@
       onTagChange={handleTagChange}
     />
   </div>
+
+  {#if activeFilter === 'mine'}
+    <!-- Own drafts (server-side, several per member, 2026-09-21). Above every
+         state branch: a member with drafts but no posts must still see them. -->
+    <ForumDraftsSection />
+  {/if}
 
   <!-- ── State branch ladder ────────────────────────────────────────
        Precedence: error > skeleton > empty-filter > empty-zero > grid.
