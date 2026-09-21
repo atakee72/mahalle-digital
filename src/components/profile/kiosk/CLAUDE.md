@@ -447,6 +447,13 @@ overall `ok` to `false`, but does NOT stop the remaining steps):
    userId })` (this user's own bookmarks) + `listings.updateMany({ savedBy:
    userId }, { $pull: { savedBy: userId } })` (this user removed from
    OTHER people's saved-listing arrays).
+   **2b. Forum drafts (2026-09-21)**: `deleteAllDraftsOf(userId)`
+   (`src/lib/forum/postDraftsStore.ts`) removes every row of the member in
+   `postDrafts` and destroys their Cloudinary images — except an image some
+   published post still references (global lookup, see the forum notes). Own
+   `try/catch` → `fail('postDrafts')`; reports `steps.postDrafts` +
+   `steps.postDraftImages`. Test: `scratchpad/e2e-drafts-account-deletion.mts`
+   (drives the real cron route on dev; aborts if any dev account is already due).
 3. **RSVPs — „Zusagen entfernt" interpretation (load-bearing)**:
    `events.updateMany({ $or: [{'rsvps.going': userId}, {'rsvps.maybe':
    userId}] }, { $pull: { 'rsvps.going': userId, 'rsvps.maybe': userId } })`
