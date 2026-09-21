@@ -131,6 +131,16 @@ Original plan for the record:
 - **Two bugs he reported** (`083e3eef`): the listing form never showed a photo preview (hex alpha glued onto a CSS variable → the whole background was dropped); the compose error stood in English on a German page, far below the form → stores a key, clears on typing, sits next to the buttons.
 - **Open, no go:** admin alert for an outdated statistics edition; tour offer on `/bookmarks` + `/search`; dead „Führung" menu row on pages without tour stops; listing delete keeps Cloudinary images; stripes over the photo in a filled listing tile; sweep of API routes no screen calls.
 
+**Monday 2026-09-21, evening (16:41 → 19:45) — record.** Started from one user question: „is there already a check for uniqueness of user names?" — no, and two members are both called Petra. Plan `docs/superpowers/plans/2026-09-21-names-handles-mentions.md` (researched, audited, executed inline, 10 commits), live `5a0bb91a`, region `fra1::fra1`, CI green, Sentry: nothing new.
+- **Privacy leak found while researching, fixed first** (`c617a80f`): about a dozen routes joined a user with „everything except the password". Proven on dev (key NAMES only): one member read another member's author object from the comments list, e-mail included. One allowlist now (`src/lib/publicAuthor.ts`). The three unused `/api/*/all` routes (they also handed out pending posts) are deleted. NOT checked on prod.
+- **Names**: one rule for signup and profile (2–30, „Petra M." and „O'Neill" allowed, invisible characters stripped); team lookalikes and the admins' own names refused at signup and on rename.
+- **Handles**: optional ONE-TIME choice at signup, reserved words, automatic handle as fallback; existing handles stay (his decision: no change route in this version). `@handle` next to names in comments, post detail, seller card, event author.
+- **Mentions** in forum posts and comments: resolved on save, stored by member id, linked, notified once and only when the content is public (held back while pending, sent on approval); autocomplete after „@" in all four text boxes. His decisions: every member with a handle is findable; approved-with-warning still notifies.
+- **Prod, read-only:** 37 members, all with a handle (no backfill); one name outside the rule („STK Schillerpromenade/Neukölln", the slash — it was outside the old rule too); one identical-name pair.
+- **CI budgets lowered** 26/92 → 23/89.
+- **Not verified on prod (would write):** signup with a chosen handle, a real mention incl. push text, the suggestion list while logged in, a tap on a real phone.
+- **Open, his call:** wording of the new texts; the privacy-page sentence (proposed, not on the page); slash in names; **a comment flagged on EDIT goes pending but never reaches the review queue** (no `flaggedContent` record — found in the audit, no go yet); Safari wording of the page-swap noise slips past the client Sentry filter (PROD-S, 17:17, before this deploy).
+
 ## E. After the first event (30 min)
 
 - `rateLimits` collection: count `baseKey` starting with `reg:ip` that hit the cap (tells you whether A1 mattered).
