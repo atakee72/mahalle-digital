@@ -95,9 +95,9 @@ export const GET: APIRoute = async ({ url, request }) => {
           try {
             const submitter = await usersCollection.findOne(
               { _id: new ObjectId(item.submittedBy) },
-              { projection: { password: 0 } }
+              { projection: { name: 1 } } // the feed shows the submitter's NAME only — never the full user doc
             );
-            return { ...item, submittedBy: submitter || item.submittedBy };
+            return { ...item, submittedBy: submitter ? { _id: String(submitter._id), name: submitter.name ?? null } : item.submittedBy };
           } catch {
             return item;
           }

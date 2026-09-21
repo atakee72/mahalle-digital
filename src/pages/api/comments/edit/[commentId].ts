@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../../lib/mongodb';
+import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
 import type { Comment } from '../../../../types';
 import { CommentUpdateSchema } from '../../../../schemas/comment.schema';
@@ -129,13 +130,13 @@ export const PUT: APIRoute = async ({ request, params }) => {
     const author = ObjectId.isValid(authorIdStr)
       ? await usersCollection.findOne(
           { _id: new ObjectId(authorIdStr) },
-          { projection: { password: 0 } }
+          { projection: PUBLIC_AUTHOR_PROJECTION }
         )
       : null;
 
     const updatedComment = {
       ...updateResult,
-      author: author || existingComment.author
+      author: author ? toPublicAuthor(author) : existingComment.author
     };
 
     return new Response(

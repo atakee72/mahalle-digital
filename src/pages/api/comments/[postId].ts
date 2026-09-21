@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
+import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
 
 export const GET: APIRoute = async ({ params, request }) => {
@@ -63,7 +64,7 @@ export const GET: APIRoute = async ({ params, request }) => {
           try {
             author = await usersCollection.findOne(
               { _id: new ObjectId(comment.author) },
-              { projection: { password: 0 } }
+              { projection: PUBLIC_AUTHOR_PROJECTION }
             );
           } catch {
             // If not valid ObjectId, skip
@@ -73,11 +74,11 @@ export const GET: APIRoute = async ({ params, request }) => {
           // Old MongoDB ObjectId lookup for backwards compatibility
           author = await usersCollection.findOne(
             { _id: comment.author },
-            { projection: { password: 0 } }
+            { projection: PUBLIC_AUTHOR_PROJECTION }
           );
         }
 
-        return { ...comment, author };
+        return { ...comment, author: author ? toPublicAuthor(author) : null };
       })
     );
 

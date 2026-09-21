@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
+import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
 import type { Recommendation, FlaggedContent } from '../../../types';
 import { RecommendationCreateSchema } from '../../../schemas/forum.schema';
@@ -140,13 +141,13 @@ export const POST: APIRoute = async ({ request }) => {
     const usersCollection = db.collection('users');
     const author = await usersCollection.findOne(
       { _id: new ObjectId(userId) },
-      { projection: { password: 0 } }
+      { projection: PUBLIC_AUTHOR_PROJECTION }
     );
 
     const createdRecommendation = {
       ...newRecommendation,
       _id: result.insertedId,
-      author: author || userId // Return populated author or fallback to ID
+      author: author ? toPublicAuthor(author) : userId // Return populated author or fallback to ID
     };
 
     // Return appropriate response based on moderation result

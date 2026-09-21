@@ -50,8 +50,8 @@ export async function fetchNewsDetailForSSR(id: string, userId: string | null): 
   if (item.source === 'user_submitted' && item.submittedBy && typeof item.submittedBy === 'string') {
     try {
       const users = db.collection('users');
-      const u = await users.findOne({ _id: new ObjectId(item.submittedBy) }, { projection: { password: 0 } });
-      if (u) (item as any).submittedBy = u;
+      const u = await users.findOne({ _id: new ObjectId(item.submittedBy) }, { projection: { name: 1 } });
+      if (u) (item as any).submittedBy = { _id: String(u._id), name: u.name ?? null };
     } catch { /* fall through with raw id */ }
   }
   return toDetail(item);
