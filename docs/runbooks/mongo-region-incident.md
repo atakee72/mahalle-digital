@@ -130,3 +130,42 @@ become frequent, THIS is the signal `maxIdleTimeMS` was meant for (pooled
 sockets that did not survive a freeze) — it was only wrong for the cold-start
 connect. Not applied; nothing user-visible (background fetch).
 
+
+## Reopened 2026-09-22 11:59 — the 09-20 retry never reached the route that fails (`7993f1ff`)
+
+One more PROD-2 event, two days after the retry shipped, again on
+`GET /api/profile/tour`, again `MongoClient.connect → … → Topology.selectServer`.
+Audit that night: **`profile/tour.ts` never called `connectDB()`** — it awaited
+the module's default export `clientPromise`, so the 09-20 retry could not help
+the very route that produced all three events. The section above missed it
+because it checked the retry, not who calls it.
+
+Worse than a missed retry, and a correction to „no poisoned container" above:
+the default export is `const clientPromise = getClientPromise()`, taken ONCE at
+module load. The un-cache in `newClientPromise()` frees the `globalThis` slot,
+so `connectDB()` recovers on its next call — but the exported binding keeps
+pointing at the rejected promise for the life of the instance. Every
+`await clientPromise` on that instance fails until it is recycled (reproduced
+with a stand-in script, `scratchpad/poison-demo.mjs`: `connectDB` → client #2,
+`await clientPromise` → rejected on request 1 and 2). Consumers at the time:
+`profile/tour`, `users/update`, `auth/register` and, in `auth.config.ts`,
+**login (`authorize`, no try/catch — every login on a stuck instance would have
+failed)** and the JWT recheck (caught — sessions kept, but the other-device
+sign-out and the `lastSeenAt` stamp silently skipped). Whether a failed login
+ever reached Sentry is unknown (Auth.js may wrap the error); one event per
+episode suggests stuck instances were short-lived or quiet, not that they could
+not happen.
+
+**Fix:** all five moved to `connectDB()`. The Auth.js adapter is the only
+remaining consumer of the default export and is never called with
+Credentials + JWT. Rule: new code uses `connectDB()`, never the default export.
+Verified: tsc 23 / svelte-check 89 / build green, retry tests 5/5; dev 6/6
+(login, JWT recheck, tour GET + POST, a real signup 201 with the throwaway
+account removed afterwards, profile save with unchanged values); prod read-only
+with the throwaway account: login, session, tour 200. The real failure (a cold
+first connect > 10 s) cannot be staged; the retry path itself is the one live
+since 09-20.
+
+**If PROD-2 reopens now:** first check the route — anything still awaiting the
+default export (`grep -rn "clientPromise" src auth.config.ts`) is a new
+consumer that skipped this rule. Then read the frames as described above.
