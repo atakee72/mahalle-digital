@@ -51,11 +51,32 @@
   );
 
   // Admin-Hinweis deep link: /topics/<id>#comment-<commentId> (comments render after the page).
+  // 2026-09-22: a single scroll attempt was flaky. Root cause, confirmed by
+  // a headless timeline probe: a post's hero image has no reserved height
+  // (ForumPostDetail's `h-auto` <img>, no width/height/aspect-ratio), so on
+  // an uncached load it finishes decoding ~200–500ms AFTER our first scroll
+  // and shifts the whole comment list down — pushing the already-centered
+  // target back out of view, with nothing left to re-scroll it. Re-scroll a
+  // few times over ~1.5s instead of once, to catch any such late shift;
+  // scrollIntoView is a no-op once the element already sits where we last
+  // put it, so the extra calls cost nothing when there's no shift.
   $effect(() => {
     if (typeof window === 'undefined' || comments.length === 0) return;
     const m = /^#comment-([0-9a-f]{24})$/.exec(window.location.hash);
     if (!m) return;
-    requestAnimationFrame(() => document.getElementById(`comment-${m[1]}`)?.scrollIntoView({ block: 'center' }));
+    const targetId = `comment-${m[1]}`;
+    const scrollToTarget = () => document.getElementById(targetId)?.scrollIntoView({ block: 'center' });
+    let cancelled = false;
+    requestAnimationFrame(scrollToTarget);
+    const timers = [200, 500, 900, 1400].map((delay) =>
+      setTimeout(() => {
+        if (!cancelled) scrollToTarget();
+      }, delay)
+    );
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
   });
 </script>
 
