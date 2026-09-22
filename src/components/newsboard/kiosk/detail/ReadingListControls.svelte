@@ -15,13 +15,8 @@
     {$t['news.readinglist.heading']}
   </div>
   {#if canSave}
-    <button type="button" onclick={onSave}
-      class="flex items-center font-bricolage" style="gap:8px; padding:8px 10px; font-size:13px; font-weight:600;
-        background:{saved ? 'var(--k-ink)' : 'transparent'}; color:{saved ? 'var(--k-paper)' : 'var(--k-ink)'};
-        border:var(--k-border-ink); border-radius:var(--k-radius-sm); text-align:left; cursor:pointer;">
-      <span>{saved ? '■' : '□'}</span>
-      {saved ? $t['news.readinglist.saved'] : $t['news.readinglist.save']}
-    </button>
+    <!-- the app's 🔖 pill, forum-detail size (user, 2026-09-22 13:21) -->
+    <div><SaveToggle {saved} onToggle={() => onSave()} /></div>
   {/if}
   <!-- Mark-as-read: Phase 3 (needs read-state). Rendered disabled. -->
   <button type="button" disabled title={$t['news.readinglist.markreadSoon']}

@@ -11,7 +11,6 @@
   import NewsTitleBlock from './browse/NewsTitleBlock.svelte';
   import NewsFilterRail from './browse/NewsFilterRail.svelte';
   import NewsCard from './browse/NewsCard.svelte';
-  import NewsCardLead from './browse/NewsCardLead.svelte';
   import DateDivider from './browse/DateDivider.svelte';
   import NewsSkeleton from './states/NewsSkeleton.svelte';
   import NewsEmptyToday from './states/NewsEmptyToday.svelte';
@@ -153,16 +152,18 @@
   // The author's own pending/rejected submissions (the API only ever returns the
   // current user's non-approved items, so any non-approved here is theirs). Float
   // them to the top of the feed where NewsCard renders the IN-PRÜFUNG/ABGELEHNT
-  // strap — and keep them OUT of the lead (NewsCardLead has no strap) and the
+  // strap — and keep them OUT of the bento doubles and the
   // chrono buckets (a pending item has no meaningful publish slot yet).
   const ownNonApproved = $derived(visible.filter((a) => a.moderationStatus !== 'approved'));
   const approvedItems = $derived(visible.filter((a) => a.moderationStatus === 'approved'));
   // HEUTE is ordered by aiRelevanceScore desc (publishedAt tiebreak); GESTERN/
-  // ÄLTER stay publishedAt desc. Lead = today's top score, falling back to
-  // yesterday's newest, else none (2026-09-22 refinement — see orderBoard()).
-  const board = $derived(orderBoard(approvedItems, new Date(), !activeSektion && !savedOnly));
+  // ÄLTER stay publishedAt desc (see orderBoard()). No lead card any more
+  // (2026-09-22 grid): today's top TWO print double-width instead (bento), only
+  // on the unfiltered board — never in GESTERN/ÄLTER.
+  const board = $derived(orderBoard(approvedItems, new Date(), false));
+  const bento = $derived(!activeSektion && !savedOnly);
+  const GRID = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 grid-flow-row-dense';
 
-  const lead = $derived(board.lead);
   const today = $derived(board.today);
   const yesterday = $derived(board.yesterday);
   const older = $derived(board.older);
@@ -221,22 +222,32 @@
     <NewsEmptyToday />
   {/if}
 {:else}
-  <div class="px-4 pt-5 pb-10 md:px-9 lg:px-10" style="display:flex; flex-direction:column; gap:16px;">
+  <!-- Card grid 1/2/3 columns (2026-09-22). One grid PER date section, so
+       grid-flow-dense can backfill the hole a double card leaves on desktop
+       with a card of the SAME day — never pull a GESTERN card above its divider. -->
+  <div class="px-4 pt-5 pb-10 md:px-9 lg:px-10 flex flex-col" style="gap:16px;">
     {#if ownNonApproved.length}
-      {#each ownNonApproved as a (a.id)}<NewsCard article={a} onSave={handleSave} canSave={isAuth} />{/each}
+      <div class={GRID}>
+        {#each ownNonApproved as a (a.id)}<NewsCard article={a} onSave={handleSave} canSave={isAuth} />{/each}
+      </div>
     {/if}
-    {#if lead}<NewsCardLead article={lead} onSave={handleSave} canSave={isAuth} />{/if}
     {#if today.length}
       <DateDivider label={$t['news.divider.today']} />
-      {#each today as a (a.id)}<NewsCard article={a} onSave={handleSave} canSave={isAuth} />{/each}
+      <div class={GRID}>
+        {#each today as a, i (a.id)}<NewsCard article={a} onSave={handleSave} canSave={isAuth} size={bento && i < 2 ? 'double' : 'single'} />{/each}
+      </div>
     {/if}
     {#if yesterday.length}
       <DateDivider label={$t['news.divider.yesterday']} />
-      {#each yesterday as a (a.id)}<NewsCard article={a} onSave={handleSave} canSave={isAuth} />{/each}
+      <div class={GRID}>
+        {#each yesterday as a (a.id)}<NewsCard article={a} onSave={handleSave} canSave={isAuth} />{/each}
+      </div>
     {/if}
     {#if older.length}
       <DateDivider label={$t['news.divider.older']} />
-      {#each older as a (a.id)}<NewsCard article={a} onSave={handleSave} canSave={isAuth} />{/each}
+      <div class={GRID}>
+        {#each older as a (a.id)}<NewsCard article={a} onSave={handleSave} canSave={isAuth} />{/each}
+      </div>
     {/if}
   </div>
 {/if}
