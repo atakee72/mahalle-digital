@@ -130,7 +130,8 @@
   --k-bar-dim: 0.7;
 }
 [data-page="forum"]        { --k-bar: var(--k-wine-deep); }
-[data-page="calendar"]     { --k-bar: var(--k-teal); }
+[data-page="calendar"]     { --k-bar: #3f7e8a; } /* one tick calmer than --k-teal (user, 2026-09-22 15:00); bars only */
+[data-page="marketplace"]  { --k-bar: #df9b2f; } /* one tick calmer than --k-ochre, ink text stays (user, 2026-09-22 15:00); bars only */
 [data-page="newsboard"]    { --k-bar: var(--k-ink); }
 [data-page="schillerkiez"] { --k-bar: var(--k-moss); }
 [data-page="blog"]         { --k-bar: var(--k-rust); }

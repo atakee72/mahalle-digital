@@ -413,11 +413,11 @@ Each main page has its own accent color used for **kickers** (mono-uppercase eye
 | Page | Accent | Tailwind | Bars (masthead + bottom nav, 2026-09-22) |
 |---|---|---|---|
 | Forum | wine | `text-wine` (`#b23a5b`) | lighter burgundy `#95425d` (`--k-wine-deep`; `#814256` and `#a1415f` each held minutes on 09-22) |
-| Calendar | teal | `text-teal` (`#3f8f9f`) | teal |
+| Calendar | teal | `text-teal` (`#3f8f9f`) | teal one tick calmer `#3f7e8a` (bars only, 09-22 15:00) |
 | Admin | plum | `text-[#6f2f59]` via `--k-plum` | own plum masthead (AdminLayout) |
 | Kiez-Daten | moss | `#6b8a4a` via `--k-moss` | moss |
 | Blog | rust | `#a3552e` via `--k-rust` | rust |
-| Marketplace | wine | shares the forum's wine deliberately | ochre (user: its title carries ochre) |
+| Marketplace | wine | shares the forum's wine deliberately | ochre one tick calmer `#df9b2f` (bars only, 09-22 15:00; ink text) |
 | Newsboard (Kurier) | ink | ink-only surface — its "newspaper" identity, no color accent | ink |
 | Auth / Profile | ochre | `--k-ochre` | ochre |
 
