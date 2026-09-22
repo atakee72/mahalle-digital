@@ -69,8 +69,8 @@ export function buildPushPayload(
       break;
     case 'admin_hint':
       body = meta?.contentKind === 'comment'
-        ? `Admin-Hinweis in einem Kommentar zu \u201a${t}\u2018`
-        : `Admin-Hinweis zu \u201a${t}\u2018`;
+        ? 'Admin-Hinweis in einem Kommentar'
+        : 'Admin-Hinweis in einem Beitrag';
       break;
     case 'moderation': {
       const noun = meta?.contentKind === 'comment' ? 'Kommentar' : 'Beitrag';
