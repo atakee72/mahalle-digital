@@ -141,8 +141,9 @@
   --k-bar-hover: rgb(0 0 0 / 0.15);
   --k-bar-disc-ring: 0 0 0 2px var(--k-paper);
   --k-bar-dim: 1;
+  --k-bar-pill-border: var(--k-paper); /* DE/EN pill framed in paper on every coloured bar (user, 2026-09-22: Kurier first, then all) */
 }
-[data-page="newsboard"] { --k-bar-hover: rgb(255 255 255 / 0.15); --k-bar-pill-border: var(--k-paper); } /* DE/EN pill framed in paper on the ink bar (user, 2026-09-22) */
+[data-page="newsboard"] { --k-bar-hover: rgb(255 255 255 / 0.15); }
 /* On the INK bar the active desktop pill (bg-ink) would vanish — flip it. */
 [data-page="newsboard"] header nav a[aria-current="page"] {
   background: var(--k-paper);
