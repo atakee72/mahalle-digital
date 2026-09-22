@@ -214,6 +214,8 @@ Four candidates' guest posts (`src/content/blog/wahl2026-<surname>.mdx`, tag `wa
 5. Same neutral `description` template for all, no summary of positions. Same two footer lines. No funding logo (the blog is not part of the funded events).
 6. A blog post is a DEPLOY — mind the event freeze windows.
 
+**Posts that arrive AFTER the election (09-22 Lindlmair, independent; 09-23 Karadag, CDU):** same recipe plus four points. (a) `sortDate` = the group's timestamp, so they line up by surname (order now Bristow, Dehne, Haghanipour, Hempel, Karadag, Lindlmair, Lüders, Mende). (b) The footer line gains „Nach der Wahl nachgetragen.“ (and „sowie einen Einzelbewerber“ since Lindlmair). (c) The intro post `wahl2026-einladung.mdx` gets a numbered italic „Nachtrag“ per late post (fourth = Karadag); its sentence „von den anderen Eingeladenen … kein Beitrag“ stays as the record of election day. (d) When the text never names the party (Karadag's did not), confirm it from a public source before it goes into the title — never infer it from a named colleague. A small LANDSCAPE photo (Karadag, 567×423) takes the same wide composite as a portrait (`scratchpad/wahl2026/karadag-photo.mjs`), because the article hero is ~2.8:1; it stays a little soft on large screens. Candidates may send a bare text with the heading as its first line — that line becomes the title after „Gastbeitrag:“, and the body starts with the greeting.
+
 ## Content collection schema (`src/content.config.ts`)
 
 `postLayout: 'standard' | 'hero' | 'gallery'` (default `'standard'`),
