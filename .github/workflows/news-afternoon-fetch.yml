@@ -1,0 +1,38 @@
+name: Kurier Afternoon Fetch
+# Rings /api/news/fetch-daily a SECOND time each day, ~15:00 Berlin (user
+# decision 2026-09-22). Vercel Hobby allows only one cron/day and both
+# vercel.json slots are already spoken for (fetch-daily 06:00 UTC,
+# process-deletions 05:30 UTC), so — same pattern as kiez-air-logger.yml —
+# GitHub Actions rings the same route a second time instead.
+# 13:13 UTC = 15:13 Berlin in summer (CEST, UTC+2) / 14:13 in winter (CET,
+# UTC+1). Actions cron is UTC-only and jitters by minutes; "around 15:00
+# Berlin" is the promise, not an exact time.
+# Requires repo secret CRON_SECRET (same value as Vercel env — already used
+# by kiez-air-logger.yml).
+on:
+  schedule:
+    - cron: '13 13 * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger afternoon news fetch
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Canonical domain since 2026-08-09. Must NOT be the old
+          # *.vercel.app origin: it 308-redirects here, and curl without -L
+          # treats that as a failure. -L is not the fix either — curl drops
+          # Authorization on a cross-host redirect (killed the air logger
+          # silently for 2 days, see kiez-air-logger.yml).
+          APP_ORIGIN: https://mahalle.digital
+        run: |
+          code=$(curl -s -o /tmp/resp.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_ORIGIN/api/news/fetch-daily")
+          cat /tmp/resp.json; echo
+          if [ "$code" != "200" ]; then
+            echo "afternoon fetch failed with HTTP $code"
+            exit 1
+          fi
