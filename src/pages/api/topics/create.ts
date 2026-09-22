@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../lib/publicAuthor';
-import { resolveMentions, notifyMentions } from '../../../lib/mentions/mentionsStore';
+import { resolveMentions, notifyMentions, applyBroadcast, notifyAdminHint } from '../../../lib/mentions/mentionsStore';
 import { moderationTarget } from '../../../lib/notifications';
 import { ObjectId } from 'mongodb';
 import type { Topic, FlaggedContent } from '../../../types';
@@ -61,14 +61,19 @@ export const POST: APIRoute = async ({ request }) => {
 
     const { title, body, tags, images } = validation.data;
 
+    // „@alle" Admin-Hinweis (2026-09-22): admin-only broadcast. The span is
+    // removed from the stored body; non-admin text is untouched.
+    const isAdmin = session.user.role === 'admin';
+    const { body: cleanBody, broadcast } = applyBroadcast(body, isAdmin);
+
     // Admins are exempt from AI moderation (their content is auto-approved —
     // they run the review queue). Skips the OpenAI calls entirely.
-    const skipModeration = session.user.role === 'admin';
+    const skipModeration = isAdmin;
 
     let mergedResult: ReturnType<typeof mergeModerationResults> = null;
     if (!skipModeration) {
       // Run content moderation + spam check + image moderation in parallel
-      const contentText = `${title}\n\n${body}`;
+      const contentText = `${title}\n\n${cleanBody}`;
       const moderationChecks: Promise<any>[] = [
         moderateText(contentText),
         checkSpamWithGPT(contentText, 'neighborhood community forum post')
@@ -90,7 +95,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // „@handle" mentions are resolved NOW and stored by user id (src/lib/mentions).
-    const mentions = await resolveMentions(db, body);
+    const mentions = await resolveMentions(db, cleanBody);
 
     // Determine moderation status
     const moderationStatus = mergedResult ? 'pending' : 'approved';
@@ -98,11 +103,12 @@ export const POST: APIRoute = async ({ request }) => {
     // Create new topic
     const newTopic: Topic = {
       title,
-      body,
+      body: cleanBody,
       author: userId as any, // Save author as ID string
       tags: tags || [],
       images: images || [],
       mentions,
+      ...(broadcast ? { broadcast } : {}),
       comments: [],
       views: 0,
       likes: 0,
@@ -120,7 +126,7 @@ export const POST: APIRoute = async ({ request }) => {
       const flaggedCollection = db.collection<FlaggedContent>('flaggedContent');
       const flaggedRecord = createFlaggedContentRecord(
         'topic',
-        { title, body, tags },
+        { title, body: cleanBody, tags },
         {
           id: userId,
           name: session.user.name || undefined,
@@ -149,6 +155,17 @@ export const POST: APIRoute = async ({ request }) => {
         actorId: userId, mentions, sourceId: result.insertedId.toString(), kind: 'post',
         target: moderationTarget('topic', result.insertedId.toString(), title),
       });
+      if (broadcast) {
+        const n = await notifyAdminHint(db, {
+          actorId: userId, sourceId: result.insertedId.toString(), kind: 'post',
+          target: moderationTarget('topic', result.insertedId.toString(), title),
+          excludedHandles: broadcast.excludedHandles,
+        });
+        await topicsCollection.updateOne(
+          { _id: result.insertedId },
+          { $set: { 'broadcast.notifiedAt': new Date(), 'broadcast.recipients': n } }
+        );
+      }
     }
 
     // Fetch author info to return with the created topic

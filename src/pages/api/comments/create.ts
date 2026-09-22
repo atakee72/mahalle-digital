@@ -9,7 +9,7 @@ import { parseRequestBody } from '../../../schemas/validation.utils';
 import { moderateText, checkSpamWithGPT, createFlaggedContentRecord, mergeModerationResults } from '../../../lib/moderation';
 import { rejectIfBanned } from '../../../lib/auth/banGuard';
 import { notify, commentTarget } from '../../../lib/notifications';
-import { resolveMentions, notifyMentions } from '../../../lib/mentions/mentionsStore';
+import { resolveMentions, notifyMentions, applyBroadcast, notifyAdminHint } from '../../../lib/mentions/mentionsStore';
 import { alertComment, alertModerationFlagged } from '../../../lib/adminAlerts';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -38,16 +38,21 @@ export const POST: APIRoute = async ({ request }) => {
 
     const { body, topicId, collectionType } = validation.data;
 
+    // „@alle" Admin-Hinweis (2026-09-22): admin-only broadcast. The span is
+    // removed from the stored body; non-admin text is untouched.
+    const isAdmin = session.user.role === 'admin';
+    const { body: cleanBody, broadcast } = applyBroadcast(body, isAdmin);
+
     // Admins are exempt from AI moderation (their content is auto-approved —
     // they run the review queue). Skips the OpenAI calls entirely.
-    const skipModeration = session.user.role === 'admin';
+    const skipModeration = isAdmin;
 
     let mergedResult: ReturnType<typeof mergeModerationResults> = null;
     if (!skipModeration) {
       // Run AI content moderation + spam check in parallel
       const [textModerationResult, spamResult] = await Promise.all([
-        moderateText(body),
-        checkSpamWithGPT(body, 'community forum comment')
+        moderateText(cleanBody),
+        checkSpamWithGPT(cleanBody, 'community forum comment')
       ]);
 
       mergedResult = mergeModerationResults(textModerationResult, spamResult);
@@ -59,16 +64,17 @@ export const POST: APIRoute = async ({ request }) => {
     const commentsCollection = db.collection<Comment>('comments');
 
     // „@handle" mentions are resolved NOW and stored by user id (src/lib/mentions).
-    const mentions = await resolveMentions(db, body);
+    const mentions = await resolveMentions(db, cleanBody);
 
     // Create new comment
     const newComment: Comment = {
-      body,
+      body: cleanBody,
       author: userId as any, // Save author as ID string
       relevantPostId: new ObjectId(topicId),
       date: Date.now(),
       upvotes: 0,
       mentions,
+      ...(broadcast ? { broadcast } : {}),
       moderationStatus,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -91,7 +97,7 @@ export const POST: APIRoute = async ({ request }) => {
       const flaggedCollection = db.collection<FlaggedContent>('flaggedContent');
       const flaggedRecord = createFlaggedContentRecord(
         'comment',
-        { body },
+        { body: cleanBody },
         {
           id: userId,
           name: session.user.name || undefined,
@@ -104,7 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
       (flaggedRecord as any).parentPostId = topicId;
       (flaggedRecord as any).parentCollection = parentCollection;
       await flaggedCollection.insertOne(flaggedRecord as FlaggedContent);
-      await alertModerationFlagged({ contentType: 'comment', title: body.slice(0, 80), authorName: session.user.name });
+      await alertModerationFlagged({ contentType: 'comment', title: cleanBody.slice(0, 80), authorName: session.user.name });
     } else {
       // Only add to parent's comments array if approved immediately.
       // findOneAndUpdate (not updateOne) so the parent's author + title come
@@ -135,6 +141,20 @@ export const POST: APIRoute = async ({ request }) => {
         target: commentTarget(parentCollection, topicId, parentDoc?.title ?? ''),
         skipUserIds: parentDoc?.author ? [String(parentDoc.author)] : [],
       });
+
+      if (broadcast) {
+        const commentId = result.insertedId.toString();
+        const baseTarget = commentTarget(parentCollection, topicId, parentDoc?.title ?? '');
+        const n = await notifyAdminHint(db, {
+          actorId: userId, sourceId: commentId, kind: 'comment',
+          target: { ...baseTarget, href: baseTarget.href + '#comment-' + commentId },
+          excludedHandles: broadcast.excludedHandles,
+        });
+        await commentsCollection.updateOne(
+          { _id: result.insertedId },
+          { $set: { 'broadcast.notifiedAt': new Date(), 'broadcast.recipients': n } }
+        );
+      }
 
       if (!skipModeration) {
         await alertComment({ authorName: session.user.name, parentTitle: parentDoc?.title ?? '' });

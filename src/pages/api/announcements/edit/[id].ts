@@ -2,7 +2,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../../lib/mongodb';
-import { resolveMentions, notifyMentions } from '../../../../lib/mentions/mentionsStore';
+import { resolveMentions, notifyMentions, applyBroadcast, notifyAdminHint } from '../../../../lib/mentions/mentionsStore';
 import { moderationTarget } from '../../../../lib/notifications';
 import { ObjectId } from 'mongodb';
 import type { Announcement, EditHistory } from '../../../../types';
@@ -83,26 +83,49 @@ export const PUT: APIRoute = async ({ request, params }) => {
       editedBy: userId
     };
 
+    // „@alle" Admin-Hinweis (2026-09-22): admin-only broadcast. body may be
+    // omitted on a title-only edit — only parse when it was actually sent.
+    const isAdmin = session.user.role === 'admin';
+    const bodyProvided = typeof body === 'string';
+    const parsedBroadcast = bodyProvided ? applyBroadcast(body, isAdmin) : null;
+    const cleanBody = parsedBroadcast ? parsedBroadcast.body : body;
+    // undefined = body wasn't sent, don't touch broadcast; null = clear it; object = set it.
+    const newBroadcast = parsedBroadcast ? parsedBroadcast.broadcast : undefined;
+
     // „@handle" mentions are re-resolved on every save (src/lib/mentions).
-    const mentions = await resolveMentions(db, body ?? '');
+    const mentions = await resolveMentions(db, cleanBody ?? '');
+
+    const setFields: Record<string, any> = {
+      title,
+      body: cleanBody,
+      description: cleanBody,
+      tags: tags || [],
+      images: images || [],
+      mentions,
+      isEdited: true,
+      lastEditedAt: new Date(),
+      updatedAt: new Date()
+    };
+    if (newBroadcast) {
+      setFields.broadcast = {
+        ...newBroadcast,
+        notifiedAt: existingAnnouncement.broadcast?.notifiedAt,
+        recipients: existingAnnouncement.broadcast?.recipients,
+      };
+    }
+    const unsetFields: Record<string, ''> = {};
+    if (newBroadcast === null && existingAnnouncement.broadcast) {
+      unsetFields.broadcast = '';
+    }
 
     const updateResult = await announcementsCollection.findOneAndUpdate(
       { _id: new ObjectId(announcementId) },
       {
-        $set: {
-          title,
-          body,
-          description: body,
-          tags: tags || [],
-          images: images || [],
-          mentions,
-          isEdited: true,
-          lastEditedAt: new Date(),
-          updatedAt: new Date()
-        },
+        $set: setFields,
         $push: {
           editHistory: editHistoryEntry
-        }
+        },
+        ...(Object.keys(unsetFields).length ? { $unset: unsetFields } : {})
       },
       { returnDocument: 'after' }
     );
@@ -120,6 +143,18 @@ export const PUT: APIRoute = async ({ request, params }) => {
       actorId: userId, mentions, sourceId: String(announcementId), kind: 'post',
       target: moderationTarget('announcement', String(announcementId), title ?? ''),
     });
+
+    if (newBroadcast && !existingAnnouncement.broadcast?.notifiedAt) {
+      const n = await notifyAdminHint(db, {
+        actorId: userId, sourceId: String(announcementId), kind: 'post',
+        target: moderationTarget('announcement', String(announcementId), title ?? ''),
+        excludedHandles: newBroadcast.excludedHandles,
+      });
+      await announcementsCollection.updateOne(
+        { _id: new ObjectId(announcementId) },
+        { $set: { 'broadcast.notifiedAt': new Date(), 'broadcast.recipients': n } }
+      );
+    }
 
     // Construct author object from session
     const author = {

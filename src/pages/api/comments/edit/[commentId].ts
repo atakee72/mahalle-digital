@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../../lib/mongodb';
-import { resolveMentions, notifyMentions, findCommentParent } from '../../../../lib/mentions/mentionsStore';
+import { resolveMentions, notifyMentions, findCommentParent, applyBroadcast, notifyAdminHint } from '../../../../lib/mentions/mentionsStore';
 import { commentTarget } from '../../../../lib/notifications';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
@@ -47,6 +47,11 @@ export const PUT: APIRoute = async ({ request, params }) => {
 
     const { body } = validation.data;
 
+    // „@alle" Admin-Hinweis (2026-09-22): admin-only broadcast. CommentUpdateSchema
+    // requires `body`, so it is always a string here.
+    const isAdmin = session.user.role === 'admin';
+    const { body: cleanBody, broadcast: newBroadcast } = applyBroadcast(body, isAdmin);
+
     const db = await connectDB();
     const commentsCollection = db.collection<Comment>('comments');
 
@@ -91,8 +96,8 @@ export const PUT: APIRoute = async ({ request, params }) => {
     let mergedResult: ReturnType<typeof mergeModerationResults> = null;
     if (!skipModeration) {
       const [textModerationResult, spamResult] = await Promise.all([
-        moderateText(body),
-        checkSpamWithGPT(body, 'community forum comment')
+        moderateText(cleanBody),
+        checkSpamWithGPT(cleanBody, 'community forum comment')
       ]);
 
       mergedResult = mergeModerationResults(textModerationResult, spamResult);
@@ -100,18 +105,32 @@ export const PUT: APIRoute = async ({ request, params }) => {
     const newModerationStatus = mergedResult ? 'pending' : 'approved';
 
     // „@handle" mentions are re-resolved on every save (src/lib/mentions).
-    const mentions = await resolveMentions(db, body);
+    const mentions = await resolveMentions(db, cleanBody);
+
+    const setFields: Record<string, any> = {
+      body: cleanBody,
+      mentions,
+      editedAt: new Date(),
+      updatedAt: new Date(),
+      moderationStatus: newModerationStatus
+    };
+    if (newBroadcast) {
+      setFields.broadcast = {
+        ...newBroadcast,
+        notifiedAt: existingComment.broadcast?.notifiedAt,
+        recipients: existingComment.broadcast?.recipients,
+      };
+    }
+    const unsetFields: Record<string, ''> = {};
+    if (newBroadcast === null && existingComment.broadcast) {
+      unsetFields.broadcast = '';
+    }
 
     const updateResult = await commentsCollection.findOneAndUpdate(
       { _id: new ObjectId(commentId) },
       {
-        $set: {
-          body,
-          mentions,
-          editedAt: new Date(),
-          updatedAt: new Date(),
-          moderationStatus: newModerationStatus
-        }
+        $set: setFields,
+        ...(Object.keys(unsetFields).length ? { $unset: unsetFields } : {})
       },
       { returnDocument: 'after' }
     );
@@ -124,9 +143,10 @@ export const PUT: APIRoute = async ({ request, params }) => {
     }
 
     // A comment stores no parent collection, so it is looked up — needed for the
-    // mention notification (public edit) and for the review-queue record (flagged edit).
+    // mention notification (public edit), the admin-hint notification and for the
+    // review-queue record (flagged edit).
     const parentPostId = existingComment.relevantPostId ? String(existingComment.relevantPostId) : '';
-    const parent = parentPostId && (mergedResult || mentions.length > 0)
+    const parent = parentPostId && (mergedResult || mentions.length > 0 || newBroadcast)
       ? await findCommentParent(db, parentPostId)
       : null;
 
@@ -141,6 +161,19 @@ export const PUT: APIRoute = async ({ request, params }) => {
       }
     }
 
+    if (newModerationStatus === 'approved' && newBroadcast && parent && !existingComment.broadcast?.notifiedAt) {
+      const baseTarget = commentTarget(parent.collection, String(existingComment.relevantPostId), parent.title);
+      const n = await notifyAdminHint(db, {
+        actorId: userId, sourceId: String(commentId), kind: 'comment',
+        target: { ...baseTarget, href: baseTarget.href + '#comment-' + String(commentId) },
+        excludedHandles: newBroadcast.excludedHandles,
+      });
+      await commentsCollection.updateOne(
+        { _id: new ObjectId(commentId) },
+        { $set: { 'broadcast.notifiedAt': new Date(), 'broadcast.recipients': n } }
+      );
+    }
+
     // A flagged edit goes into the review queue like a flagged new comment.
     // Until 2026-09-21 this route set the comment to `pending` but wrote NO
     // flaggedContent record: the comment vanished from the thread and nobody
@@ -149,7 +182,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
     if (mergedResult) {
       const flaggedRecord = createFlaggedContentRecord(
         'comment',
-        { body },
+        { body: cleanBody },
         {
           id: userId,
           name: session.user.name || undefined,
@@ -162,7 +195,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
       (flaggedRecord as any).parentCollection = parent?.collection ?? 'topics';
       (flaggedRecord as any).fromEdit = true;
       await db.collection<FlaggedContent>('flaggedContent').insertOne(flaggedRecord as FlaggedContent);
-      await alertModerationFlagged({ contentType: 'comment', title: body.slice(0, 80), authorName: session.user.name });
+      await alertModerationFlagged({ contentType: 'comment', title: cleanBody.slice(0, 80), authorName: session.user.name });
     }
 
     // Populate author info to match the create endpoint's response shape.

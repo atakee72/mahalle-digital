@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../../lib/mongodb';
-import { resolveMentions, notifyMentions } from '../../../../lib/mentions/mentionsStore';
+import { resolveMentions, notifyMentions, applyBroadcast, notifyAdminHint } from '../../../../lib/mentions/mentionsStore';
 import { moderationTarget } from '../../../../lib/notifications';
 import { invalidateKiezKontext } from '../../../../lib/kiez/kontext';
 import { ObjectId } from 'mongodb';
@@ -48,6 +48,12 @@ export const PUT: APIRoute = async ({ request, params }) => {
 
     const { title, body, tags, images } = validation.data;
 
+    // „@alle" Admin-Hinweis (2026-09-22): admin-only broadcast. TopicCreateSchema
+    // requires `body`, so it is always a string here (unlike the announcement/
+    // recommendation edit routes, which use a `.partial()` schema).
+    const isAdmin = session.user.role === 'admin';
+    const { body: cleanBody, broadcast: newBroadcast } = applyBroadcast(body, isAdmin);
+
     // Connect to database
     const db = await connectDB();
     const topicsCollection = db.collection<Topic>('topics');
@@ -93,7 +99,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
     if (!skipModeration) {
       // Run content moderation on edited content (FAIL-SAFE: queues for review on any error).
       // Mirrors the create-path checks: moderateText + checkSpamWithGPT + tag moderation + image moderation.
-      const contentText = `${title}\n\n${body}`;
+      const contentText = `${title}\n\n${cleanBody}`;
       const moderationChecks: Promise<any>[] = [
         moderateText(contentText),
         checkSpamWithGPT(contentText, 'neighborhood community forum post')
@@ -130,7 +136,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
     // Build update data
     const updateData: Record<string, any> = {
       title,
-      body,
+      body: cleanBody,
       tags: tags || [],
       images: images || [],
       isEdited: true,
@@ -138,12 +144,24 @@ export const PUT: APIRoute = async ({ request, params }) => {
       updatedAt: new Date(),
       moderationStatus: newModerationStatus,
       // „@handle" mentions are re-resolved on every save (src/lib/mentions).
-      mentions: await resolveMentions(db, body)
+      mentions: await resolveMentions(db, cleanBody)
     };
 
     // Clear rejection reason if going back to pending (new review needed)
     if (newModerationStatus === 'pending') {
       updateData.rejectionReason = null;
+    }
+
+    if (newBroadcast) {
+      updateData.broadcast = {
+        ...newBroadcast,
+        notifiedAt: existingTopic.broadcast?.notifiedAt,
+        recipients: existingTopic.broadcast?.recipients,
+      };
+    }
+    const unsetFields: Record<string, ''> = {};
+    if (newBroadcast === null && existingTopic.broadcast) {
+      unsetFields.broadcast = '';
     }
 
     // Update the topic with edit history
@@ -153,7 +171,8 @@ export const PUT: APIRoute = async ({ request, params }) => {
         $set: updateData,
         $push: {
           editHistory: editHistoryEntry
-        }
+        },
+        ...(Object.keys(unsetFields).length ? { $unset: unsetFields } : {})
       },
       { returnDocument: 'after' }
     );
@@ -163,7 +182,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
       const flaggedCollection = db.collection<FlaggedContent>('flaggedContent');
       const flaggedRecord = createFlaggedContentRecord(
         'topic',
-        { title, body, tags },
+        { title, body: cleanBody, tags },
         {
           id: userId,
           name: session.user.name || undefined,
@@ -190,6 +209,17 @@ export const PUT: APIRoute = async ({ request, params }) => {
         actorId: userId, mentions: updateData.mentions, sourceId: String(topicId), kind: 'post',
         target: moderationTarget('topic', String(topicId), title),
       });
+      if (newBroadcast && !existingTopic.broadcast?.notifiedAt) {
+        const n = await notifyAdminHint(db, {
+          actorId: userId, sourceId: String(topicId), kind: 'post',
+          target: moderationTarget('topic', String(topicId), title),
+          excludedHandles: newBroadcast.excludedHandles,
+        });
+        await topicsCollection.updateOne(
+          { _id: new ObjectId(topicId) },
+          { $set: { 'broadcast.notifiedAt': new Date(), 'broadcast.recipients': n } }
+        );
+      }
     }
 
     // Invalidate Kiez-Daten Anwohner-Kontext cache in case the topic title changed
