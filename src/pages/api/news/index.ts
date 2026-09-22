@@ -63,7 +63,12 @@ export const GET: APIRoute = async ({ url, request }) => {
     const [items, total] = await Promise.all([
       newsCollection
         .find(filter)
-        .sort({ fetchDate: -1, source: -1, aiRelevanceScore: -1, [sortBy]: sortOrder === 'asc' ? 1 : -1, _id: -1 })
+        // Day (fetchDate) first, then the article's real publish time; the GPT
+        // score is only a tiebreak since 2026-09-22 — before, every item of one
+        // cron run tied on fetchDate and the score alone ordered the day, so a
+        // 4-day-old score-90 item outranked a 4-hour-old score-85 one. The
+        // „user-submitted first" rule (source: -1) went with it.
+        .sort({ fetchDate: -1, publishedAt: -1, aiRelevanceScore: -1, [sortBy]: sortOrder === 'asc' ? 1 : -1, _id: -1 })
         .skip(offset)
         .limit(limit)
         .toArray(),
