@@ -17,7 +17,7 @@
 
   /* ── Color · semantic accents (canvas-true hex) ──────────────── */
   --k-wine:    #b23a5b;   /* topic · Forum brand (carved-accent)  */
-  --k-wine-deep: #814256; /* bars only (forum masthead + bottom nav, 2026-09-22) — kickers, „+", shadows stay --k-wine */
+  --k-wine-deep: #a1415f; /* bars only (2026-09-22 14:49: one tick lighter + livelier than the legacy burgundy #814256, user pick out of three; paper text 5.1:1) (forum masthead + bottom nav, 2026-09-22) — kickers, „+", shadows stay --k-wine */
   --k-plum:    #6f2f59;   /* long-form, deep accent               */
   --k-teal:    #3f8f9f;   /* announcement                         */
   --k-moss:    #6b8a4a;   /* recommendation                       */
