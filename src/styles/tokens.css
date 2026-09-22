@@ -17,6 +17,7 @@
 
   /* ── Color · semantic accents (canvas-true hex) ──────────────── */
   --k-wine:    #b23a5b;   /* topic · Forum brand (carved-accent)  */
+  --k-wine-deep: #814256; /* bars only (forum masthead + bottom nav, 2026-09-22) — kickers, „+", shadows stay --k-wine */
   --k-plum:    #6f2f59;   /* long-form, deep accent               */
   --k-teal:    #3f8f9f;   /* announcement                         */
   --k-moss:    #6b8a4a;   /* recommendation                       */
@@ -128,7 +129,7 @@
   --k-bar-disc-ring: none;
   --k-bar-dim: 0.7;
 }
-[data-page="forum"]        { --k-bar: var(--k-wine); }
+[data-page="forum"]        { --k-bar: var(--k-wine-deep); }
 [data-page="calendar"]     { --k-bar: var(--k-teal); }
 [data-page="newsboard"]    { --k-bar: var(--k-ink); }
 [data-page="schillerkiez"] { --k-bar: var(--k-moss); }
