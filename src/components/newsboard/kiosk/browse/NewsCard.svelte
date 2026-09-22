@@ -18,6 +18,8 @@
   // Bento (2026-09-22): today's top two scores print double-width (md:col-span-2,
   // set here so the grid cell and the card are one element).
   const double = $derived(size === 'double');
+  const hasImage = $derived(!!article.imageUrl);
+  const summaryLines = $derived(hasImage ? (double ? 4 : 3) : (double ? 8 : 6));
   const clamp = (n: number) => `display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:${n}; overflow:hidden;`;
 
   const title = $derived($locale === 'de' ? article.title : (article.titleEN || article.title));
@@ -26,20 +28,23 @@
 </script>
 
 <!-- Vertical card (2026-09-22 grid): image on top, text block, meta row pinned
-     to the bottom (flex-col + h-full) so cards in one grid row align. Missing
-     images get ArticleImage's own placeholder so every card keeps the same
-     rhythm. -->
+     to the bottom (flex-col + h-full) so cards in one grid row align. No image
+     → no image box at all; the summary gets twice the lines instead (user,
+     2026-09-22 13:21). -->
 <article
   class={`news-card flex flex-col h-full [--news-img-ratio:16/9] ${double ? 'md:col-span-2 lg:[--news-img-ratio:21/9]' : ''}`}
   data-size={size}
+  data-has-image={hasImage ? 'true' : 'false'}
   data-read-state={article.archived ? 'archived' : article.read ? 'seen' : 'fresh'}
   data-kiez={article.kiez ? 'true' : undefined}
   style={`background:var(--k-paper); border:var(--k-border-hair); border-radius:var(--k-radius-md); padding:14px; gap:14px; opacity:${decay};`
-    + (article.kiez ? ' --k-paper:#1b1a17; --k-paper-warm:#1b1a17; --k-ink:#f5efe0; --k-ink-soft:#ebe1c7; --k-ink-mute:#c9bea3; --k-border-hair:1px solid #f5efe0; --news-noimage-bg:#26241f; --news-noimage-border:1px dashed #6d6656;' : '')}
+    + (article.kiez ? ' --k-paper:#1b1a17; --k-paper-warm:#1b1a17; --k-ink:#f5efe0; --k-ink-soft:#ebe1c7; --k-ink-mute:#c9bea3; --k-border-hair:1px solid #f5efe0;' : '')}
 >
-  <a href={`/newsboard/${article.id}`} class="block" tabindex="-1" aria-hidden="true">
-    <ArticleImage imageUrl={article.imageUrl} quelle={article.quelle} sektion={article.sektion} ratio="16/9" alt="" />
-  </a>
+  {#if hasImage}
+    <a href={`/newsboard/${article.id}`} class="block" tabindex="-1" aria-hidden="true">
+      <ArticleImage imageUrl={article.imageUrl} quelle={article.quelle} sektion={article.sektion} ratio="16/9" alt="" />
+    </a>
+  {/if}
 
   <div class="flex flex-col flex-1 min-w-0">
     <div class="flex items-center flex-wrap" style="gap:6px; margin-bottom:8px;">
@@ -78,7 +83,8 @@
 
     <p
       class="font-bricolage"
-      style={`font-size:13.5px; line-height:1.55; color:var(--k-ink); margin:0 0 12px; ${clamp(double ? 4 : 3)}`}
+      data-summary-lines={summaryLines}
+      style={`font-size:13.5px; line-height:1.55; color:var(--k-ink); margin:0 0 12px; ${clamp(summaryLines)}`}
     >{article.summary}</p>
 
     <!-- meta on its own line, actions under it: one rhythm for every card
