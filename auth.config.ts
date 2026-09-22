@@ -131,10 +131,14 @@ export default defineConfig({
             if (Date.now() - last > PWD_RECHECK_MS && token.id) {
                 try {
                     const client = await clientPromise;
+                    const userObjectId = new ObjectId(String(token.id));
                     const u = await client.db().collection('users').findOne(
-                        { _id: new ObjectId(String(token.id)) },
+                        { _id: userObjectId },
                         { projection: { passwordChangedAt: 1 } }
                     );
+                    // „Active in the last 90 days" for the @alle Admin-Hinweis (2026-09-22):
+                    // one stamp per token per 5 minutes, never fails the callback.
+                    client.db().collection('users').updateOne({ _id: userObjectId }, { $set: { lastSeenAt: new Date() } }).catch(() => {});
                     if (u?.passwordChangedAt) {
                         if (typeof token.loginAt === 'number') {
                             if (token.loginAt < new Date(u.passwordChangedAt).getTime()) {
