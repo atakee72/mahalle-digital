@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import clientPromise from "../../../lib/mongodb";
+import { connectDB } from "../../../lib/mongodb";
 import bcrypt from "bcrypt";
 import { checkNameProfanity } from "../../../lib/moderation";
 import { createEmailVerifyToken } from "../../../lib/auth/emailVerify";
@@ -99,8 +99,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
         // Connect to MongoDB using singleton (moved up 2026-09-21: the protected-
         // name check needs it, and it must run BEFORE the OpenAI calls below).
-        const client = await clientPromise;
-        const db = client.db();
+        const db = await connectDB();
 
         // Nobody poses as the team: official-sounding names and lookalikes of an
         // admin's own display name are refused (after both rate limits).

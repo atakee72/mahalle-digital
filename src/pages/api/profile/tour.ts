@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { z } from 'zod';
-import clientPromise from '../../../lib/mongodb';
+import { connectDB } from '../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 
 // Tour progress — additive users fields (tours.<chapter>: Date, tourHelloDismissedAt: Date).
@@ -20,8 +20,8 @@ const json = (data: unknown, status = 200) =>
 export const GET: APIRoute = async ({ request }) => {
   const session = await getSession(request);
   if (!session?.user?.id) return json({ error: 'Unauthorized' }, 401);
-  const client = await clientPromise;
-  const user = await client.db().collection('users').findOne(
+  const db = await connectDB();
+  const user = await db.collection('users').findOne(
     { _id: new ObjectId(session.user.id) },
     { projection: { tours: 1, tourHelloDismissedAt: 1 } }
   );
@@ -42,8 +42,8 @@ export const POST: APIRoute = async ({ request }) => {
   const $set: Record<string, Date> = {};
   const now = new Date();
   // $set only when absent (first write wins — restarts/aborts never move the date).
-  const client = await clientPromise;
-  const users = client.db().collection('users');
+  const db = await connectDB();
+  const users = db.collection('users');
   const _id = new ObjectId(session.user.id);
   const existing = await users.findOne({ _id }, { projection: { tours: 1, tourHelloDismissedAt: 1 } });
   if (parsed.data.chapter && !existing?.tours?.[parsed.data.chapter]) $set[`tours.${parsed.data.chapter}`] = now;

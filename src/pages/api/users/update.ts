@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { z } from 'zod';
-import clientPromise from '../../../lib/mongodb';
+import { connectDB } from '../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { rejectIfBanned } from '../../../lib/auth/banGuard';
 import { checkNameProfanity, checkMottoProfanity } from '../../../lib/moderation';
@@ -42,8 +42,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
     const { name, hobbies, motto } = parsed.data;
 
-    const client = await clientPromise;
-    const db = client.db();
+    const db = await connectDB();
 
     if (name !== undefined) {
       // Nobody poses as the team. Admins are exempt: an admin's real display

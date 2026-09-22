@@ -1,7 +1,11 @@
 import { defineConfig } from 'auth-astro';
 import Credentials from "@auth/core/providers/credentials";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import clientPromise from "./src/lib/mongodb";
+// The adapter keeps the default export (a promise fixed at module load). It is
+// never reached with Credentials + JWT (see the note below); everything that
+// runs per request uses connectDB(), which retries a failed first connect —
+// the fixed promise stays rejected for the life of the instance (2026-09-22).
+import clientPromise, { connectDB } from "./src/lib/mongodb";
 import { ObjectId } from "mongodb";
 import bcrypt from "bcrypt";
 import { peekRateLimit, consumeRateLimit, clearRateLimit, LOGIN_MAX_FAILS, LOGIN_WINDOW_MS, BAN_FLAG_WINDOW_MS } from "./src/lib/auth/rateLimit";
@@ -47,8 +51,7 @@ export default defineConfig({
                 const gate = await peekRateLimit(lockKey, LOGIN_MAX_FAILS, LOGIN_WINDOW_MS);
                 if (gate.limited) return null;
 
-                const client = await clientPromise;
-                const db = client.db();
+                const db = await connectDB();
 
                 const user = await db.collection('users').findOne(
                     { email: emailNorm },
@@ -130,15 +133,15 @@ export default defineConfig({
             const last = typeof token.pwdCheckedAt === 'number' ? token.pwdCheckedAt : 0;
             if (Date.now() - last > PWD_RECHECK_MS && token.id) {
                 try {
-                    const client = await clientPromise;
+                    const db = await connectDB();
                     const userObjectId = new ObjectId(String(token.id));
-                    const u = await client.db().collection('users').findOne(
+                    const u = await db.collection('users').findOne(
                         { _id: userObjectId },
                         { projection: { passwordChangedAt: 1 } }
                     );
                     // „Active in the last 90 days" for the @alle Admin-Hinweis (2026-09-22):
                     // one stamp per token per 5 minutes, never fails the callback.
-                    client.db().collection('users').updateOne({ _id: userObjectId }, { $set: { lastSeenAt: new Date() } }).catch(() => {});
+                    db.collection('users').updateOne({ _id: userObjectId }, { $set: { lastSeenAt: new Date() } }).catch(() => {});
                     if (u?.passwordChangedAt) {
                         if (typeof token.loginAt === 'number') {
                             if (token.loginAt < new Date(u.passwordChangedAt).getTime()) {

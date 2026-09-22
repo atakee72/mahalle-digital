@@ -63,10 +63,13 @@ function getClientPromise(): Promise<MongoClient> {
 }
 
 // Export a module-scoped MongoClient promise. By doing this in a separate
-// module, the client can be shared across functions. NOTE: consumers that
-// await THIS binding (the Auth.js adapter in `auth.config.ts`) hold one fixed
-// promise and so don't get the retry-after-failure above — prefer `connectDB()`
-// in new code.
+// module, the client can be shared across functions. WARNING: this binding is
+// taken ONCE at module load and never replaced — if that first connect fails,
+// every later `await clientPromise` on the same instance rejects until the
+// instance is recycled (the un-cache above only frees the globalThis slot).
+// Its only remaining consumer is the Auth.js adapter, which Credentials + JWT
+// never calls. Everything else uses `connectDB()` (2026-09-22: login, the JWT
+// recheck, register, users/update and profile/tour moved over).
 const clientPromise: Promise<MongoClient> = getClientPromise();
 export default clientPromise;
 
