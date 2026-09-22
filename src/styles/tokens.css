@@ -116,7 +116,9 @@
 /* ── Section-coloured chrome (2026-09-22, user decision „one colour for both
    bars") — the masthead + phone bottom nav (KioskNav) paint var(--k-bar);
    --k-bar-fg is their text colour, --k-bar-hover the inactive-pill hover fill,
-   --k-bar-disc-ring keeps the wine logo disc a disc on coloured bars.
+   --k-bar-disc-ring keeps the wine logo disc a disc on coloured bars,
+   --k-bar-dim the inactive bottom-tab opacity (paper at 70% on teal/moss fell
+   to ~2.3:1 contrast, so coloured bars show inactive labels at full paper).
    Default ochre/ink: Markt („its title also includes that colour"), Profil,
    Auth and any page without a data-page. Admin has its own plum masthead. ── */
 :root {
@@ -124,6 +126,7 @@
   --k-bar-fg: var(--k-ink);
   --k-bar-hover: var(--k-paper-warm);
   --k-bar-disc-ring: none;
+  --k-bar-dim: 0.7;
 }
 [data-page="forum"]        { --k-bar: var(--k-wine); }
 [data-page="calendar"]     { --k-bar: var(--k-teal); }
@@ -134,6 +137,7 @@
   --k-bar-fg: var(--k-paper);
   --k-bar-hover: rgb(0 0 0 / 0.15);
   --k-bar-disc-ring: 0 0 0 2px var(--k-paper);
+  --k-bar-dim: 1;
 }
 [data-page="newsboard"] { --k-bar-hover: rgb(255 255 255 / 0.15); }
 /* On the INK bar the active desktop pill (bg-ink) would vanish — flip it. */
