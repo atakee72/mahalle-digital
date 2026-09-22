@@ -67,6 +67,11 @@ export function buildPushPayload(
         ? `Du wurdest in einem Kommentar erw\u00e4hnt: \u201a${t}\u2018`
         : `Du wurdest erw\u00e4hnt: \u201a${t}\u2018`;
       break;
+    case 'admin_hint':
+      body = meta?.contentKind === 'comment'
+        ? `Admin-Hinweis in einem Kommentar zu \u201a${t}\u2018`
+        : `Admin-Hinweis zu \u201a${t}\u2018`;
+      break;
     case 'moderation': {
       const noun = meta?.contentKind === 'comment' ? 'Kommentar' : 'Beitrag';
       if (meta?.outcome === 'rejected') body = `Dein ${noun} wurde abgelehnt — Details in deinem Profil`;

@@ -170,6 +170,7 @@
     market_contact: { g: '⇄', c: 'var(--k-ink)' },
     moderation: { g: '§', c: 'var(--k-plum, #6f2f59)' },
     official: { g: '◉', c: 'var(--k-teal, #3f8f9f)' },
+    admin_hint: { g: '!', c: 'var(--k-plum, #6f2f59)' },
   };
 
   function rowText(it: NotificationItem): string {
@@ -185,6 +186,8 @@
         const actor = it.actorName ?? $t['nc.tombstone'];
         return tStr(it.meta?.contentKind === 'comment' ? $t['nc.mention.comment'] : $t['nc.mention.post'], { actor, title });
       }
+      case 'admin_hint':
+        return tStr(it.meta?.contentKind === 'comment' ? $t['nc.adminHint.comment'] : $t['nc.adminHint.post'], { title });
       case 'official':
         return tStr($t['nc.official'], { title });
       case 'market_contact':

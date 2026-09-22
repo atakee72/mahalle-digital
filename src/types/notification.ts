@@ -1,6 +1,6 @@
 import type { ObjectId } from 'mongodb';
 
-export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention';
+export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention' | 'admin_hint';
 
 export interface NotificationTarget {
   /** The page kind the row deep-links to (mirrors the href, not necessarily

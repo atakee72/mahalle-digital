@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb';
 import type { MentionRef } from '../lib/mentions/mentions';
+import type { BroadcastRef } from '../lib/mentions/broadcast';
 
 // User Types
 export interface User {
@@ -48,6 +49,8 @@ export interface EditHistory {
 export interface Topic {
   /** „@handle" mentions resolved at save time — see src/lib/mentions. */
   mentions?: MentionRef[];
+  /** „@alle" Admin-Hinweis (admin only): the token is stripped from `body` and kept here — see src/lib/mentions/broadcast.ts. */
+  broadcast?: BroadcastRef;
   _id?: ObjectId | string;
   title: string;
   body: string;
@@ -78,6 +81,8 @@ export interface Topic {
 export interface Comment {
   /** „@handle" mentions resolved at save time — see src/lib/mentions. */
   mentions?: MentionRef[];
+  /** „@alle" Admin-Hinweis (admin only): the token is stripped from `body` and kept here — see src/lib/mentions/broadcast.ts. */
+  broadcast?: BroadcastRef;
   _id?: ObjectId | string;
   body: string;
   author: ObjectId | string | User;
@@ -101,6 +106,8 @@ export interface Comment {
 export interface Announcement {
   /** „@handle" mentions resolved at save time — see src/lib/mentions. */
   mentions?: MentionRef[];
+  /** „@alle" Admin-Hinweis (admin only): the token is stripped from `body` and kept here — see src/lib/mentions/broadcast.ts. */
+  broadcast?: BroadcastRef;
   _id?: ObjectId | string;
   title: string;
   content: string;
@@ -136,6 +143,8 @@ export interface Announcement {
 export interface Recommendation {
   /** „@handle" mentions resolved at save time — see src/lib/mentions. */
   mentions?: MentionRef[];
+  /** „@alle" Admin-Hinweis (admin only): the token is stripped from `body` and kept here — see src/lib/mentions/broadcast.ts. */
+  broadcast?: BroadcastRef;
   _id?: ObjectId | string;
   title: string;
   content: string;

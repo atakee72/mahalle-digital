@@ -8,9 +8,12 @@ import * as Sentry from '@sentry/astro';
 import { ObjectId, type Db } from 'mongodb';
 import { consumeRateLimit } from '../auth/rateLimit';
 import { notify, commentTarget, moderationTarget } from '../notifications';
-import type { NotificationTarget } from '../../types/notification';
+import type { NotificationTarget, NotificationDoc } from '../../types/notification';
 import type { MentionRef } from './mentions';
 import { findCommentParent, pickMentionRecipients } from './mentionsResolve';
+import { parseBroadcast } from './broadcast';
+import { findActiveMemberIds, activeSince } from './activeMembers';
+import { sendPushToUsers, buildPushPayload } from '../push';
 
 export * from './mentionsResolve';
 
@@ -92,5 +95,42 @@ export async function notifyMentionsOnApproval(
     }
   } catch (err) {
     await capture(err);
+  }
+}
+
+/** Server-side gate for „@alle": only an admin's text is parsed; anyone else's stays as written. */
+export function applyBroadcast(text: string, isAdmin: boolean): { body: string; broadcast: { token: string; excludedHandles: string[] } | null } {
+  if (!isAdmin) return { body: text, broadcast: null };
+  const r = parseBroadcast(text);
+  return r ? { body: r.body, broadcast: { token: r.token, excludedHandles: r.excludedHandles } } : { body: text, broadcast: null };
+}
+
+/** „@alle" → every member active in the last 90 days, minus author, excluded handles,
+ *  tombstones and anyone already notified for this source. NO rate limit (user
+ *  decision). Never throws. Returns the number notified. */
+export async function notifyAdminHint(db: Db, args: {
+  actorId: string; sourceId: string; kind: 'post' | 'comment'; target: NotificationTarget; excludedHandles: string[];
+}): Promise<number> {
+  try {
+    const active = await findActiveMemberIds(db, activeSince());
+    const excluded = args.excludedHandles.length
+      ? (await db.collection('users').find({ handle: { $in: args.excludedHandles } }, { projection: { _id: 1 } }).toArray()).map((u) => String(u._id))
+      : [];
+    const seen = (await db.collection('notifications')
+      .find({ type: 'admin_hint', 'meta.sourceId': args.sourceId }, { projection: { userId: 1 } }).toArray()).map((n) => String(n.userId));
+    const skip = new Set<string>([args.actorId, ...excluded, ...seen]);
+    const recipients = active.filter((id) => !skip.has(id));
+    if (recipients.length === 0) return 0;
+    const now = new Date();
+    const meta = { sourceId: args.sourceId, contentKind: args.kind };
+    const docs: NotificationDoc[] = recipients.map((userId) => ({
+      userId, type: 'admin_hint', actorId: args.actorId, target: args.target, meta, createdAt: now, readAt: null,
+    }));
+    await db.collection<NotificationDoc>('notifications').insertMany(docs, { ordered: false });
+    await sendPushToUsers(recipients, buildPushPayload('admin_hint', args.target, meta));
+    return recipients.length;
+  } catch (err) {
+    await capture(err);
+    return 0;
   }
 }
