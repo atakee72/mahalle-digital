@@ -228,7 +228,7 @@
            it invisibly, with the paint on inner spans — so the hit area grows
            without the pill (user: "too big on mobile", 2026-09-10). -->
       <div
-        class="inline-flex items-center h-[25px] rounded-full border-2 border-ink font-dmmono text-[11px] uppercase tracking-[0.12em] bg-ink"
+        class="inline-flex items-center h-[25px] rounded-full border-2 border-[color:var(--k-bar-pill-border)] font-dmmono text-[11px] uppercase tracking-[0.12em] bg-ink"
         role="group"
         aria-label="Language"
       >

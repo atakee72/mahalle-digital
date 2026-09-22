@@ -128,6 +128,7 @@
   --k-bar-hover: var(--k-paper-warm);
   --k-bar-disc-ring: none;
   --k-bar-dim: 0.7;
+  --k-bar-pill-border: var(--k-ink);
 }
 [data-page="forum"]        { --k-bar: var(--k-wine-deep); }
 [data-page="calendar"]     { --k-bar: #3f7e8a; } /* one tick calmer than --k-teal (user, 2026-09-22 15:00); bars only */
@@ -141,7 +142,7 @@
   --k-bar-disc-ring: 0 0 0 2px var(--k-paper);
   --k-bar-dim: 1;
 }
-[data-page="newsboard"] { --k-bar-hover: rgb(255 255 255 / 0.15); }
+[data-page="newsboard"] { --k-bar-hover: rgb(255 255 255 / 0.15); --k-bar-pill-border: var(--k-paper); } /* DE/EN pill framed in paper on the ink bar (user, 2026-09-22) */
 /* On the INK bar the active desktop pill (bg-ink) would vanish — flip it. */
 [data-page="newsboard"] header nav a[aria-current="page"] {
   background: var(--k-paper);
