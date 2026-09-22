@@ -45,7 +45,13 @@
         if (!res.ok) { close(); return; }
         const data = await res.json();
         if (my !== seq) return;
-        items = Array.isArray(data.users) ? data.users : [];
+        const hits: Hit[] = Array.isArray(data.users) ? data.users : [];
+        // „@alle" Admin-Hinweis (2026-09-22): admins get a synthetic row ahead
+        // of the real members. Picking it goes through the same applyMention
+        // path, so the text gets „@alle ".
+        items = data.broadcast === true
+          ? [{ id: 'alle', name: 'alle aktiven Nachbar:innen', handle: 'alle', image: null }, ...hits]
+          : hits;
         active = 0;
         open = items.length > 0;
       } catch { close(); }

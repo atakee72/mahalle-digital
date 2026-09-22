@@ -53,6 +53,10 @@ export const GET: APIRoute = async ({ request, url }) => {
       .limit(MAX_HITS)
       .toArray();
 
+    // „@alle" Admin-Hinweis (2026-09-22): admins see a synthetic „alle" row
+    // when the query could still be typing that handle. Non-admins never do.
+    const broadcast = session.user.role === 'admin' && 'alle'.startsWith(q.toLowerCase());
+
     return json(
       {
         users: docs.map((u) => ({
@@ -60,7 +64,8 @@ export const GET: APIRoute = async ({ request, url }) => {
           name: typeof u.name === 'string' ? u.name : '',
           handle: String(u.handle),
           image: u.image || u.userPicture || null
-        }))
+        })),
+        broadcast
       },
       200
     );
