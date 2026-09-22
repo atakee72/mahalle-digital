@@ -159,6 +159,14 @@ Original plan for the record:
 - Guidance he gave today, verbatim in quotes: „from now on, if you deem that a cheaper model can perform a task just you can do, delegate that task to it"; „use subagents as far as possible!"; notification texts short because „long explanations in the notifications take up much space esp. in mobile devices".
 - Open, his call: the floating „+" shares the bar colour on forum/calendar/Kurier phones (peer flagged); comment delete does not remove that comment's notifications; `news.readinglist.*` i18n keys unused; reserving the hero image height; landing „Kurier top 3" still score-ordered.
 
+**Tuesday 2026-09-22, evening (15:18 → 22:10) — record.** Chrome only; no feature work, nothing touched outside the nav.
+
+- `49feeb03` + `66e5663c` + `c8459490`: the DE/EN pill framed in paper on the Kurier ink bar, then on every coloured bar, then ONE rule — frame colour = the bar's text colour — carrying the logo ring (ink on the ochre bars for the first time), the avatar and the selected desktop tab (always paper, ochre included). Docs commit `930984cb` rode along on the first push.
+- `d38ecbf7`: bevelled edges everywhere in the bar. Origin: he spotted a hairline arc inside the pill's white end, asked what it was (a rendering seam, the ink layer bleeding through two matching curves) and then asked for it deliberately on the avatar, the bell, the switcher, the logo, the selected tab, the bottom nav's active chip and the floating „+" (whose print shadow went 3 px → 2 px; 1 px tried and rejected). Two recipes in the area file; the visible line always sits on the right. Gates: tsc 23, svelte-check 89, build green; prod `fra1::fra1`, CI green.
+- **Correction taken today:** he asked „can you see the shadow…?" and I diagnosed AND fixed it — he liked the hairline and had only asked a question („i wasnt complaining… i was just asking a question!"). Reverted within the minute; memory `feedback_questions_are_not_commands.md` extended with this shape (a question about a visual detail is not a bug report).
+- His design calls, for the record: unselected tabs stay flat („the current page is the only lifted one" — my suggestion, his go), the bottom chip keeps square corners for now, and the bell's ink outline was traded for the paper frame although its fill is cream (quieter than before — worth a look on a real screen).
+- Open from the day, unchanged: reserving the post hero image height (CLS + root of the flaky anchor scroll); comment delete leaves its notifications; landing „Kurier top 3" still score-ordered; `news.readinglist.*` keys unused; Node 24 between 27 and 30 Sept.
+
 ## E. After the first event (30 min)
 
 - `rateLimits` collection: count `baseKey` starting with `reg:ip` that hit the cap (tells you whether A1 mattered).
