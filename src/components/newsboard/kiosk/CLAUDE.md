@@ -134,12 +134,23 @@ The server now orders a day by the article's real `publishedAt` (score is only
 a tiebreak — see `src/pages/api/news/CLAUDE.md`), which exposed two follow-on
 problems fixed the same day:
 
-- **Lead pick.** `approvedItems[0]` used to BE the lead — now that's just „the
-  highest score of the day", which can be old. `pickLead()`
-  (`src/lib/newsboard/newsFormat.ts`, pure, tested in `newsOrder.test.ts`)
-  picks the first APPROVED item whose `publishedAt` is in today's chrono
-  bucket, falling back to yesterday's, else no lead — never „highest score".
-  `NewsboardIndexInner.svelte`'s `lead`/`rest` derive from it.
+- **Lead pick + today's order (refined 2026-09-22 12:18, user decision:
+  „the scoring idea was actually nice, and we can use it just for sorting the
+  articles of today").** `approvedItems[0]` used to BE the lead — now that's
+  just „the highest score of the day", which can be old. The first cut of the
+  fix (`pickLead()`) went too far the other way and made HEUTE pure
+  publish-time order, discarding the score signal entirely. Final rule,
+  `orderBoard()` (`src/lib/newsboard/newsFormat.ts`, pure, tested in
+  `newsOrder.test.ts`, replaces `pickLead()`): inside HEUTE, order by
+  `aiRelevanceScore` desc with `publishedAt` desc as tiebreak; GESTERN/ÄLTER
+  stay `publishedAt` desc (unchanged); the lead is the first item of the
+  ordered HEUTE bucket (today's highest score), falling back to the first
+  (newest) of GESTERN before the 6 AM cron, else no lead — removed from its
+  bucket once picked. `NewsVM` carries a `score` field
+  (`aiRelevanceScore ?? 0`, set in `toVM`) so the pure function never needs a
+  server import. `NewsboardIndexInner.svelte` derives one
+  `board = orderBoard(approvedItems, new Date(), !activeSektion && !savedOnly)`
+  and reads `board.lead`/`board.today`/`board.yesterday`/`board.older`.
 - **Kiez sources stay visible.** Recency ordering means a Kiez/Neukölln
   article no longer floats to the top on score alone, so it now prints as an
   INK card so it doesn't get lost among mainstream RSS sources. `isKiezSource()`
