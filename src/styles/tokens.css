@@ -126,7 +126,7 @@
   --k-bar: var(--k-ochre);
   --k-bar-fg: var(--k-ink);
   --k-bar-hover: var(--k-paper-warm);
-  --k-bar-disc-ring: none;
+  --k-bar-disc-ring: 0 0 0 2px var(--k-ink); /* ink ring on ochre, paper on colour — one rule: frame = bar text colour (user, 2026-09-22) */
   --k-bar-dim: 0.7;
   --k-bar-pill-border: var(--k-ink);
 }
@@ -141,7 +141,7 @@
   --k-bar-hover: rgb(0 0 0 / 0.15);
   --k-bar-disc-ring: 0 0 0 2px var(--k-paper);
   --k-bar-dim: 1;
-  --k-bar-pill-border: var(--k-paper); /* DE/EN pill framed in paper on every coloured bar (user, 2026-09-22: Kurier first, then all) */
+  --k-bar-pill-border: var(--k-paper); /* frame of the DE/EN pill, the avatar disc and the active desktop tab: paper on every coloured bar (user, 2026-09-22) */
 }
 [data-page="newsboard"] { --k-bar-hover: rgb(255 255 255 / 0.15); }
 /* On the INK bar the active desktop pill (bg-ink) would vanish — flip it. */

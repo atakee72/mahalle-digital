@@ -209,10 +209,10 @@
       {#each topNav as item (item.href)}
         <a
           href={item.href}
-          class="px-4 py-1.5 rounded-full border-2 border-ink font-bricolage font-medium text-sm transition-colors duration-150 {
+          class="px-4 py-1.5 rounded-full border-2 font-bricolage font-medium text-sm transition-colors duration-150 {
             isActive(item.match)
-              ? 'bg-ink text-paper'
-              : 'bg-transparent text-[color:var(--k-bar-fg)] hover:bg-[var(--k-bar-hover)]'
+              ? 'bg-ink text-paper border-[color:var(--k-bar-pill-border)]'
+              : 'border-ink bg-transparent text-[color:var(--k-bar-fg)] hover:bg-[var(--k-bar-hover)]'
           }"
           aria-current={isActive(item.match) ? 'page' : undefined}
         >
@@ -267,7 +267,7 @@
             aria-label={user.name}
             aria-current={profileActive ? 'page' : undefined}
             class:prof-nav-avatar-active={profileActive}
-            class="w-9 h-9 rounded-full border-2 border-ink flex items-center justify-center font-dmmono font-bold text-[11px] uppercase tracking-wider bg-paper text-ink hover:scale-105 transition-transform duration-[180ms] ease-out kiosk-tap"
+            class="w-9 h-9 rounded-full border-2 border-[color:var(--k-bar-pill-border)] flex items-center justify-center font-dmmono font-bold text-[11px] uppercase tracking-wider bg-paper text-ink hover:scale-105 transition-transform duration-[180ms] ease-out kiosk-tap"
           >
             {#if liveImage ?? user.image}
               <img src={liveImage ?? user.image} alt="" class="w-full h-full object-cover rounded-full" />
