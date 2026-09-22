@@ -18,6 +18,7 @@
   // Trash is visible whenever the viewer is the author (no time window).
 
   import { linkifySegments, displayUrl } from '../../../lib/linkify';
+  import { restoreBroadcastText } from '../../../lib/mentions/broadcast';
   import KioskAvatar from './KioskAvatar.svelte';
   import MentionPopup from './compose/MentionPopup.svelte';
   import TranslateControl from './TranslateControl.svelte';
@@ -45,6 +46,8 @@
       hasWarningLabel?: boolean;
       /** „@handle" mentions the server resolved at save time — linked by user id. */
       mentions?: { handle: string; userId: string }[];
+      /** „@alle" Admin-Hinweis (admin only): stripped from `body`, kept here. */
+      broadcast?: { token: string; excludedHandles: string[] } | null;
     };
     isOP?: boolean;
     isLatest?: boolean;
@@ -129,7 +132,7 @@
   let saving = $state(false);
 
   function enterEdit() {
-    draft = originalBody;
+    draft = restoreBroadcastText(originalBody, comment.broadcast);
     editing = true;
   }
   function cancelEdit() {
@@ -211,7 +214,7 @@
   }
 </script>
 
-<article class="flex gap-3 py-5 border-t border-dashed border-rule first:border-t-0">
+<article id={`comment-${comment._id}`} class="flex gap-3 py-5 border-t border-dashed border-rule first:border-t-0">
   <!-- Avatar column with heart count below -->
   <div class="flex flex-col items-center gap-1.5 shrink-0">
     <KioskAvatar
@@ -246,6 +249,7 @@
       {#if commentAuthorHandle}
         <span class="font-dmmono text-[10px] text-ink-mute">@{commentAuthorHandle}</span>
       {/if}
+      {#if comment.broadcast}<span class="ml-2 inline-block px-1.5 py-0.5 border border-[#6f2f59] text-[#6f2f59] font-dmmono text-[10px] uppercase tracking-wide align-middle" data-admin-hint>{$t['forum.adminHint.tag']}</span>{/if}
       {#if isOP}
         <span class="inline-flex items-center px-1.5 py-0.5 rounded font-dmmono text-[9px] uppercase tracking-[0.1em] bg-wine text-paper font-medium">
           OP
@@ -341,6 +345,7 @@
         </button>
       </div>
     {:else}
+      {#if comment.broadcast && isAuthor}<p class="font-dmmono text-[0.85em] text-ink-mute mb-1" data-admin-hint-token>{comment.broadcast.token}</p>{/if}
       <p class="font-bricolage text-sm text-ink leading-relaxed whitespace-pre-line"
       >{#each linkifySegments(body, comment.mentions ?? []) as seg}{#if seg.type === 'link'}<a href={seg.value} title={seg.value} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 decoration-[1.5px] break-words hover:text-wine">{displayUrl(seg.value)}<span aria-hidden="true" class="text-[0.8em] ml-0.5">↗</span></a>{:else if seg.type === 'mention'}<a href={`/nachbarn/id/${seg.userId}`} data-mention class="font-semibold text-wine hover:underline underline-offset-2">@{seg.value}</a>{:else}{seg.value}{/if}{/each}</p>
       <div class="mt-1.5">

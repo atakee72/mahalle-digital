@@ -49,6 +49,14 @@
   const unreadLabel = $derived(
     unreadCount > 0 ? $t['detail.replies.unread'].replace('{n}', String(unreadCount)) : ''
   );
+
+  // Admin-Hinweis deep link: /topics/<id>#comment-<commentId> (comments render after the page).
+  $effect(() => {
+    if (typeof window === 'undefined' || comments.length === 0) return;
+    const m = /^#comment-([0-9a-f]{24})$/.exec(window.location.hash);
+    if (!m) return;
+    requestAnimationFrame(() => document.getElementById(`comment-${m[1]}`)?.scrollIntoView({ block: 'center' }));
+  });
 </script>
 
 <section>

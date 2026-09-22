@@ -16,6 +16,7 @@
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { relTime as relTimeFor } from '../../../lib/relTime';
   import { linkifySegments, displayUrl } from '../../../lib/linkify';
+  import { restoreBroadcastText } from '../../../lib/mentions/broadcast';
   import { collectionForKind, type PostKind } from '../../../lib/forum/postKind';
   import KioskAvatar from './KioskAvatar.svelte';
   import KioskBtn from './KioskBtn.svelte';
@@ -330,7 +331,7 @@
 
   function enterEdit() {
     editTitle = topic.title;
-    editBody = topic.body ?? topic.description ?? '';
+    editBody = restoreBroadcastText(topic.body ?? topic.description ?? '', topic.broadcast);
     editKind = kind;
     editError = null;
     editing = true;
@@ -652,6 +653,7 @@
         {#if badgeState}
           <StatusBadge state={badgeState} size="sm" />
         {/if}
+        {#if topic.broadcast}<span class="inline-block px-1.5 py-0.5 border border-[#6f2f59] text-[#6f2f59] font-dmmono text-[10px] uppercase tracking-wide align-middle" data-admin-hint>{$t['forum.adminHint.tag']}</span>{/if}
         {#if isAuthor && !editing}
           <button
             type="button"
@@ -817,6 +819,7 @@
           <p class="font-bricolage text-sm text-danger mb-3" role="alert">{editError}</p>
         {/if}
       {:else}
+        {#if topic.broadcast && isAuthor}<p class="font-dmmono text-[0.85em] text-ink-mute mb-1" data-admin-hint-token>{topic.broadcast.token}</p>{/if}
         <div class="space-y-3.5 mb-5 max-w-prose">
           {#each paragraphs as para, i (i)}
             {#if i === 0}
