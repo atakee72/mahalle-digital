@@ -90,7 +90,7 @@
           onclick={onPickDay ? () => onPickDay(d) : undefined}
           class={`relative py-1 text-center ${
             today
-              ? 'bg-wine text-paper border border-ink rounded-[4px] font-bold'
+              ? 'bg-teal text-paper border border-ink rounded-[4px] font-bold'
               : selected
               ? 'border border-wine rounded-[4px] font-bold text-wine'
               : 'text-ink'

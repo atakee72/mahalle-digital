@@ -569,8 +569,10 @@
         >
           <span
             class={`flex items-center justify-center text-[13px] ${
-              today || endpoint
+              endpoint
                 ? 'w-7 h-7 rounded-full bg-wine border-2 border-ink font-extrabold text-paper'
+                : today
+                ? 'w-7 h-7 rounded-full bg-teal border-2 border-ink font-extrabold text-paper'
                 : armed
                 ? 'w-7 h-7 rounded-full bg-paper border-2 border-wine font-extrabold text-wine'
                 : 'font-medium text-ink'

@@ -4,7 +4,8 @@ Loaded lazily when Claude reads/edits files in `src/components/calendar/kiosk/` 
 
 ### Page-accent rule (teal)
 - Calendar's accent is **teal** (`text-teal`, `#3f8f9f`). Apply to kickers (mono-uppercase eyebrows) and carved-italic title accents (e.g. "passiert im Kiez?" → italic teal accent).
-- **Don't touch** these wine/ochre semantics — they stay wine/ochre across all kiosk surfaces: live-now indicator (ochre dot + `k-cal-live-dot`), today indicator, weekend-day labels, required-field asterisks, compose step numbers (`01`, `02`), CTA wine-shadows, modal wine-shadows, the floating wine FAB on mobile.
+- **Don't touch** these wine/ochre semantics — they stay wine/ochre across all kiosk surfaces: live-now indicator (ochre dot + `k-cal-live-dot`), weekend-day labels, required-field asterisks, compose step numbers (`01`, `02`), CTA wine-shadows, modal wine-shadows, the floating wine FAB on mobile.
+- **Today marker is teal since 2026-09-22** (user decision, after the masthead/bottom-nav bars went teal): the filled day-number disc + the „HEUTE" label are `bg-teal`/`text-teal` in `CalendarMonthGrid.svelte` (desktop month grid), the mini-calendar's today cell in `CalendarSidebar.svelte`, and the today disc in `mobile/CalendarMobileMonth.svelte`. A drag-select range endpoint that lands on today still shows the wine selection disc (selection takes precedence over the ambient today tint, same as the desktop grid's `inSel`-before-`today` background priority) — `mobile/CalendarMobileMonth.svelte`'s cell-number span checks `endpoint` before `today`. The agenda/day views' „HEUTE" label (`AgendaDayHeader.svelte`) was already ochre (it sits inside the dark ink today-block, not a wine element) and is unchanged; that block's wine drop-shadow is the generic CTA/modal wine-shadow and also stays.
 - Root CLAUDE.md "Page-accent rule" has the full convention.
 
 ### Live ticker — `src/lib/calendar/nowTicker.ts`

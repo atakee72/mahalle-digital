@@ -289,7 +289,7 @@
       {@const inMonth = isSameMonth(cell, visibleMonth)}
       <!-- `today` is scoped to the visible month on purpose: the grid pads
            the first/last week with adjacent-month days, so browsing August
-           while it is Sep 6 used to paint the wine disc, the paper-warm
+           while it is Sep 6 used to paint the teal disc, the paper-warm
            cell tint AND the HEUTE badge onto a 35%-opacity spillover cell.
            All three are the same "you are here" marker, so all three are
            suppressed together — getting back to the real today is what the
@@ -318,14 +318,14 @@
           <span
             class={`font-bricolage tracking-[-0.02em] ${
               today
-                ? 'inline-flex items-center justify-center w-[26px] h-[26px] rounded-full bg-wine text-paper border border-ink font-extrabold text-[18px]'
+                ? 'inline-flex items-center justify-center w-[26px] h-[26px] rounded-full bg-teal text-paper border border-ink font-extrabold text-[18px]'
                 : 'font-semibold text-[13px] text-ink'
             }`}
           >
             {cell.getDate()}
           </span>
           {#if today}
-            <span class="font-dmmono text-[9px] tracking-[0.1em] text-wine">
+            <span class="font-dmmono text-[9px] tracking-[0.1em] text-teal">
               {$t['cal.cell.today']}
             </span>
           {/if}
