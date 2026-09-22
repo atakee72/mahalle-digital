@@ -212,12 +212,11 @@ space". Rule he accepted: at most two sizes, today's top TWO double-width.
   21/9 on `lg`), chips → title (22 px; double 24 px, `text-wrap: balance`) →
   dek (2-line clamp) → summary (3 lines; double 4) → meta line (`ArticleMeta`)
   → action line (weiterlesen left, save pill right), pinned to the bottom with
-  `mt-auto` so cards in one row align (`flex flex-col h-full`). A card WITHOUT
-  an image now shows `ArticleImage`'s „Kein Bild" placeholder (it used to show
-  no image column at all) so every card keeps the same rhythm. The ink (Kiez)
-  card also overrides `--news-noimage-bg`/`--news-noimage-border` — those are
-  resolved at `:root`, so inverting `--k-paper-soft` on the card does not reach
-  them.
+  `mt-auto` so cards in one row align (`flex flex-col h-full`). **No image →
+  no image box** (user, 2026-09-22 13:21 — replaced a first-cut „Kein Bild"
+  placeholder that cost height): the summary gets twice the lines instead
+  (single 3 → 6, double 4 → 8), `data-has-image` / `data-summary-lines` on the
+  card for probes.
 - **`SaveToggle` is the app's 🔖 pill** (copied from `ForumPostDetail`):
   rounded-full, 2 px border, ochre when saved, label „speichern" while unsaved
   / „gespeichert" once saved (`detail.engagement.save`/`.saved`, the
@@ -226,8 +225,10 @@ space". Rule he accepted: at most two sizes, today's top TWO double-width.
   the pill inverts on an ink card; the saved state pins text + border to
   `#1b1a17` so the inversion can't make it paper-on-ochre. The invisible
   hit-area extender (`inset:-12px -8px` mini) gives ≥ 44 px, hit-tested with
-  `elementFromPoint`. `detail/ReadingListControls.svelte` still has its own
-  ■/□ button (it imports `SaveToggle` but never rendered it) — untouched.
+  `elementFromPoint`. The detail page's Leseliste (`detail/ReadingListControls.svelte`)
+  uses the same pill at non-mini size (forum-detail dimensions, `px-3 py-1`,
+  14 px) since 2026-09-22 13:21 — its old ■/□ button is gone, so the
+  `news.readinglist.save`/`.saved` i18n keys are now unused.
 - Probe: `scratchpad/news-grid-probe.cjs` (env `PROBE_WIDTH`, port 4656) with
   five `E2E-` fixtures from `scratchpad/news-kiez-fixtures.mts insert|cleanup`
   (A 95, B 90 Kiez, C 80, D 70 today + Y yesterday): no lead, doubles = A+B,
