@@ -940,9 +940,16 @@ option:disabled {
 }
 .nc-bell-disc {
   position: relative; width: 36px; height: 36px; border-radius: 50%;
-  background: var(--k-paper-warm); border: 1.5px solid var(--k-ink);
+  background: var(--k-paper-warm);
+  /* Frame follows the bar's text colour like the pill and the avatar
+     (user, 2026-09-22): ink on the ochre bars, paper on the coloured ones. */
+  border: 2px solid var(--k-bar-pill-border, var(--k-ink));
   display: flex; align-items: center; justify-content: center;
   transition: transform 180ms ease-out; /* hover feedback only — sibling of the avatar disc */
+  /* Same bevel as the avatar disc (user, 2026-09-22): hairline dark on the
+     right, pale on the left, fading top and bottom — the rim reads raised. */
+  box-shadow: inset -1px 0 1.5px rgb(27 26 23 / 0.55),
+              inset 1px 0 1.5px rgb(245 239 224 / 0.8);
 }
 .nc-bell:hover .nc-bell-disc, .nc-bell:focus-visible .nc-bell-disc { transform: scale(1.05); }
 .nc-bell:focus-visible { outline: none; }

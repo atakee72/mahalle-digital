@@ -192,7 +192,7 @@
     <a href="/" class="flex items-center gap-3 group shrink-0 kiosk-tap">
       <span
         class="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-wine text-paper flex items-center justify-center font-bricolage font-bold text-xl leading-none group-hover:scale-105 transition-transform duration-[180ms] ease-out"
-        style="box-shadow: var(--k-bar-disc-ring);"
+        style="box-shadow: var(--k-bar-disc-ring), inset -1px 0 1.5px rgb(27 26 23 / 0.55), inset 1px 0 1.5px rgb(245 239 224 / 0.8);"
       >m</span>
       <span class="hidden sm:flex flex-col leading-tight">
         <span class="font-bricolage font-bold text-xl tracking-tight" style="color: var(--k-bar-fg);">
@@ -211,7 +211,7 @@
           href={item.href}
           class="px-4 py-1.5 rounded-full border-2 font-bricolage font-medium text-sm transition-colors duration-150 {
             isActive(item.match)
-              ? 'bg-ink text-paper border-[color:var(--k-bar-pill-border)]'
+              ? 'bg-ink text-paper border-[color:var(--k-paper)] shadow-[inset_-1px_0_3px_rgba(245,239,224,0.75),inset_-1px_0_1.5px_rgba(27,26,23,0.55)]'
               : 'border-ink bg-transparent text-[color:var(--k-bar-fg)] hover:bg-[var(--k-bar-hover)]'
           }"
           aria-current={isActive(item.match) ? 'page' : undefined}
@@ -228,7 +228,7 @@
            it invisibly, with the paint on inner spans — so the hit area grows
            without the pill (user: "too big on mobile", 2026-09-10). -->
       <div
-        class="inline-flex items-center h-[25px] rounded-full border-2 border-[color:var(--k-bar-pill-border)] font-dmmono text-[11px] uppercase tracking-[0.12em] bg-ink"
+        class="relative inline-flex items-center h-[25px] rounded-full border-2 border-[color:var(--k-bar-pill-border)] font-dmmono text-[11px] uppercase tracking-[0.12em] bg-ink"
         role="group"
         aria-label="Language"
       >
@@ -252,6 +252,14 @@
             $locale === 'en' ? 'bg-paper text-ink' : 'bg-ink text-paper hover:text-paper-warm'
           }">EN</span>
         </button>
+        <!-- Same bevel layer as the avatar and the bell disc (user,
+             2026-09-22): dark hairline on the right, pale on the left. It
+             sits above both halves, because an inset shadow on this box
+             would be painted under them. -->
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-full shadow-[inset_-1px_0_1.5px_rgba(27,26,23,0.55),inset_1px_0_1.5px_rgba(245,239,224,0.8)]"
+        ></span>
       </div>
 
       <!-- User disc (ochre + initials, or photo) -->
@@ -267,13 +275,22 @@
             aria-label={user.name}
             aria-current={profileActive ? 'page' : undefined}
             class:prof-nav-avatar-active={profileActive}
-            class="w-9 h-9 rounded-full border-2 border-[color:var(--k-bar-pill-border)] flex items-center justify-center font-dmmono font-bold text-[11px] uppercase tracking-wider bg-paper text-ink hover:scale-105 transition-transform duration-[180ms] ease-out kiosk-tap"
+            class="relative w-9 h-9 rounded-full border-2 border-[color:var(--k-bar-pill-border)] flex items-center justify-center font-dmmono font-bold text-[11px] uppercase tracking-wider bg-paper text-ink hover:scale-105 transition-transform duration-[180ms] ease-out kiosk-tap"
           >
             {#if liveImage ?? user.image}
               <img src={liveImage ?? user.image} alt="" class="w-full h-full object-cover rounded-full" />
             {:else}
               {initialsOf(user.name)}
             {/if}
+            <!-- Same bevel the DE/EN pill gets for free from its stacked
+                 layers (user, 2026-09-22): a hairline that is dark on the
+                 right and light on the left, so the ring reads
+                 as raised and the face as set back. Own layer, because an
+                 inset shadow on the <a> would sit UNDER the photo. -->
+            <span
+              aria-hidden="true"
+              class="pointer-events-none absolute inset-0 rounded-full shadow-[inset_-1px_0_1.5px_rgba(27,26,23,0.55),inset_1px_0_1.5px_rgba(245,239,224,0.8)]"
+            ></span>
           </a>
           {#if menuOpen}
             <AvatarMenu {user} onClose={closeMenu} />
@@ -308,7 +325,7 @@
         href={item.href}
         class="flex-1 min-h-[44px] flex items-center justify-center py-3.5 font-dmmono text-[10px] uppercase tracking-[0.12em] text-center transition-colors {
           isActive(item.match)
-            ? 'font-bold bg-paper-warm text-ink'
+            ? 'font-bold bg-paper-warm text-ink shadow-[inset_-1px_0_1.5px_rgba(27,26,23,0.55),inset_1px_0_1.5px_rgba(245,239,224,0.8)]'
             : 'opacity-[var(--k-bar-dim)] hover:opacity-100 text-[color:var(--k-bar-fg)]'
         }"
         aria-current={isActive(item.match) ? 'page' : undefined}

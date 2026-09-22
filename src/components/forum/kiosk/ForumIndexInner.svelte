@@ -951,5 +951,5 @@
   aria-label={$t['forum.mobile.cta.aria']}
   data-forum-fab
   data-tour="forum-new-topic"
-  class="fixed bottom-16 right-4 z-30 w-14 h-14 rounded-full bg-wine text-paper border-2 border-ink font-bricolage font-bold text-[28px] leading-none shadow-[3px_3px_0_var(--k-ink,#0e1033)] flex items-center justify-center lg:hidden"
+  class="fixed bottom-16 right-4 z-30 w-14 h-14 rounded-full bg-wine text-paper border-2 border-ink font-bricolage font-bold text-[28px] leading-none shadow-[2px_2px_0_var(--k-ink,#0e1033),inset_-1px_0_3px_rgba(245,239,224,0.75),inset_-1px_0_1.5px_rgba(27,26,23,0.55)] flex items-center justify-center lg:hidden"
 ><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 4v16M4 12h16" /></svg></a>
