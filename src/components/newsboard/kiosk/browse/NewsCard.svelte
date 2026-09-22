@@ -23,11 +23,13 @@
 <article
   class={`news-card grid items-start grid-cols-1 [--news-img-ratio:16/9] sm:[--news-img-ratio:4/3] ${noImage ? '' : 'sm:grid-cols-[1fr_220px]'}`}
   data-read-state={article.archived ? 'archived' : article.read ? 'seen' : 'fresh'}
-  style="background:var(--k-paper); border:var(--k-border-hair); border-radius:var(--k-radius-md);
-         padding:18px; gap:22px; opacity:{decay};"
+  data-kiez={article.kiez ? 'true' : undefined}
+  style={`background:var(--k-paper); border:var(--k-border-hair); border-radius:var(--k-radius-md); padding:18px; gap:22px; opacity:${decay};`
+    + (article.kiez ? ' --k-paper:#1b1a17; --k-paper-warm:#1b1a17; --k-ink:#f5efe0; --k-ink-soft:#ebe1c7; --k-ink-mute:#c9bea3; --k-border-hair:1px solid #f5efe0;' : '')}
 >
   <div>
     <div class="flex items-center flex-wrap" style="gap:6px; margin-bottom:8px;">
+      {#if article.kiez}<span data-kiez-kicker class="font-dmmono uppercase" style="font-size:9px; font-weight:700; letter-spacing:0.1em; padding:2px 7px; color:var(--k-ink); border:1px solid var(--k-ink); border-radius:3px;">{$t['news.kiez.kicker']}</span>{/if}
       <ReadDot read={article.read} />
       <SektionTag id={article.sektion} mini />
       <HeatChip count={article.forumLinks} mini />

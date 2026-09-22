@@ -3,9 +3,9 @@
   import { t } from '../../../lib/kiosk-i18n';
   import { showToast } from '../../../utils/toast';
   import {
-    resolveSektion, resolveQuelle, type NewsVM, type SektionKey,
+    resolveSektion, resolveQuelle, isKiezSource, type NewsVM, type SektionKey,
   } from '../../../lib/newsboard/newsTaxonomy';
-  import { chronoBucket } from '../../../lib/newsboard/newsFormat';
+  import { chronoBucket, pickLead } from '../../../lib/newsboard/newsFormat';
 
   import NewsMasthead from './browse/NewsMasthead.svelte';
   import NewsTitleBlock from './browse/NewsTitleBlock.svelte';
@@ -59,6 +59,7 @@
       summary: Array.isArray(summary) ? summary[0] : summary,
       quelle: resolveQuelle(it.sourceName, it.source),
       sektion: resolveSektion(it.aiCategory),
+      kiez: isKiezSource(it.sourceName),
       imageUrl: it.imageUrl || '',
       sourceUrl: it.sourceUrl,
       publishedAt: it.publishedAt ?? it.fetchedAt ?? new Date().toISOString(),
@@ -155,8 +156,10 @@
   // chrono buckets (a pending item has no meaningful publish slot yet).
   const ownNonApproved = $derived(visible.filter((a) => a.moderationStatus !== 'approved'));
   const approvedItems = $derived(visible.filter((a) => a.moderationStatus === 'approved'));
-  const lead = $derived(!activeSektion && !savedOnly ? approvedItems[0] : undefined);
-  const rest = $derived(lead ? approvedItems.slice(1) : approvedItems);
+  // Lead = newest of today (yesterday's as fallback), never „highest score of
+  // the day" (2026-09-22) — see pickLead().
+  const lead = $derived(!activeSektion && !savedOnly ? pickLead(approvedItems) : undefined);
+  const rest = $derived(lead ? approvedItems.filter((a) => a.id !== lead.id) : approvedItems);
 
   const today = $derived(rest.filter((a) => chronoBucket(a.publishedAt) === 'today'));
   const yesterday = $derived(rest.filter((a) => chronoBucket(a.publishedAt) === 'yesterday'));

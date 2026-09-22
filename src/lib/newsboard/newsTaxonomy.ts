@@ -110,6 +110,7 @@ export interface NewsVM {
   summary: string;      // aiSummary / description body
   quelle: QuelleKey;
   sektion: SektionKey;
+  kiez: boolean;         // source is a Kiez / Neukölln outlet → ink card
   imageUrl: string;
   sourceUrl: string;
   publishedAt: string;  // ISO

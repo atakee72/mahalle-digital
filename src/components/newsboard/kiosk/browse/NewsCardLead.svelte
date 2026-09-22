@@ -19,11 +19,13 @@
 
 <article
   class="news-card grid relative grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-5 md:gap-7 p-5 md:p-7 [--news-img-ratio:3/2] md:[--news-img-ratio:4/5]"
-  style="background:var(--k-paper-warm); border:var(--k-border-ink); border-radius:var(--k-radius-lg);
-         box-shadow:var(--k-shadow-md);"
+  data-kiez={article.kiez ? 'true' : undefined}
+  style={`background:var(--k-paper-warm); border:var(--k-border-ink); border-radius:var(--k-radius-lg); box-shadow:var(--k-shadow-md);`
+    + (article.kiez ? ' --k-paper:#1b1a17; --k-paper-warm:#1b1a17; --k-ink:#f5efe0; --k-ink-soft:#ebe1c7; --k-ink-mute:#c9bea3; --k-border-hair:1px solid #f5efe0; --k-border-ink:2px solid #f5efe0;' : '')}
 >
   <div>
     <div class="flex items-center flex-wrap" style="gap:8px; margin-bottom:14px;">
+      {#if article.kiez}<span data-kiez-kicker class="font-dmmono uppercase" style="font-size:9px; font-weight:700; letter-spacing:0.1em; padding:2px 7px; color:var(--k-ink); border:1px solid var(--k-ink); border-radius:3px;">{$t['news.kiez.kicker']}</span>{/if}
       <SektionTag id={article.sektion} />
       <HeatChip count={article.forumLinks} />
     </div>
