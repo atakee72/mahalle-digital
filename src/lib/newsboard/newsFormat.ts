@@ -53,3 +53,12 @@ export function chronoBucket(input: Date | string | undefined, now: Date = new D
   if (diffDays === 1) return 'yesterday';
   return 'older';
 }
+
+// Lead card = the newest of TODAY (input order is the server's publish-time
+// order), yesterday's as a fallback before the 6 AM cron, else none. Until
+// 2026-09-22 the lead was simply approvedItems[0], i.e. the day's highest GPT
+// score — a 4-day-old item sat above a 4-hour-old one.
+export function pickLead<T extends { publishedAt: string | Date }>(items: readonly T[], now: Date = new Date()): T | undefined {
+  return items.find((it) => chronoBucket(it.publishedAt, now) === 'today')
+    ?? items.find((it) => chronoBucket(it.publishedAt, now) === 'yesterday');
+}

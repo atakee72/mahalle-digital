@@ -86,6 +86,21 @@ export function resolveQuelle(sourceName?: string | null, source?: string | null
   return 'newsdata';
 }
 
+// „Aus dem Kiez" (2026-09-22, user decision): articles from Kiez / Neukölln
+// sources are printed as INK cards on the board so they stay visible now that
+// the day is ordered by publish time instead of the GPT score. ONE list, by
+// sourceName only — a member-submitted Tagesspiegel link is not Kiez. Edit
+// freely; lowercase substrings, umlaut variants spelled out.
+export const KIEZ_SOURCE_PATTERNS: readonly string[] = [
+  'schillerkiez', 'schillerpromenade', 'facetten neukölln', 'facettenneukoelln', 'facetten neukoelln',
+  'kiez und kneipe', 'kiezundkneipe', 'wochenkurier', 'neukoellner', 'neuköllner', 'nachbarschaftstreff', 'neukölln', 'neukoelln',
+];
+
+export function isKiezSource(sourceName?: string | null): boolean {
+  const s = (sourceName ?? '').toLowerCase();
+  return s.length > 0 && KIEZ_SOURCE_PATTERNS.some((p) => s.includes(p));
+}
+
 // View-model the cards/orchestrator pass around (resolved from the DB NewsItem).
 export interface NewsVM {
   id: string;
