@@ -29,12 +29,17 @@
 </script>
 
 <section class="px-4 md:px-9 lg:px-10" style="border-bottom:1px dashed var(--k-rule);">
-  <!-- Row 1: Sektion (scrollFade peek on mobile) -->
-  <div data-tour="kurier-sections" class="py-3 flex items-center gap-2">
-    <span class="font-dmmono uppercase shrink-0" style="font-size:9.5px; color:var(--k-ink-mute); letter-spacing:0.12em; width:56px;">
+  <!-- Two rows on every width (2026-09-22 condensed head): below lg each row
+       scrolls sideways (scrollFade) instead of wrapping — the phone head used
+       to wrap to four filter rows. The SEKTION label rides inside the scroller
+       (scrolls away with it); ZEITRAUM's label is md+ only — the three period
+       words explain themselves on a phone. -->
+  <!-- Row 1: Sektion -->
+  <div data-tour="kurier-sections" class="pt-3 pb-2 md:pb-3 flex items-center">
+    <div use:scrollFade class="kiosk-scroll-fade no-scrollbar flex items-center gap-2 overflow-x-auto min-w-0 lg:flex-wrap lg:overflow-visible">
+    <span class="font-dmmono uppercase shrink-0" style="font-size:9.5px; color:var(--k-ink-mute); letter-spacing:0.12em; min-width:56px;">
       {$t['news.filter.sektion']}
     </span>
-    <div use:scrollFade class="kiosk-scroll-fade no-scrollbar flex items-center gap-2 overflow-x-auto lg:flex-wrap lg:overflow-visible">
       <button type="button" onclick={() => onSektionChange(null)} aria-pressed={activeSektion === null}
         class="shrink-0 kiosk-tap-box inline-flex items-center justify-center font-bricolage font-semibold">
         <span style="padding:5px 12px; font-size:12.5px; border-radius:var(--k-radius-pill);
@@ -59,8 +64,8 @@
   </div>
 
   <!-- Row 2: Zeitraum + Saved + Unread -->
-  <div class="pb-3 flex items-center gap-3 flex-wrap" data-tour="kurier-fade">
-    <span class="font-dmmono uppercase shrink-0" style="font-size:9.5px; color:var(--k-ink-mute); letter-spacing:0.12em;">
+  <div use:scrollFade class="kiosk-scroll-fade no-scrollbar pb-3 flex items-center gap-2 md:gap-3 overflow-x-auto lg:flex-wrap lg:overflow-visible" data-tour="kurier-fade">
+    <span class="hidden md:inline font-dmmono uppercase shrink-0" style="font-size:9.5px; color:var(--k-ink-mute); letter-spacing:0.12em;">
       {$t['news.filter.zeitraum']}
     </span>
     {#each ZEITRAUM as z (z.id)}
@@ -75,7 +80,7 @@
       </button>
     {/each}
 
-    <div class="flex-1"></div>
+    <div class="flex-1 hidden lg:block"></div>
 
     <button type="button" onclick={() => onSavedToggle(!savedOnly)} disabled={!isAuthenticated}
       title={!isAuthenticated ? $t['news.filter.saved.gated'] : undefined} aria-pressed={savedOnly}

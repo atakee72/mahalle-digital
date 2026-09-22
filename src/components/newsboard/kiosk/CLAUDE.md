@@ -235,6 +235,30 @@ space". Rule he accepted: at most two sizes, today's top TWO double-width.
   widths per breakpoint, no hole beside the first double, Y single under
   GESTERN, pill text/readability/tap target, equal row heights, saved state.
 
+## Condensed page head (2026-09-22, user: phone screenshots)
+
+The phone head used to stack title block → full nameplate (ribbon, 44 px
+wordmark, tagline, stats row) → filters wrapping to FOUR rows, so the first
+article sat far down the page. Now:
+- `NewsMasthead`: ONE `h1` for all widths — 28 px below `md`, the big
+  `clamp(36px,9vw,88px)` from `md`. Below `md` the ribbons, tagline and
+  KURATIERT chip are hidden and a single mono line carries
+  „TAGESAUSGABE · NR. 263 · 19 ARTIKEL HEUTE · 9 QUELLEN" (numbers bold);
+  section padding 12/12 px (was 30/22). From `md` everything stays, padding
+  16/16. The degraded note gets its own mono line on phones.
+- `NewsFilterRail`: two rows on every width; below `lg` each row scrolls
+  sideways (`use:scrollFade` + `kiosk-scroll-fade no-scrollbar`, chips
+  `shrink-0`) instead of wrapping. The SEKTION label rides inside the row's
+  scroller; the ZEITRAUM label is `md+` only (decision: the three period words
+  explain themselves). Row 2 holds Heute / Diese Woche / Diesen Monat +
+  ☆ Gespeichert + ● Ungelesen; its `flex-1` spacer is `lg`-only. Tour anchors
+  unchanged; `kurier-saved` may start off-screen inside the scroller on a
+  phone, and the tour's `scrollIntoView` brings it in (checked: right edge
+  435 → 374 px at 390).
+- Measured (dev, logged in, tour banner shown, `scratchpad/news-head-probe.cjs`):
+  first card top 390 px: 715 → 465 (250 px higher), filter rows 4 → 2,
+  nameplate 208 → 74 px; 1280: 606 → 578, nameplate 256 → 228; 768: 567.
+
 ## Default time window = `week`
 
 `activeZeitraum` defaults to `'week'` (not `'today'`) so the HEUTE/GESTERN/FRÜHER
