@@ -128,6 +128,52 @@ The link field is the FIRST field of `submit/NewsSubmitInner.svelte`; pasting (o
 ## Floating „+" on phones (2026-09-20, user request)
 `a[data-news-fab]` at the end of `NewsboardIndexInner.svelte` → `/newsboard/submit`: the same floating add button as calendar, market and forum (`fixed bottom-16 right-4 z-30`, 56 px, `lg:hidden`, label `news.mobile.cta.aria`), shown in every list state. It is INK with a wine print shadow (user decision 2026-09-20: the button takes the page colour; an ink shadow would vanish under an ink disc, so it borrows the primary ink button's wine shadow). The title block's „+ news einreichen" button is desktop-only since the same night (`hidden lg:inline-flex`, user request); the floating button carries the same `data-tour="kurier-submit"`, so the tour's last Kurier stop lands on it below `lg`. Same request: the page title is 34 px below 380 px / 36 px from 380 px on phones like forum and calendar (was 26 px; from `md` the old `clamp(26px,4vw,38px)` stays — written as `md:text-[length:clamp(…)]`, the `length:` hint is needed or Tailwind reads it as a colour). It runs to two lines on phones, like the market's. Probe: `scratchpad/title-sizes.cjs`. Known cost the user accepted: a permanent button may bring more submissions into the editorial queue. Probe + details: `src/components/forum/kiosk/CLAUDE.md` → „Floating „+" on phones".
 
+## Kiez cards + lead pick (2026-09-22)
+
+The server now orders a day by the article's real `publishedAt` (score is only
+a tiebreak — see `src/pages/api/news/CLAUDE.md`), which exposed two follow-on
+problems fixed the same day:
+
+- **Lead pick.** `approvedItems[0]` used to BE the lead — now that's just „the
+  highest score of the day", which can be old. `pickLead()`
+  (`src/lib/newsboard/newsFormat.ts`, pure, tested in `newsOrder.test.ts`)
+  picks the first APPROVED item whose `publishedAt` is in today's chrono
+  bucket, falling back to yesterday's, else no lead — never „highest score".
+  `NewsboardIndexInner.svelte`'s `lead`/`rest` derive from it.
+- **Kiez sources stay visible.** Recency ordering means a Kiez/Neukölln
+  article no longer floats to the top on score alone, so it now prints as an
+  INK card so it doesn't get lost among mainstream RSS sources. `isKiezSource()`
+  + the editable `KIEZ_SOURCE_PATTERNS` list live in `newsTaxonomy.ts` (pure);
+  `toVM()` sets `NewsVM.kiez`. The look is a token-inversion trick, not a new
+  component: `NewsCard.svelte` / `NewsCardLead.svelte` override
+  `--k-paper`/`--k-ink`/`--k-ink-soft`/`--k-ink-mute`/`--k-border-hair` (+
+  `--k-paper-warm`/`--k-border-ink` on the lead, which uses those instead of
+  the plain-card tokens) as INLINE custom properties on the card root when
+  `article.kiez` — every descendant that reads the token (border, text)
+  inverts for free via normal CSS cascade, no per-child styling. No `<style>`
+  block was added (nested-island rule — `NewsCard`/`NewsCardLead` are only
+  ever imported through `NewsboardIndexInner`, and a `<style>` block there
+  gets orphaned in prod, see root CLAUDE.md). A mono kicker chip
+  (`news.kiez.kicker`, `data-kiez-kicker`) renders first in the chip row;
+  `data-kiez="true"` on the card root is for probes.
+  **Gotcha found by reading the actual card tree, not the plan text:**
+  `SourceChip.svelte` (nested inside `ArticleMeta`, not one of the primitives
+  the original plan named) hardcodes its OWN pill background to
+  `var(--k-paper-warm)` — a literal token, not derived from `--k-paper` — so
+  without overriding `--k-paper-warm` too, a Kiez card's source chip went
+  invisible (light text on an un-inverted light chip). Fixed by adding
+  `--k-paper-warm` to both cards' override list rather than touching
+  `SourceChip.svelte` itself (keeps it generic). Everything else
+  (`SektionTag`, `HeatChip`, `ArticleMeta`'s submitter-initials disc,
+  `ArticleImage`'s no-image placeholder) either chains through
+  `--k-ink`/`--k-paper` already (inverts automatically) or uses an
+  independent semantic accent (wine/moss/teal/ochre/danger, the project's
+  „sticker accents stay" convention) — deliberately untouched.
+- Probe: `scratchpad/news-kiez-probe.cjs` (env `PROBE_WIDTH`, checks the lead
+  pick, the ink card's computed colors, the kicker text, and a plain card's
+  paper background) against two `E2E-`-prefixed dev-only fixtures inserted via
+  `scratchpad/news-kiez-fixtures.mts insert`/`cleanup`.
+
 ## Default time window = `week`
 
 `activeZeitraum` defaults to `'week'` (not `'today'`) so the HEUTE/GESTERN/FRÜHER

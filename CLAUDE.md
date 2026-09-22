@@ -152,7 +152,7 @@ See `src/components/admin/CLAUDE.md` — full notes load when working in that su
 ### Newsboard
 See `src/pages/api/news/CLAUDE.md` — full notes load when working in that subtree (or read directly for UI work — frontend lives at `src/components/NewsCardsWrapper.tsx` and `src/components/ui/NewsCards.tsx`).
 
-**Kiosk UI** (June 2026): the Newsboard index was migrated to the kiosk design system — `src/pages/newsboard.astro` + `src/components/newsboard/kiosk/` (Svelte islands). Full notes: `src/components/newsboard/kiosk/CLAUDE.md` (loads when working in that subtree).
+**Kiosk UI** (June 2026): the Newsboard index was migrated to the kiosk design system — `src/pages/newsboard.astro` + `src/components/newsboard/kiosk/` (Svelte islands). Full notes: `src/components/newsboard/kiosk/CLAUDE.md` (loads when working in that subtree). **Recency order + Kiez ink cards (2026-09-22):** a day sorts by the article's real `publishedAt` (score is now only a tiebreak) and the lead card comes from `pickLead()`, not the day's top score; Kiez/Neukölln-sourced articles print as ink cards with an „Aus dem Kiez" kicker so they stay visible — see the area file's „Kiez cards + lead pick" section.
 
 ### Kiez Data Dashboard
 **Kiosk rebuild complete** (Tasks 1–11, July 2026): `/schillerkiez` moved from the legacy carousel dashboard to the kiosk design system — `src/pages/schillerkiez.astro` + `src/components/kiez/kiosk/` (Svelte islands, moss accent), plus a print route at `/schillerkiez/druck`. Full notes: `src/components/kiez/CLAUDE.md` (data pipeline, LOR codes, MSS column layout, air quality, trend backfills, kiosk architecture — orchestrator/states, view-model lib, Anwohner-Kontext, Berlin-Vergleich, druck route) load when working in that subtree.
