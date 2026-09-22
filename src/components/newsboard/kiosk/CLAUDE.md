@@ -28,7 +28,7 @@ bottom.
 
 - `NewsboardIndexInner.svelte` — orchestrator (fetch, filters, save, bucketing).
 - `browse/` — `NewsMasthead`, `NewsTitleBlock`, `NewsFilterRail`, `NewsCard`,
-  `NewsCardLead`, `DateDivider`.
+  `DateDivider`. (`NewsCardLead` was deleted 2026-09-22 — see „Card grid + bento".)
 - `primitives/` — `SourceChip`, `SektionTag`, `KuratiertChip`, `HeatChip`,
   `ReadDot`, `SaveToggle`, `ArticleImage`, `ArticleMeta`.
 - `states/` — `NewsSkeleton`, `NewsEmptyToday`, `NewsEmptySaved`, `NewsError`,
@@ -184,6 +184,55 @@ problems fixed the same day:
   pick, the ink card's computed colors, the kicker text, and a plain card's
   paper background) against two `E2E-`-prefixed dev-only fixtures inserted via
   `scratchpad/news-kiez-fixtures.mts insert`/`cleanup`.
+
+## Card grid + bento + save pill (2026-09-22)
+
+User, 2026-09-22 12:49–12:55: „the lead is still too large … restructure them
+as smaller cards, 2-3 each row … otherwise the user must scroll all the time";
+„why on earth has the newsboard a really meaningless, shapeless save button? …
+use the save icon as other places in the app"; „bento style … the articles
+with the highest scores appear bigger than others, taking up 2 times more
+space". Rule he accepted: at most two sizes, today's top TWO double-width.
+
+- **No lead card any more.** `NewsCardLead.svelte` is deleted; the board calls
+  `orderBoard(approvedItems, now, false)` (the `withLead` flag stays in the
+  pure helper, unused by the board). The data/order rules above are unchanged.
+- **Grid**: one `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4
+  grid-flow-row-dense` PER date section (own submissions, HEUTE, GESTERN,
+  ÄLTER), with the `DateDivider`s between the grids. Per-section on purpose:
+  a double card leaves a hole in column 3 on desktop, and `dense` backfills it
+  — with one shared grid it would pull a GESTERN card up above its divider.
+  Consequence to know: on desktop today reads A C / B D (the third card sits
+  beside the first double), on tablet/phone it stays A, B, C, D.
+- **Bento**: today's first two items get `size="double"` (`md:col-span-2`,
+  `data-size="double"`) only when no Sektion filter and no saved-only view is
+  active; never in GESTERN/ÄLTER. Tablet: a double is a full row; phone: all
+  cards one column, same width.
+- **`NewsCard` is vertical**: image on top (`--news-img-ratio` 16/9; double
+  21/9 on `lg`), chips → title (22 px; double 24 px, `text-wrap: balance`) →
+  dek (2-line clamp) → summary (3 lines; double 4) → meta line (`ArticleMeta`)
+  → action line (weiterlesen left, save pill right), pinned to the bottom with
+  `mt-auto` so cards in one row align (`flex flex-col h-full`). A card WITHOUT
+  an image now shows `ArticleImage`'s „Kein Bild" placeholder (it used to show
+  no image column at all) so every card keeps the same rhythm. The ink (Kiez)
+  card also overrides `--news-noimage-bg`/`--news-noimage-border` — those are
+  resolved at `:root`, so inverting `--k-paper-soft` on the card does not reach
+  them.
+- **`SaveToggle` is the app's 🔖 pill** (copied from `ForumPostDetail`):
+  rounded-full, 2 px border, ochre when saved, label „speichern" while unsaved
+  / „gespeichert" once saved (`detail.engagement.save`/`.saved`, the
+  2026-09-10 verb-then-state rule), `aria-pressed`, `data-save-pill`. Border
+  and text use `var(--k-ink)` inline, NOT the static Tailwind `border-ink`, so
+  the pill inverts on an ink card; the saved state pins text + border to
+  `#1b1a17` so the inversion can't make it paper-on-ochre. The invisible
+  hit-area extender (`inset:-12px -8px` mini) gives ≥ 44 px, hit-tested with
+  `elementFromPoint`. `detail/ReadingListControls.svelte` still has its own
+  ■/□ button (it imports `SaveToggle` but never rendered it) — untouched.
+- Probe: `scratchpad/news-grid-probe.cjs` (env `PROBE_WIDTH`, port 4656) with
+  five `E2E-` fixtures from `scratchpad/news-kiez-fixtures.mts insert|cleanup`
+  (A 95, B 90 Kiez, C 80, D 70 today + Y yesterday): no lead, doubles = A+B,
+  widths per breakpoint, no hole beside the first double, Y single under
+  GESTERN, pill text/readability/tap target, equal row heights, saved state.
 
 ## Default time window = `week`
 
