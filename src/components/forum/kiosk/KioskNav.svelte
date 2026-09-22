@@ -182,7 +182,7 @@
   data-mast-hidden={mastHidden ? 'true' : undefined}
   onfocusin={() => (mastHidden = false)}
   class="sticky {menuOpen || bellOpen ? 'z-50' : 'z-40'} border-b-2 border-ink transition-[top] duration-200 ease-out motion-reduce:transition-none"
-  style="background: var(--k-ochre); top: {mastHidden ? -(mastH + 2) : 0}px;"
+  style="background: var(--k-bar); top: {mastHidden ? -(mastH + 2) : 0}px;"
 >
   <!-- py-2 below lg: a lower bar on phones (user, 2026-09-10); the 44px tap
        boxes inside the 25px locale pill overflow it invisibly, so they don't
@@ -192,12 +192,13 @@
     <a href="/" class="flex items-center gap-3 group shrink-0 kiosk-tap">
       <span
         class="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-wine text-paper flex items-center justify-center font-bricolage font-bold text-xl leading-none group-hover:scale-105 transition-transform duration-[180ms] ease-out"
+        style="box-shadow: var(--k-bar-disc-ring);"
       >m</span>
       <span class="hidden sm:flex flex-col leading-tight">
-        <span class="font-bricolage font-bold text-ink text-xl tracking-tight">
+        <span class="font-bricolage font-bold text-xl tracking-tight" style="color: var(--k-bar-fg);">
           {$t['brand.name']}
         </span>
-        <span class="font-dmmono text-[10px] uppercase tracking-[0.18em] text-ink/80">
+        <span class="font-dmmono text-[10px] uppercase tracking-[0.18em] opacity-80" style="color: var(--k-bar-fg);">
           {$t['brand.location']}
         </span>
       </span>
@@ -211,7 +212,7 @@
           class="px-4 py-1.5 rounded-full border-2 border-ink font-bricolage font-medium text-sm transition-colors duration-150 {
             isActive(item.match)
               ? 'bg-ink text-paper'
-              : 'bg-transparent text-ink hover:bg-paper-warm'
+              : 'bg-transparent text-[color:var(--k-bar-fg)] hover:bg-[var(--k-bar-hover)]'
           }"
           aria-current={isActive(item.match) ? 'page' : undefined}
         >
@@ -295,19 +296,20 @@
 </header>
 
 <!-- ─── Bottom mobile nav (fixed, hidden on lg+) ──────────────────────── -->
+<!-- Both bars paint the section colour (--k-bar, tokens.css, 2026-09-22). -->
 <nav
   class="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t-2 border-ink"
-  style="background: var(--k-ochre);"
+  style="background: var(--k-bar);"
   aria-label="Primary"
 >
   <div class="flex items-stretch justify-around max-w-md mx-auto">
     {#each bottomNav as item (item.href)}
       <a
         href={item.href}
-        class="flex-1 min-h-[44px] flex items-center justify-center py-3.5 font-dmmono text-[10px] uppercase tracking-[0.12em] text-center transition-colors text-ink {
+        class="flex-1 min-h-[44px] flex items-center justify-center py-3.5 font-dmmono text-[10px] uppercase tracking-[0.12em] text-center transition-colors {
           isActive(item.match)
-            ? 'font-bold bg-paper-warm'
-            : 'opacity-70 hover:opacity-100'
+            ? 'font-bold bg-paper-warm text-ink'
+            : 'opacity-[var(--k-bar-dim)] hover:opacity-100 text-[color:var(--k-bar-fg)]'
         }"
         aria-current={isActive(item.match) ? 'page' : undefined}
       >
