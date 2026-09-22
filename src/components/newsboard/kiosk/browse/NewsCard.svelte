@@ -12,22 +12,36 @@
     article,
     onSave = (_id: string) => {},
     canSave = false,
-  }: { article: NewsVM; onSave?: (id: string) => void; canSave?: boolean } = $props();
+    size = 'single',
+  }: { article: NewsVM; onSave?: (id: string) => void; canSave?: boolean; size?: 'single' | 'double' } = $props();
+
+  // Bento (2026-09-22): today's top two scores print double-width (md:col-span-2,
+  // set here so the grid cell and the card are one element).
+  const double = $derived(size === 'double');
+  const clamp = (n: number) => `display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:${n}; overflow:hidden;`;
 
   const title = $derived($locale === 'de' ? article.title : (article.titleEN || article.title));
-  const noImage = $derived(!article.imageUrl);
   const decay = $derived(article.archived ? READ_DECAY.archived : article.read ? READ_DECAY.seen : READ_DECAY.fresh);
   const status = $derived(article.moderationStatus);
 </script>
 
+<!-- Vertical card (2026-09-22 grid): image on top, text block, meta row pinned
+     to the bottom (flex-col + h-full) so cards in one grid row align. Missing
+     images get ArticleImage's own placeholder so every card keeps the same
+     rhythm. -->
 <article
-  class={`news-card grid items-start grid-cols-1 [--news-img-ratio:16/9] sm:[--news-img-ratio:4/3] ${noImage ? '' : 'sm:grid-cols-[1fr_220px]'}`}
+  class={`news-card flex flex-col h-full [--news-img-ratio:16/9] ${double ? 'md:col-span-2 lg:[--news-img-ratio:21/9]' : ''}`}
+  data-size={size}
   data-read-state={article.archived ? 'archived' : article.read ? 'seen' : 'fresh'}
   data-kiez={article.kiez ? 'true' : undefined}
-  style={`background:var(--k-paper); border:var(--k-border-hair); border-radius:var(--k-radius-md); padding:18px; gap:22px; opacity:${decay};`
-    + (article.kiez ? ' --k-paper:#1b1a17; --k-paper-warm:#1b1a17; --k-ink:#f5efe0; --k-ink-soft:#ebe1c7; --k-ink-mute:#c9bea3; --k-border-hair:1px solid #f5efe0;' : '')}
+  style={`background:var(--k-paper); border:var(--k-border-hair); border-radius:var(--k-radius-md); padding:14px; gap:14px; opacity:${decay};`
+    + (article.kiez ? ' --k-paper:#1b1a17; --k-paper-warm:#1b1a17; --k-ink:#f5efe0; --k-ink-soft:#ebe1c7; --k-ink-mute:#c9bea3; --k-border-hair:1px solid #f5efe0; --news-noimage-bg:#26241f; --news-noimage-border:1px dashed #6d6656;' : '')}
 >
-  <div>
+  <a href={`/newsboard/${article.id}`} class="block" tabindex="-1" aria-hidden="true">
+    <ArticleImage imageUrl={article.imageUrl} quelle={article.quelle} sektion={article.sektion} ratio="16/9" alt="" />
+  </a>
+
+  <div class="flex flex-col flex-1 min-w-0">
     <div class="flex items-center flex-wrap" style="gap:6px; margin-bottom:8px;">
       {#if article.kiez}<span data-kiez-kicker class="font-dmmono uppercase" style="font-size:9px; font-weight:700; letter-spacing:0.1em; padding:2px 7px; color:var(--k-ink); border:1px solid var(--k-ink); border-radius:3px;">{$t['news.kiez.kicker']}</span>{/if}
       <ReadDot read={article.read} />
@@ -42,16 +56,18 @@
 
     <a href={`/newsboard/${article.id}`} class="block no-underline">
       <h3
-        class="font-bricolage break-words hyphens-auto"
-        style="font-weight:700; font-size:22px; line-height:1.15; letter-spacing:-0.02em;
+        class={`font-bricolage break-words hyphens-auto ${double ? 'text-[24px]' : 'text-[22px]'}`}
+        style="font-weight:700; line-height:1.15; letter-spacing:-0.02em; text-wrap:balance;
                margin:0 0 6px; color:var(--k-ink);"
       >{title}</h3>
     </a>
 
-    <p
-      class="font-instrument italic"
-      style="font-size:14px; line-height:1.4; color:var(--k-ink-soft); margin:0 0 10px; max-width:70ch;"
-    >{article.dek}</p>
+    {#if article.dek}
+      <p
+        class="font-instrument italic"
+        style={`font-size:14px; line-height:1.4; color:var(--k-ink-soft); margin:0 0 8px; ${clamp(2)}`}
+      >{article.dek}</p>
+    {/if}
 
     {#if status === 'rejected' && article.warningText}
       <p class="font-instrument italic" style="font-size:12px; color:var(--k-danger); margin:0 0 8px; padding-left:10px; border-left:2px solid var(--k-danger);">{article.warningText}</p>
@@ -62,24 +78,23 @@
 
     <p
       class="font-bricolage"
-      style="font-size:13.5px; line-height:1.55; color:var(--k-ink); margin:0 0 12px; max-width:70ch;"
+      style={`font-size:13.5px; line-height:1.55; color:var(--k-ink); margin:0 0 12px; ${clamp(double ? 4 : 3)}`}
     >{article.summary}</p>
 
-    <div class="flex items-center" style="gap:12px;">
+    <!-- meta on its own line, actions under it: one rhythm for every card
+         width (a single-row meta wrapped raggedly in the 3-column cells) -->
+    <div class="mt-auto flex flex-col" style="gap:10px;">
       <ArticleMeta quelle={article.quelle} publishedAt={article.publishedAt} submitterName={article.submitterName} />
-      <div class="flex-1"></div>
-      <a
-        href={`/newsboard/${article.id}`}
-        class="font-dmmono"
-        style="font-size:10px; color:var(--k-ink-soft); text-decoration:underline dashed; text-underline-offset:3px;"
-      >{$t['news.readmore']}</a>
-      {#if canSave}
-        <SaveToggle saved={article.saved} mini onToggle={() => onSave(article.id)} />
-      {/if}
+      <div class="flex items-center justify-between" style="gap:12px;">
+        <a
+          href={`/newsboard/${article.id}`}
+          class="font-dmmono"
+          style="font-size:10px; color:var(--k-ink-soft); text-decoration:underline dashed; text-underline-offset:3px;"
+        >{$t['news.readmore']}</a>
+        {#if canSave}
+          <SaveToggle saved={article.saved} mini onToggle={() => onSave(article.id)} />
+        {/if}
+      </div>
     </div>
   </div>
-
-  {#if !noImage}
-    <div class="order-first sm:order-none"><ArticleImage imageUrl={article.imageUrl} quelle={article.quelle} sektion={article.sektion} ratio="4/3" alt={title} /></div>
-  {/if}
 </article>
