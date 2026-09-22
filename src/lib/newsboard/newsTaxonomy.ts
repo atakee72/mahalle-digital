@@ -111,6 +111,7 @@ export interface NewsVM {
   quelle: QuelleKey;
   sektion: SektionKey;
   kiez: boolean;         // source is a Kiez / Neukölln outlet → ink card
+  score: number;         // aiRelevanceScore, 0 when missing — orders HEUTE only, see orderBoard()
   imageUrl: string;
   sourceUrl: string;
   publishedAt: string;  // ISO

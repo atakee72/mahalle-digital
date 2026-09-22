@@ -5,7 +5,7 @@
   import {
     resolveSektion, resolveQuelle, isKiezSource, type NewsVM, type SektionKey,
   } from '../../../lib/newsboard/newsTaxonomy';
-  import { chronoBucket, pickLead } from '../../../lib/newsboard/newsFormat';
+  import { chronoBucket, orderBoard } from '../../../lib/newsboard/newsFormat';
 
   import NewsMasthead from './browse/NewsMasthead.svelte';
   import NewsTitleBlock from './browse/NewsTitleBlock.svelte';
@@ -60,6 +60,7 @@
       quelle: resolveQuelle(it.sourceName, it.source),
       sektion: resolveSektion(it.aiCategory),
       kiez: isKiezSource(it.sourceName),
+      score: Number(it.aiRelevanceScore ?? 0),
       imageUrl: it.imageUrl || '',
       sourceUrl: it.sourceUrl,
       publishedAt: it.publishedAt ?? it.fetchedAt ?? new Date().toISOString(),
@@ -156,14 +157,15 @@
   // chrono buckets (a pending item has no meaningful publish slot yet).
   const ownNonApproved = $derived(visible.filter((a) => a.moderationStatus !== 'approved'));
   const approvedItems = $derived(visible.filter((a) => a.moderationStatus === 'approved'));
-  // Lead = newest of today (yesterday's as fallback), never „highest score of
-  // the day" (2026-09-22) — see pickLead().
-  const lead = $derived(!activeSektion && !savedOnly ? pickLead(approvedItems) : undefined);
-  const rest = $derived(lead ? approvedItems.filter((a) => a.id !== lead.id) : approvedItems);
+  // HEUTE is ordered by aiRelevanceScore desc (publishedAt tiebreak); GESTERN/
+  // ÄLTER stay publishedAt desc. Lead = today's top score, falling back to
+  // yesterday's newest, else none (2026-09-22 refinement — see orderBoard()).
+  const board = $derived(orderBoard(approvedItems, new Date(), !activeSektion && !savedOnly));
 
-  const today = $derived(rest.filter((a) => chronoBucket(a.publishedAt) === 'today'));
-  const yesterday = $derived(rest.filter((a) => chronoBucket(a.publishedAt) === 'yesterday'));
-  const older = $derived(rest.filter((a) => chronoBucket(a.publishedAt) === 'older'));
+  const lead = $derived(board.lead);
+  const today = $derived(board.today);
+  const yesterday = $derived(board.yesterday);
+  const older = $derived(board.older);
 
   // "X Artikel heute" must reflect only today's APPROVED bucket, even when a wider
   // Zeitraum window is loaded (pending items don't count as published articles).

@@ -54,11 +54,50 @@ export function chronoBucket(input: Date | string | undefined, now: Date = new D
   return 'older';
 }
 
-// Lead card = the newest of TODAY (input order is the server's publish-time
-// order), yesterday's as a fallback before the 6 AM cron, else none. Until
-// 2026-09-22 the lead was simply approvedItems[0], i.e. the day's highest GPT
-// score — a 4-day-old item sat above a 4-hour-old one.
-export function pickLead<T extends { publishedAt: string | Date }>(items: readonly T[], now: Date = new Date()): T | undefined {
-  return items.find((it) => chronoBucket(it.publishedAt, now) === 'today')
-    ?? items.find((it) => chronoBucket(it.publishedAt, now) === 'yesterday');
+export interface BoardOrder<T> {
+  lead: T | undefined;
+  today: T[];
+  yesterday: T[];
+  older: T[];
+}
+
+// Bucket + order the board. Refined 2026-09-22 12:18 (user decision, verbatim:
+// "the scoring idea was actually nice, and we can use it just for sorting the
+// articles of today"): HEUTE is ordered by aiRelevanceScore desc (publishedAt
+// desc as tiebreak) — the score is a genuinely useful signal for same-day
+// items, it just shouldn't let an old article outrank a fresh one across
+// days, which is what the original score-only order did. GESTERN/ÄLTER stay
+// publishedAt desc, unchanged. The lead is the first item of the ordered
+// HEUTE bucket (today's highest score), falling back to the first (newest) of
+// GESTERN before the 6 AM cron, else none — never "just highest score of the
+// whole day" (that was the bug fixed earlier today) and never "just newest of
+// today" (that discarded the score signal entirely, undone here).
+export function orderBoard<T extends { publishedAt: string | Date; score: number }>(
+  items: readonly T[],
+  now: Date = new Date(),
+  withLead = true
+): BoardOrder<T> {
+  const todayItems: T[] = [];
+  const yesterdayItems: T[] = [];
+  const olderItems: T[] = [];
+  for (const it of items) {
+    const bucket = chronoBucket(it.publishedAt, now);
+    if (bucket === 'today') todayItems.push(it);
+    else if (bucket === 'yesterday') yesterdayItems.push(it);
+    else olderItems.push(it);
+  }
+  const byTime = (a: T, b: T) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+  todayItems.sort((a, b) => b.score - a.score || byTime(a, b));
+  yesterdayItems.sort(byTime);
+  olderItems.sort(byTime);
+
+  let lead: T | undefined;
+  if (withLead) {
+    lead = todayItems.length ? todayItems[0] : yesterdayItems[0];
+    if (lead) {
+      if (todayItems[0] === lead) todayItems.shift();
+      else if (yesterdayItems[0] === lead) yesterdayItems.shift();
+    }
+  }
+  return { lead, today: todayItems, yesterday: yesterdayItems, older: olderItems };
 }
