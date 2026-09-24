@@ -1,110 +1,33 @@
 ---
-// Search — kiosk-shell page that pre-loads the recent topic + comment
-// corpus and filters it client-side. URL `?q=` pre-fills the search box
-// and the input keeps it in sync via history.replaceState (no reload,
-// browser back/forward still works).
-//
-// Why client-side filter and not `/api/topics?search=...`: the
-// recent-200-topic + 300-comment corpus is small (~few hundred KB JSON),
-// and instant per-keystroke filtering beats a debounced network
-// roundtrip for community-size data. If the corpus ever outgrows this,
-// swap the island for a server-fetch version — the page contract (just
-// `initialItems` + `initialComments`) doesn't have to change.
-//
-// Comment search is part of the design's "BEITRÄGE + KOMMENTARE" promise
-// (kiosk-forum-extras.jsx L221). Comments are fetched independently of
-// the topics corpus so old-topic comments stay searchable; parent
-// titles are resolved server-side via a follow-up `_id $in` lookup for
-// any topics not already in the top-200 corpus.
-
+// /search — forum search (posts of all three kinds + comments). The query
+// runs on the SERVER (src/lib/forum/searchStore.ts): a `?q=` in the URL is
+// answered in this first render, later keystrokes go through
+// GET /api/search from the island. Until 2026-09-24 the page shipped the
+// last 200 discussions + 300 comments and filtered in the browser — it
+// never saw announcements or recommendations, and comments were read with a
+// field name (`topicId`) that no comment has.
 import KioskLayout from '../layouts/KioskLayout.astro';
 import SearchPage from '../components/forum/kiosk/SearchPage.svelte';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../lib/mongodb';
-import { fetchCollectionWithAuthors } from '../lib/topicsQuery';
-import { FORUM_QUERY_OPTIONS } from '../lib/forumQueryOptions';
-import { ObjectId } from 'mongodb';
+import { normalizeQuery } from '../lib/forum/searchQuery';
+import { searchForum, type SearchResult } from '../lib/forum/searchStore';
 
 const session = await getSession(Astro.request);
 const userId = session?.user?.id;
 
-let initialItems: any[] = [];
-let initialComments: any[] = [];
-try {
-  const db = await connectDB();
-
-  // ── Topics corpus (top 200 recent) ──────────────────────────────
-  const params = new URLSearchParams();
-  params.set('fields', FORUM_QUERY_OPTIONS.fields.join(','));
-  params.set('sortBy', FORUM_QUERY_OPTIONS.sortBy);
-  params.set('sortOrder', FORUM_QUERY_OPTIONS.sortOrder);
-  params.set('limit', '200');
-  const url = new URL(`http://ssr.local/api/topics?${params.toString()}`);
-  const result = await fetchCollectionWithAuthors(db.collection('topics'), url, userId);
-  initialItems = JSON.parse(JSON.stringify(result.items));
-
-  // ── Comments corpus (top 300 recent, approved-only) ────────────
-  // Author is intentionally NOT populated — design's search-result
-  // card doesn't show author for comments. Only body / topicId / date
-  // are needed for matching + display.
-  const comments = await db
-    .collection('comments')
-    .find({
-      $or: [
-        { moderationStatus: 'approved' },
-        { moderationStatus: { $exists: false } },
-      ],
-    })
-    .sort({ date: -1 })
-    .limit(300)
-    .project({ body: 1, topicId: 1, date: 1 })
-    .toArray();
-
-  // Resolve parent titles. Most parents will already be in the top-200
-  // topics corpus; the rest need one follow-up `_id $in` query so a
-  // comment on an old topic still shows context.
-  const knownTopicIds = new Set(initialItems.map((t: any) => String(t._id)));
-  const referencedIds = new Set<string>();
-  for (const c of comments as any[]) {
-    if (c.topicId) referencedIds.add(String(c.topicId));
+const initialQuery = normalizeQuery(Astro.url.searchParams.get('q')) ?? '';
+let initialResults: SearchResult | null = null;
+if (initialQuery) {
+  try {
+    const db = await connectDB();
+    initialResults = await searchForum(db, initialQuery, userId);
+  } catch (err) {
+    console.error('[search.astro] first query failed:', err);
   }
-  const missingIds = [...referencedIds].filter(
-    (id) => !knownTopicIds.has(id) && ObjectId.isValid(id)
-  );
-
-  const missingTopics =
-    missingIds.length > 0
-      ? await db
-          .collection('topics')
-          .find({ _id: { $in: missingIds.map((id) => new ObjectId(id)) } })
-          .project({ title: 1 })
-          .toArray()
-      : [];
-
-  const titleMap = new Map<string, string>();
-  for (const t of initialItems) titleMap.set(String(t._id), t.title);
-  for (const t of missingTopics as any[]) titleMap.set(String(t._id), t.title);
-
-  initialComments = (comments as any[])
-    .map((c) => ({
-      _id: String(c._id),
-      body: c.body,
-      topicId: String(c.topicId),
-      date: c.date,
-      parentTitle: titleMap.get(String(c.topicId)) ?? null,
-    }))
-    .filter((c) => c.parentTitle);
-  initialComments = JSON.parse(JSON.stringify(initialComments));
-} catch (err) {
-  console.error('[search.astro] SSR search corpus fetch failed:', err);
 }
 ---
 
 <KioskLayout title="Mahalle · Suche" description="Suche im Forum." page="forum">
-  <SearchPage
-    client:only="svelte"
-    initialItems={initialItems}
-    initialComments={initialComments}
-    currentUserId={userId ?? null}
-  />
+  <SearchPage client:only="svelte" initialQuery={initialQuery} initialResults={initialResults} />
 </KioskLayout>
