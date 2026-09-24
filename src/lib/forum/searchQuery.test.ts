@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normalizeQuery, escapeRegex, buildSearchRegex, buildPostSearchFilter,
-  excerptAround, KIND_BY_COLLECTION, PATH_BY_KIND, SEARCH_MAX_LEN,
+  excerptAround, splitFirstMatch, KIND_BY_COLLECTION, PATH_BY_KIND, SEARCH_MAX_LEN,
 } from './searchQuery';
 
 test('normalizeQuery: trims, collapses whitespace, enforces 2–80', () => {
@@ -59,3 +59,13 @@ test('kind and path maps agree with the detail routes', () => {
   assert.equal(PATH_BY_KIND.announcement, '/announcements');
   assert.equal(PATH_BY_KIND.recommendation, '/recommendations');
 });
+
+test('splitFirstMatch + excerptAround: positions survive a Turkish İ before the match', () => {
+  assert.deepEqual(splitFirstMatch('İyi Fest im Kiez', 'fest'), { prefix: 'İyi ', match: 'Fest', suffix: ' im Kiez' });
+  assert.equal(splitFirstMatch('nichts', 'zzz'), null);
+  assert.equal(splitFirstMatch(null, 'x'), null);
+  assert.equal(splitFirstMatch('abc', ''), null);
+  const body = 'İİİİİ ' + 'A'.repeat(200) + ' Schillermarkt ' + 'B'.repeat(200);
+  assert.ok(/Schillermarkt/.test(excerptAround(body, 'schillermarkt', 60)));
+});
+

@@ -14,7 +14,7 @@
   import PostTypeChip from './PostTypeChip.svelte';
   import { locale } from '../../../lib/kiosk-i18n';
   import { relTime } from '../../../lib/relTime';
-  import { normalizeQuery, SEARCH_MAX_LEN, type SearchResult } from '../../../lib/forum/searchQuery'; // pure module — never import searchStore (driver) into an island
+  import { normalizeQuery, splitFirstMatch, SEARCH_MAX_LEN, type SearchResult } from '../../../lib/forum/searchQuery'; // pure module — never import searchStore (driver) into an island
 
   let { initialQuery = '', initialResults = null } = $props<{
     initialQuery?: string;
@@ -31,6 +31,10 @@
   const posts = $derived(results && results.q === normalized ? results.posts : []);
   const comments = $derived(results && results.q === normalized ? results.comments : []);
   const total = $derived(posts.length + comments.length);
+  // True from the keystroke until the answer for THIS query is in — the
+  // 250 ms debounce runs before `loading` flips, and without this the page
+  // showed „Nichts gefunden“ for every pause in typing (review 2026-09-24).
+  const pending = $derived(!!normalized && (!results || results.q !== normalized));
 
   // ─── Fetch (debounced, last request wins) ─────────────────────────
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -63,6 +67,7 @@
       return;
     }
     if (results && results.q === q) return; // SSR answer or same query again
+    failed = false; // a new query gets a fresh try — the old failure must not show meanwhile
     timer = setTimeout(() => run(q), 250);
     return () => clearTimeout(timer);
   });
@@ -79,22 +84,7 @@
     window.history.replaceState(window.history.state, '', url.toString());
   });
 
-  // ─── Highlight (XSS-safe) ────────────────────────────────────────
-  // No `{@html}` — split into prefix / match / suffix segments and let
-  // Svelte auto-escape each piece individually.
-  function splitOnFirstMatch(
-    text: string | undefined | null,
-    q: string
-  ): { prefix: string; match: string; suffix: string } | null {
-    if (!text || !q) return null;
-    const idx = text.toLowerCase().indexOf(q.toLowerCase());
-    if (idx === -1) return null;
-    return {
-      prefix: text.slice(0, idx),
-      match: text.slice(idx, idx + q.length),
-      suffix: text.slice(idx + q.length)
-    };
-  }
+  // ─── Highlight: splitFirstMatch() (pure helper) — no {@html}, each piece auto-escaped ─
 
   const placeholder = $derived(
     $locale === 'de'
@@ -105,8 +95,8 @@
   const kickerCopy = $derived.by(() => {
     const de = $locale === 'de';
     if (!normalized) return de ? 'FORUM · BEITRÄGE + KOMMENTARE' : 'FORUM · POSTS + COMMENTS';
-    if (loading) return de ? 'SUCHE …' : 'SEARCHING …';
     if (failed) return de ? 'SUCHE NICHT ERREICHBAR' : 'SEARCH UNAVAILABLE';
+    if (loading || pending) return de ? 'SUCHE …' : 'SEARCHING …';
     return de
       ? `${total} TREFFER · BEITRÄGE + KOMMENTARE`
       : `${total} RESULTS · POSTS + COMMENTS`;
@@ -171,7 +161,10 @@
         {$locale === 'de' ? 'Versuch es gleich noch einmal.' : 'Try again in a moment.'}
       </p>
     </div>
-  {:else if !loading && total === 0}
+  {:else if loading || pending}
+    <!-- Answer on its way: no list and no empty state until it is here. -->
+    <div class="px-[18px] py-10" aria-hidden="true"></div>
+  {:else if total === 0}
     <div
       class="mx-[18px] my-6 px-6 py-10 bg-paper-warm border-[1.5px] border-dashed border-rule rounded-xl text-center"
     >
@@ -188,8 +181,8 @@
     <div class="px-[18px] py-2.5 flex flex-col gap-2.5">
       <!-- Post matches (all three kinds) -->
       {#each posts as post (post._id)}
-        {@const titleSplit = splitOnFirstMatch(post.title, normalized)}
-        {@const bodySplit = splitOnFirstMatch(post.excerpt, normalized)}
+        {@const titleSplit = splitFirstMatch(post.title, normalized)}
+        {@const bodySplit = splitFirstMatch(post.excerpt, normalized)}
         <a
           href={post.href}
           class="block focus:outline-none focus:ring-2 focus:ring-ink rounded-xl"
@@ -225,7 +218,7 @@
 
       <!-- Comment matches (extends design — ↪ KOMMENTAR kicker variant) -->
       {#each comments as comment (comment._id)}
-        {@const bodySplit = splitOnFirstMatch(comment.excerpt, normalized)}
+        {@const bodySplit = splitFirstMatch(comment.excerpt, normalized)}
         <a
           href={comment.href}
           class="block focus:outline-none focus:ring-2 focus:ring-ink rounded-xl"

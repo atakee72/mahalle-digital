@@ -67,13 +67,28 @@ export function buildPostSearchFilter(q: string): Record<string, unknown> {
   return { $or: [{ title: rx }, { body: rx }, { tags: rx }] };
 }
 
+// First case-insensitive match of `q` in `text` as prefix / match / suffix
+// (the island renders each piece escaped — no {@html}). Regex-based on the
+// ORIGINAL string: `'İ'.toLowerCase()` is two code units, so an index found
+// in a lowercased copy is off by one per Turkish İ before the match.
+export function splitFirstMatch(
+  text: unknown,
+  q: string
+): { prefix: string; match: string; suffix: string } | null {
+  if (typeof text !== 'string' || !text || !q) return null;
+  const m = buildSearchRegex(q).exec(text);
+  if (!m) return null;
+  return { prefix: text.slice(0, m.index), match: m[0], suffix: text.slice(m.index + m[0].length) };
+}
+
 export function excerptAround(text: unknown, q: string, len = EXCERPT_LEN): string {
   if (typeof text !== 'string' || !text) return '';
   const flat = text.replace(/\s+/g, ' ').trim();
   if (flat.length <= len) return flat;
-  const idx = q ? flat.toLowerCase().indexOf(q.toLowerCase()) : -1;
+  const m = q ? buildSearchRegex(q).exec(flat) : null;
+  const idx = m ? m.index : -1;
   if (idx === -1) return flat.slice(0, len - 1).trimEnd() + '…';
-  const half = Math.floor((len - q.length) / 2);
+  const half = Math.floor((len - (m as RegExpExecArray)[0].length) / 2);
   let start = Math.max(0, idx - half);
   const end = Math.min(flat.length, start + len);
   if (end - start < len) start = Math.max(0, end - len);
