@@ -94,6 +94,9 @@ const de = {
 
   // notification bell + panel
   'nav.bell.aria': 'Mitteilungen',
+  'nav.search.aria': 'Suche',
+  'nav.search.placeholder': 'Im Forum suchen …',
+  'nav.search.close': 'Suche schließen',
   'nc.title': 'MITTEILUNGEN',
   'nc.neu': 'NEU',
   'nc.empty': "Alles gelesen — der Kiez meldet sich, wenn’s was Neues gibt.",
@@ -2115,6 +2118,9 @@ const en: Dict = {
 
   // notification bell + panel
   'nav.bell.aria': 'Notifications',
+  'nav.search.aria': 'Search',
+  'nav.search.placeholder': 'Search the forum …',
+  'nav.search.close': 'Close search',
   'nc.title': 'NOTIFICATIONS',
   'nc.neu': 'NEW',
   'nc.empty': "All caught up — the kiez will let you know when there’s news.",

@@ -960,6 +960,56 @@ option:disabled {
   font-size: 9px; font-weight: 700; line-height: 15px; text-align: center;
   border: 1px solid var(--k-ink);
 }
+/* ─── Masthead search disc + strip (2026-09-24) ─────────────────────────
+   Disc = sibling of .nc-bell-disc: same size, fill, frame colour token and
+   bevel. The strip is the header's second row; it sits INSIDE <header> so the
+   hide-on-scroll ResizeObserver re-measures --k-mast-h when it opens. Styles
+   live here, not in MastSearch.svelte (nested island → orphaned <style>). */
+.ms-btn {
+  position: relative; width: 44px; height: 44px; /* invisible ≥44px hit area, like .nc-bell */
+  margin: -4px; /* layout box stays 36px, so the bar keeps its height */
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--k-ink);
+}
+.ms-btn:focus-visible { outline: none; }
+.ms-disc {
+  position: relative; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--k-paper-warm);
+  border: 2px solid var(--k-bar-pill-border, var(--k-ink));
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 180ms ease-out;
+  box-shadow: inset -1px 0 1.5px rgb(27 26 23 / 0.55),
+              inset 1px 0 1.5px rgb(245 239 224 / 0.8);
+}
+.ms-btn:hover .ms-disc, .ms-btn:focus-visible .ms-disc { transform: scale(1.05); }
+/* Open / on the search page: ink disc with the paper-framed look of a selected tab. */
+.ms-disc--active {
+  background: var(--k-ink); color: var(--k-paper); border-color: var(--k-paper);
+  box-shadow: inset -1px 0 3px rgb(245 239 224 / 0.75), inset -1px 0 1.5px rgb(27 26 23 / 0.55);
+}
+.ms-strip {
+  border-top: 2px solid var(--k-ink);
+  background: var(--k-paper-warm);
+}
+.ms-strip__inner {
+  max-width: 80rem; margin: 0 auto; padding: 8px 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+@media (min-width: 768px) { .ms-strip__inner { padding-left: 36px; padding-right: 36px; } }
+@media (min-width: 1024px) { .ms-strip__inner { padding-left: 40px; padding-right: 40px; } }
+.ms-field {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 14px; border-radius: 9999px;
+  background: var(--k-paper); border: 1.5px solid var(--k-ink);
+}
+.ms-field input {
+  flex: 1; min-width: 0; background: transparent; border: 0; outline: none;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 15px; font-weight: 600; color: var(--k-ink);
+}
+.ms-field input::placeholder { color: var(--k-ink-mute); font-weight: 400; }
+.ms-close { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; border: 0; background: none; color: var(--k-ink); cursor: pointer; font-size: 18px; line-height: 1; }
+.ms-close:hover { background: rgb(27 26 23 / 0.08); }
+
 .nc-menu {
   position: absolute; top: calc(100% + 10px); right: 0; width: 324px; z-index: 50;
   transform-origin: top right;

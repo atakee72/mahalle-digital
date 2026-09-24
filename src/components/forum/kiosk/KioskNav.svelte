@@ -12,6 +12,8 @@
   import { initialsOf } from '../../../lib/initials';
   import AvatarMenu from './AvatarMenu.svelte';
   import NotificationBell from './NotificationBell.svelte';
+  import MastSearch from './MastSearch.svelte';
+  import { tick } from 'svelte';
   import { untrack } from 'svelte';
   import { initialMastState, nextMastState, MAST_HIDE_QUERY } from '../../../lib/nav/hideOnScroll';
 
@@ -22,6 +24,45 @@
 
   let menuOpen = $state(false);
   let bellOpen = $state(false);
+
+  // ─── Masthead search (2026-09-24) ────────────────────────────────────
+  // The magnifier disc opens a strip under the bar (markup at the end of
+  // <header>, styles .ms-* in global.css). Enter → full navigation to
+  // /search?q= (the page SSRs the first query; the strip must not survive
+  // into a page that has its own box). Escape / a click outside close it.
+  let searchOpen = $state(false);
+  let searchEl = $state<HTMLInputElement | null>(null);
+  let searchQ = $state('');
+
+  async function toggleSearch() {
+    searchOpen = !searchOpen;
+    if (searchOpen) { await tick(); searchEl?.focus(); } // the strip mounts on the next flush
+  }
+  function closeSearch(restoreFocus: boolean) {
+    if (!searchOpen) return;
+    searchOpen = false;
+    searchQ = '';
+    if (restoreFocus) (headerEl?.querySelector('[data-mast-search-btn]') as HTMLElement | null)?.focus();
+  }
+  function submitSearch(e: SubmitEvent) {
+    e.preventDefault();
+    const q = searchQ.replace(/\s+/g, ' ').trim();
+    if (q.length < 2) return;
+    window.location.href = `/search?q=${encodeURIComponent(q)}`;
+  }
+  $effect(() => {
+    if (!searchOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeSearch(true); };
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (headerEl?.querySelector('#mast-search')?.contains(t)) return;
+      if (headerEl?.querySelector('[data-mast-search-btn]')?.contains(t)) return;
+      closeSearch(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onDown);
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onDown); };
+  });
   let avatarEl = $state<HTMLElement | null>(null);
 
   // ─── Hide-on-scroll (phones/tablets, 2026-09-19) ─────────────────────
@@ -60,6 +101,7 @@
           !mq.matches ||
           menuOpen ||
           bellOpen ||
+          searchOpen ||
           el.querySelector(':focus-visible') !== null ||
           document.querySelector('.tour-card') !== null
       );
@@ -94,7 +136,7 @@
   // Opening a menu, or keyboard focus entering the bar, brings it back at once
   // (the scroll handler only runs on scroll).
   $effect(() => {
-    if (menuOpen || bellOpen) mastHidden = false;
+    if (menuOpen || bellOpen || searchOpen) mastHidden = false;
   });
 
   // Published for whatever docks under the bar (BlogReadBar, calendar reveal).
@@ -181,7 +223,7 @@
   bind:this={headerEl}
   data-mast-hidden={mastHidden ? 'true' : undefined}
   onfocusin={() => (mastHidden = false)}
-  class="sticky {menuOpen || bellOpen ? 'z-50' : 'z-40'} border-b-2 border-ink transition-[top] duration-200 ease-out motion-reduce:transition-none"
+  class="sticky {menuOpen || bellOpen || searchOpen ? 'z-50' : 'z-40'} border-b-2 border-ink transition-[top] duration-200 ease-out motion-reduce:transition-none"
   style="background: var(--k-bar); top: {mastHidden ? -(mastH + 2) : 0}px;"
 >
   <!-- py-2 below lg: a lower bar on phones (user, 2026-09-10); the 44px tap
@@ -264,6 +306,7 @@
 
       <!-- User disc (ochre + initials, or photo) -->
       {#if user?.name}
+        <MastSearch open={searchOpen} onToggle={toggleSearch} {currentPath} />
         <NotificationBell onOpenChange={(o: boolean) => (bellOpen = o)} />
         <div class="relative">
           <a
@@ -310,6 +353,17 @@
       {/if}
     </div>
   </div>
+  {#if searchOpen}
+    <form id="mast-search" class="ms-strip" role="search" onsubmit={submitSearch}>
+      <div class="ms-strip__inner">
+        <label class="ms-field">
+          <span class="font-dmmono text-[14px] text-ink-mute" aria-hidden="true">⌕</span>
+          <input bind:this={searchEl} bind:value={searchQ} type="text" inputmode="search" enterkeyhint="search" maxlength="80" autocomplete="off" placeholder={$t['nav.search.placeholder']} aria-label={$t['nav.search.aria']} />
+        </label>
+        <button type="button" class="ms-close kiosk-tap" onclick={() => closeSearch(true)} aria-label={$t['nav.search.close']}>×</button>
+      </div>
+    </form>
+  {/if}
 </header>
 
 <!-- ─── Bottom mobile nav (fixed, hidden on lg+) ──────────────────────── -->
