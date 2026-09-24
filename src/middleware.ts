@@ -71,6 +71,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       '/api/topics', '/api/announcements', '/api/recommendations',
       '/api/events', '/api/news', '/api/comments', '/api/listings',
       '/api/users', // profiles batch-read: only consumer is the gated calendar modal
+      '/api/search', // forum search: members only, like the feed it reads
     ];
     // The daily news cron is a GET from Vercel with its own CRON_SECRET
     // Bearer gate — it must keep working without a session.
