@@ -77,6 +77,18 @@
     onClose(restoreFocus);
   }
 
+  // A tap outside must ONLY close the panel. The close unmounts the scrim on
+  // pointerdown, so the tap's click (≈50–100 ms later) would land on whatever
+  // is under the finger — a post card link opened the post (user, 09-25).
+  // Swallow exactly that one click; expire if no click follows (scroll gesture).
+  let swallowTimer: ReturnType<typeof setTimeout> | null = null;
+  function swallowNextClick() {
+    const onClick = (e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); cleanup(); };
+    const cleanup = () => { document.removeEventListener('click', onClick, true); if (swallowTimer) { clearTimeout(swallowTimer); swallowTimer = null; } };
+    document.addEventListener('click', onClick, true);
+    swallowTimer = setTimeout(cleanup, 500);
+  }
+
   function onDocPointerDown(e: PointerEvent) {
     const t = e.target as Element | null;
     // Clicks on the bell itself must NOT close here — the bell's own click
@@ -84,7 +96,7 @@
     // (close-then-toggle race; AvatarMenu only escapes it via its 140ms
     // deferred close, which CD's instant-close ruling removed here).
     if (t?.closest('.nc-bell')) return;
-    if (menuEl && !menuEl.contains(e.target as Node)) close();
+    if (menuEl && !menuEl.contains(e.target as Node)) { swallowNextClick(); close(); }
   }
   function onKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
