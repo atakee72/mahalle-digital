@@ -17,7 +17,7 @@
   import { createSearchRunner } from '../../lib/search/searchRunner.svelte';
   import SearchHit from './SearchHit.svelte';
 
-  let { onClose }: { onClose: (restoreFocus: boolean) => void } = $props();
+  let { onClose }: { onClose: (restoreFocus: boolean, opts?: { navigating?: boolean }) => void } = $props();
 
   const runner = createSearchRunner();
   let boxEl = $state<HTMLElement | null>(null);
@@ -76,7 +76,7 @@
   // navigation itself must still happen.
   function onBodyClick(e: MouseEvent) {
     const a = (e.target as Element | null)?.closest('a.sh, a.sm-foot');
-    if (a) onClose(false);
+    if (a) onClose(false, { navigating: true });
   }
 </script>
 

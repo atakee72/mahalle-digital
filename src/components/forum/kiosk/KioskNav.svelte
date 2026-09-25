@@ -14,6 +14,7 @@
   import NotificationBell from './NotificationBell.svelte';
   import MastSearch from './MastSearch.svelte';
   import SearchModal from '../../search/SearchModal.svelte';
+  import { navigate } from 'astro:transitions/client';
   import { untrack } from 'svelte';
   import { initialMastState, nextMastState, MAST_HIDE_QUERY } from '../../../lib/nav/hideOnScroll';
 
@@ -32,13 +33,59 @@
   // close it inside the modal; the modal reports whether focus should return
   // to the disc. `searchOpen` also keeps the hide-on-scroll bar in place and
   // bumps the header's z-index (below), like the menus.
+  //
+  // Phone „back" closes it (same afternoon): opening pushes ONE `#suche`
+  // history entry via Astro's own `navigate()` — never a hand-rolled
+  // pushState, see root CLAUDE.md „Astro Script + ViewTransitions": a
+  // same-URL entry without a hash makes the ClientRouter refetch and swap
+  // the whole page on popstate, only a hash move short-circuits to
+  // `moveToLocation`. Closing via ×/Escape/scrim consumes that entry with
+  // `history.back()` so a later „back" still leaves the page; closing via
+  // popstate (the phone gesture) just follows it, no further history call.
   let searchOpen = $state(false);
-  function toggleSearch() { searchOpen = !searchOpen; }
-  function closeSearch(restoreFocus: boolean) {
+  let searchEntryPushed = false; // plain let, not state — bookkeeping only
+  const SEARCH_HASH = '#suche';
+
+  function openSearch() {
+    if (searchOpen) return;
+    searchOpen = true;
+    // Push ONE hash entry so the phone's „back" closes the modal. Only when
+    // the hash is not already there (a reload on #suche): navigate() to the
+    // current href pushes nothing, and history.back() would then leave the
+    // page.
+    if (location.hash !== SEARCH_HASH) {
+      searchEntryPushed = true;
+      navigate(SEARCH_HASH); // Astro: samePage + hash → moveToLocation (pushState with the router's index), no fetch
+    }
+  }
+  function toggleSearch() { if (searchOpen) closeSearch(true); else openSearch(); }
+
+  function closeSearch(restoreFocus: boolean, opts: { navigating?: boolean } = {}) {
     if (!searchOpen) return;
     searchOpen = false;
     if (restoreFocus) (headerEl?.querySelector('[data-mast-search-btn]') as HTMLElement | null)?.focus({ preventScroll: true });
+    // Consume our entry so a later „back" still leaves the page. Not when a
+    // hit click is navigating away (the click's own navigation must win),
+    // and not when the close came from popstate (the entry is already gone).
+    if (searchEntryPushed && !opts.navigating && location.hash === SEARCH_HASH) {
+      searchEntryPushed = false;
+      history.back(); // → Astro onPopState: direction back, from.hash → moveToLocation, no fetch; restores the saved scroll
+    } else {
+      searchEntryPushed = false;
+    }
   }
+  function onSearchPopState() {
+    // Astro's moveToLocation() ends a same-page hash move with `location.href = to.href`, a
+    // fragment navigation that fires a NATIVE popstate while we are still on #suche — ignore
+    // it. A real „back" (or our own history.back()) lands hash-less.
+    if (!searchOpen || location.hash === SEARCH_HASH) return;
+    searchEntryPushed = false;
+    closeSearch(true);
+  }
+  $effect(() => {
+    window.addEventListener('popstate', onSearchPopState);
+    return () => window.removeEventListener('popstate', onSearchPopState);
+  });
   let avatarEl = $state<HTMLElement | null>(null);
 
   // ─── Hide-on-scroll (phones/tablets, 2026-09-19) ─────────────────────
