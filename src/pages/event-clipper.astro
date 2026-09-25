@@ -1,11 +1,16 @@
 ---
 // /event-clipper — Termin-Clipper bookmarklet page.
 //
-// Deliberately NOT login-gated (instructions are harmless; the compose
-// target /events/create is gated and its ?redirect= bounce preserves the
-// prefill query). The bookmarklet href is built client-side from
-// location.origin so the same page works on dev and prod.
+// Deliberately NOT login-gated (instructions are harmless). Since v5
+// (2026-09-26) the bookmarklet no longer builds the compose URL itself: it
+// ships the page text to /events/clip (admin-only), where OpenAI reads
+// date, time and place. The bookmarklet SOURCE is a readable file
+// (src/lib/clipper/bookmarklet.js) imported ?raw and injected below; the
+// href is built client-side from location.origin so dev clips into dev
+// and prod into prod. Bookmarklets freeze at drag time: after any change
+// to the source, re-drag the button.
 import KioskLayout from '../layouts/KioskLayout.astro';
+import bookmarkletSrc from '../lib/clipper/bookmarklet.js?raw';
 ---
 
 <KioskLayout
@@ -27,40 +32,41 @@ import KioskLayout from '../layouts/KioskLayout.astro';
     <ol class="clip-steps">
       <li><strong>Einmalig:</strong> Zieh den Knopf unten in deine Lesezeichen-Leiste (Bookmarks-Bar).</li>
       <li>Auf einer Veranstaltungsseite: markiere optional den Beschreibungstext, dann klicke das Lesezeichen.</li>
-      <li>Der Mahalle-Termin öffnet sich vorausgefüllt — prüfen, ergänzen, veröffentlichen. Fertig.</li>
+      <li>Mahalle liest die Seite (ein paar Sekunden) und öffnet den Termin vorausgefüllt — Datum, Uhrzeit, Ort, Kurztext. Prüfen, ergänzen, veröffentlichen.</li>
     </ol>
 
     <p class="clip-drag">
       <a id="clipper-link" href="#" class="clip-btn font-bricolage" draggable="true">📎 Zu Mahalle clippen</a>
     </p>
     <p class="clip-note">
-      Titel und (wenn die Seite sie maschinenlesbar angibt) das Datum werden
-      automatisch übernommen; markierter Text wird zur Beschreibung, die
-      Quelle wird verlinkt. Auf dem Handy funktionieren Lesezeichen-Skripte
-      leider nur eingeschränkt — der Clipper ist ein Desktop-Werkzeug.
+      Das Lesen übernimmt ein Sprachmodell (OpenAI); die Seite wird dafür als
+      Text übertragen, nichts wird gespeichert. Der Clipper ist ein
+      Admin-Werkzeug. Nach einer Änderung am Clipper den Knopf neu in die
+      Leiste ziehen. Auf dem Handy funktionieren Lesezeichen-Skripte leider
+      nur eingeschränkt.
     </p>
   </main>
 </KioskLayout>
 
-<script is:inline data-astro-rerun>
+<script is:inline define:vars={{ bookmarkletSrc }}>
   (function () {
-    // Bookmarklet source. __ORIGIN__ is replaced with this page's origin so
-    // dev and prod each clip into themselves. Collected: og:title/document
-    // title, text selection, page URL, best-effort schema.org Event dates.
-    var SRC = "(function(){function q(s){var m=document.querySelector(s);return m?m.getAttribute('content'):null}var t=q('meta[property=\\\"og:title\\\"]')||document.title||'';var sel='';try{sel=String(window.getSelection())}catch(e){}var url=location.href;var from='',to='',st='',et='',loc='';try{var sc=document.querySelectorAll('script[type=\\\"application/ld+json\\\"]');outer:for(var i=0;i<sc.length;i++){var d=JSON.parse(sc[i].textContent);var arr=Array.isArray(d)?d:(d&&d['@graph']?d['@graph']:[d]);for(var j=0;j<arr.length;j++){var n=arr[j];if(n&&/Event/.test(String(n['@type']))&&n.startDate){var sd=String(n.startDate);from=sd.slice(0,10);if(sd.length>=16){st=sd.slice(11,16)}if(n.endDate){var ed=String(n.endDate);var edd=ed.slice(0,10);if(edd!==from){to=edd}if(ed.length>=16){et=ed.slice(11,16)}}if(n.location){loc=String(n.location.name||(typeof n.location==='string'?n.location:''))}break outer}}}}catch(e){}if(!from){try{var ts=document.querySelectorAll('time[datetime]');if(ts.length){var d1=String(ts[0].getAttribute('datetime'));from=d1.slice(0,10);if(d1.length>=16){st=d1.slice(11,16)}if(ts.length>1){var d2=String(ts[1].getAttribute('datetime'));var dd2=d2.slice(0,10);if(dd2!==from){to=dd2}if(d2.length>=16){et=d2.slice(11,16)}}}}catch(e){}}if(!loc){try{var els=document.querySelectorAll('dt,th,strong,b,h3,h4,h5,div,span,p');for(var k=0;k<els.length;k++){var lt=(els[k].textContent||'').trim();if(/^(where|wo|ort|veranstaltungsort|location)$/i.test(lt)){var sib=els[k].nextElementSibling;var lv=sib?(sib.textContent||'').trim():'';if(lv&&lv.length<=120){loc=lv;break}}}}catch(e){}}var para='';if(!sel){try{para=q('meta[property=\\\"og:description\\\"]')||q('meta[name=\\\"description\\\"]')||'';if(!para){var ps=document.querySelectorAll('main p,article p,p');for(var m2=0;m2<ps.length;m2++){var pt=(ps[m2].textContent||'').trim();if(pt.length>=100){para=pt;break}}}para=String(para).trim().slice(0,400)}catch(e){}}var body=(sel?sel+'\\n\\n':(para?para+' …\\n\\n':''))+'Quelle: '+url;var p=new URLSearchParams();if(t){p.set('title',t.slice(0,200))}p.set('body',body.slice(0,3000));if(from){p.set('from',from)}if(to){p.set('to',to)}if(from&&!st){p.set('allDay','1')}if(st){p.set('startTime',st)}if(et){p.set('endTime',et)}if(loc){p.set('location',loc.slice(0,200))}window.open('__ORIGIN__/events/create?'+p.toString(),'_blank')})();";
     var link = document.getElementById('clipper-link');
-    if (link) {
-      link.setAttribute(
-        'href',
-        'javascript:' + encodeURIComponent(SRC.replace('__ORIGIN__', location.origin))
-      );
-      // A click on the page itself shouldn't run the clipper here (it would
-      // clip the clipper page) — nudge to drag instead.
-      link.addEventListener('click', function (e) {
-        e.preventDefault();
-        alert('Zieh den Knopf in deine Lesezeichen-Leiste — von dort aus clippt er jede Seite.');
-      });
-    }
+    if (!link) return;
+    link.setAttribute(
+      'href',
+      // Global replace: the source file's own header comment also mentions
+      // __ORIGIN__ (documentation), so a single (non-global) replace would
+      // hit that comment first and leave the real window.open() call
+      // untouched. Harmless either way — comments aren't executed — but
+      // global keeps every occurrence consistent.
+      'javascript:' + encodeURIComponent(bookmarkletSrc.replace(/__ORIGIN__/g, location.origin))
+    );
+    // A click on the page itself shouldn't run the clipper here (it would
+    // clip the clipper page) — nudge to drag instead.
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      alert('Zieh den Knopf in deine Lesezeichen-Leiste — von dort aus clippt er jede Seite.');
+    });
   })();
 </script>
 
