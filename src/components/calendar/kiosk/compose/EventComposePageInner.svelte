@@ -305,6 +305,14 @@
 {#if rateLimited}
   <RateLimitPanel unlocksIn={null} />
 {:else}
+  {#if clipMiss}
+    <div class="px-4 md:px-9 lg:px-10 pt-5">
+      <p class="font-bricolage text-sm px-3.5 py-2 rounded-md border" style="color: var(--k-ink); background: color-mix(in srgb, var(--k-ochre) 18%, transparent); border-color: var(--k-ochre);" role="status">
+        {$t['cal.compose.clip.miss']}
+      </p>
+    </div>
+  {/if}
+
   <div
     class="grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-0 min-h-[calc(100vh-180px)]"
   >
@@ -322,14 +330,6 @@
       editing={isEditing}
     />
   </div>
-
-  {#if clipMiss}
-    <div class="px-4 md:px-9 lg:px-10 pb-4">
-      <p class="font-bricolage text-sm px-3.5 py-2 rounded-md border" style="color: var(--k-ink); background: color-mix(in srgb, var(--k-ochre) 18%, transparent); border-color: var(--k-ochre);" role="status">
-        {$t['cal.compose.clip.miss']}
-      </p>
-    </div>
-  {/if}
 
   {#if inlineError}
     <div class="px-4 md:px-9 lg:px-10 pb-6">
