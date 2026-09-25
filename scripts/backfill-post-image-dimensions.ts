@@ -26,9 +26,15 @@ type Img = { url?: string; publicId?: string; width?: number; height?: number };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) { console.error('MONGODB_URI missing'); process.exit(1); }
-  const dbName = new URL(uri).pathname.slice(1);
+  const raw = process.env.MONGODB_URI;
+  if (!raw) { console.error('MONGODB_URI missing'); process.exit(1); }
+  // --prod forces the prod database on the same cluster (precedent:
+  // scripts/create-post-draft-indexes.ts) — the local .env points at
+  // mahalle-dev, so without this the "prod run" silently hit dev (09-25).
+  const u = new URL(raw);
+  if (PROD) u.pathname = '/mahalle';
+  const uri = u.toString();
+  const dbName = u.pathname.slice(1);
   if (!dbName.includes('dev') && !PROD) {
     console.error(`refusing: db name "${dbName}" does not look like a dev db (pass --prod to override)`);
     process.exit(1);
