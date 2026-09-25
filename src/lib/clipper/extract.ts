@@ -61,6 +61,7 @@ export function buildClipMessages(input: ClipInput, todayISO: string): Array<{ r
   const system = [
     'You extract ONE event from the visible text of a web page for a Berlin neighbourhood calendar.',
     `Today is ${weekdayOf(todayISO)}, ${todayISO} (timezone Europe/Berlin). Resolve relative dates ("Samstag", "morgen", "nächsten Freitag") against today; never invent a date that the text does not support — answer null instead.`,
+    'A recurring schedule without a concrete calendar date ("jeden Abend", "immer montags", "wöchentlich", "every Tuesday") is NOT a date: answer startDate null and confidence low.',
     'Dates as YYYY-MM-DD, times as 24h HH:MM. If the page names a date but no start time, set allDay true. If a single-day event ends after midnight, endDate is the next day.',
     'Prefer the event the page is ABOUT over other events mentioned in navigation, teasers or listings. If the text is a listing of many events, extract the first one that has a full date.',
     'title: short, no venue, no date. location: venue name plus street if given. summary: 2–3 neutral sentences in the language of the page (German or English), no marketing phrases, no URLs.',
