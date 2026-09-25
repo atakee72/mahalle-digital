@@ -1,0 +1,64 @@
+---
+// /events/clip — Termin-Clipper v5 landing (2026-09-26). ADMIN-ONLY.
+// The bookmarklet opens this page with the event page's text in the URL
+// FRAGMENT (never sent to a server). The bundled script below reads it,
+// strips it from history, POSTs it to /api/events/clip (same origin → the
+// session cookie rides along, no CORS), and redirects to the normal
+// /events/create prefill. Middleware already gates /events; here we add the
+// admin check because the endpoint is admin-only too.
+import KioskLayout from '../../layouts/KioskLayout.astro';
+import { getSession } from 'auth-astro/server';
+
+const session = await getSession(Astro.request);
+if (!session?.user) return Astro.redirect('/login?redirect=%2Fevents%2Fclip', 302);
+if (session.user.role !== 'admin') return Astro.redirect('/calendar', 302);
+---
+
+<KioskLayout title="Mahalle · Termin wird gelesen" description="Termin-Clipper" page="calendar" noindex={true}>
+  <main class="clip-status px-4 md:px-9 lg:px-10">
+    <p class="font-dmmono text-[11px] uppercase tracking-[0.18em]" style="color: var(--k-ink-mute);">WERKZEUG · KALENDER</p>
+    <h1 class="font-bricolage font-bold text-[28px] md:text-[34px] tracking-tight mt-2" style="color: var(--k-ink);">Termin wird gelesen …</h1>
+    <p id="clip-msg" class="mt-3 text-[15px] leading-relaxed" style="color: var(--k-ink-soft);">Einen Moment — Datum, Uhrzeit und Ort werden aus der Seite gelesen.</p>
+    <p id="clip-fallback" class="mt-6 hidden text-[14px]">
+      <a href="/event-clipper" class="underline">Zurück zum Clipper</a> · <a href="/events/create" class="underline">Termin von Hand anlegen</a>
+    </p>
+  </main>
+</KioskLayout>
+
+<script>
+  import { toComposeParams, mergeHint, normalizeClipResult, berlinTodayISO, type ClipHint } from '../../lib/clipper/extract';
+
+  type Payload = { v: number; title: string; url: string; text: string; selection?: string; hint?: ClipHint };
+
+  const msg = document.getElementById('clip-msg')!;
+  const fallback = document.getElementById('clip-fallback')!;
+  const fail = (text: string) => { msg.textContent = text; fallback.classList.remove('hidden'); };
+
+  (async () => {
+    let payload: Payload | null = null;
+    try {
+      const raw = location.hash.slice(1);
+      if (raw) payload = JSON.parse(decodeURIComponent(raw));
+    } catch { payload = null; }
+    // Strip the text from the address bar / history right away (the page is
+    // ours, but a 12 000-char fragment in the history list helps nobody).
+    history.replaceState(history.state, '', location.pathname);
+    if (!payload || payload.v !== 1 || typeof payload.text !== 'string' || typeof payload.url !== 'string') {
+      fail('Nichts empfangen. Bitte den Clipper auf der Veranstaltungsseite noch einmal anklicken.');
+      return;
+    }
+    const page = { title: String(payload.title || ''), url: payload.url, selection: payload.selection || '' };
+    let result = mergeHint(normalizeClipResult(null, berlinTodayISO()), payload.hint); // markup-only fallback
+    try {
+      const res = await fetch('/api/events/clip', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: page.title, url: page.url, text: payload.text, selection: page.selection || undefined, hint: payload.hint }),
+      });
+      if (res.status === 401 || res.status === 403) { fail('Bitte als Admin anmelden und den Clipper erneut anklicken.'); return; }
+      const data = await res.json().catch(() => null);
+      if (data?.ok && data.result) result = data.result;
+    } catch { /* fall through with the markup-only result */ }
+    const params = toComposeParams(result, page);
+    location.replace('/events/create?' + params.toString());
+  })();
+</script>

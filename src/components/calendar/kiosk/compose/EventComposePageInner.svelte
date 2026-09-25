@@ -137,6 +137,12 @@
 
   const initialValues: Partial<EventComposeValues> = computeInitialValues();
 
+  // Event-clipper v5: the /events/clip landing sets ?clipMiss=1 when the
+  // model + markup fallback found no date at all — surfaced as a notice
+  // below the form (state declared next to inlineError below).
+  const clipMissParam =
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('clipMiss') === '1';
+
   // ─── Form values ─────────────────────────────────────────────────
   // Seed from initialValues so the preview rail matches first-paint
   // (otherwise edit mode would briefly show today's date until the
@@ -195,6 +201,7 @@
   let modalOpen = $state(false);
   let rateLimited = $state(false);
   let inlineError = $state<string | null>(null);
+  let clipMiss = $state(clipMissParam);
 
   function validate(v: EventComposeValues): string | null {
     if (v.title.trim().length < 5) return 'Titel zu kurz (mind. 5 Zeichen).';
@@ -315,6 +322,14 @@
       editing={isEditing}
     />
   </div>
+
+  {#if clipMiss}
+    <div class="px-4 md:px-9 lg:px-10 pb-4">
+      <p class="font-bricolage text-sm px-3.5 py-2 rounded-md border" style="color: var(--k-ink); background: color-mix(in srgb, var(--k-ochre) 18%, transparent); border-color: var(--k-ochre);" role="status">
+        {$t['cal.compose.clip.miss']}
+      </p>
+    </div>
+  {/if}
 
   {#if inlineError}
     <div class="px-4 md:px-9 lg:px-10 pb-6">
