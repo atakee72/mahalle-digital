@@ -148,6 +148,8 @@
 [data-page="newsboard"] header nav a[aria-current="page"] {
   background: var(--k-paper);
   color: var(--k-ink);
+  /* Mirror of the inner hairline the ink tab wears (KioskNav): paper gap, ink line. */
+  box-shadow: inset 0 -0.25px 0 1.75px var(--k-paper), inset 0 0 0 2px var(--k-ink);
 }
 
 /* --k-accent-italic is scoped to italicized verb emphasis in marketplace

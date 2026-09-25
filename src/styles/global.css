@@ -946,10 +946,9 @@ option:disabled {
   border: 2px solid var(--k-bar-pill-border, var(--k-ink));
   display: flex; align-items: center; justify-content: center;
   transition: transform 180ms ease-out; /* hover feedback only — sibling of the avatar disc */
-  /* Same bevel as the avatar disc (user, 2026-09-22): hairline dark on the
-     right, pale on the left, fading top and bottom — the rim reads raised. */
-  box-shadow: inset -1px 0 1.5px rgb(27 26 23 / 0.55),
-              inset 1px 0 1.5px rgb(245 239 224 / 0.8);
+  /* Ink hairline just inside the frame (user, 2026-09-25 — replaced the
+     09-22 bevel, which read as a shadow on the coloured bars). */
+  box-shadow: inset 0 0.4px 0 0.4px var(--k-ink);
 }
 .nc-bell:hover .nc-bell-disc, .nc-bell:focus-visible .nc-bell-disc { transform: scale(1.05); }
 .nc-bell:focus-visible { outline: none; }
@@ -962,7 +961,7 @@ option:disabled {
 }
 /* ─── Masthead search disc (2026-09-24) + search modal .sm-* (2026-09-25) ──
    Disc = sibling of .nc-bell-disc: same size, fill, frame colour token and
-   bevel. The modal below replaced the strip (09-24) and the inline field
+   hairline. The modal below replaced the strip (09-24) and the inline field
    (09-25 morning). Styles live here, not in the .svelte files (nested
    island → orphaned <style>). */
 .ms-btn {
@@ -978,14 +977,13 @@ option:disabled {
   border: 2px solid var(--k-bar-pill-border, var(--k-ink));
   display: flex; align-items: center; justify-content: center;
   transition: transform 180ms ease-out;
-  box-shadow: inset -1px 0 1.5px rgb(27 26 23 / 0.55),
-              inset 1px 0 1.5px rgb(245 239 224 / 0.8);
+  box-shadow: inset 0 0.4px 0 0.4px var(--k-ink);
 }
 .ms-btn:hover .ms-disc, .ms-btn:focus-visible .ms-disc { transform: scale(1.05); }
 /* Open / on the search page: ink disc with the paper-framed look of a selected tab. */
 .ms-disc--active {
   background: var(--k-ink); color: var(--k-paper); border-color: var(--k-paper);
-  box-shadow: inset -1px 0 3px rgb(245 239 224 / 0.75), inset -1px 0 1.5px rgb(27 26 23 / 0.55);
+  box-shadow: inset 0 0.4px 0 0.4px var(--k-ink);
 }
 
 /* Search modal: scrim + box are SIBLINGS (the blur must not be an ancestor

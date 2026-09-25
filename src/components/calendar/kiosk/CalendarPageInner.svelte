@@ -532,6 +532,6 @@
   <a
     href="/events/create"
     aria-label={$t['cal.mobile.cta.aria']}
-    class="fixed bottom-16 right-4 z-30 w-14 h-14 rounded-full bg-teal text-paper border-2 border-ink font-bricolage font-bold text-[28px] leading-none shadow-[2px_2px_0_var(--k-ink,#0e1033),inset_-1px_0_3px_rgba(245,239,224,0.75),inset_-1px_0_1.5px_rgba(27,26,23,0.55)] flex items-center justify-center lg:hidden"
+    class="fixed bottom-16 right-4 z-30 w-14 h-14 rounded-full bg-teal text-paper border-2 border-ink font-bricolage font-bold text-[28px] leading-none shadow-[2px_2px_0_var(--k-ink,#0e1033),inset_0_-0.25px_0_1.75px_#3f8f9f,inset_0_0_0_2px_#1b1a17] flex items-center justify-center lg:hidden"
   ><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 4v16M4 12h16" /></svg></a>
 </div>
