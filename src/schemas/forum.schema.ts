@@ -5,9 +5,15 @@ export const ObjectIdSchema = z.string()
   .regex(/^[0-9a-fA-F]{24}$/, 'Invalid MongoDB ObjectId');
 
 // Reusable image schema for forum posts
+// width/height are OPTIONAL: /api/posts/upload returns Cloudinary's post-transform
+// pixel size and the compose islands pass it through, so the detail hero can reserve
+// the right box before the file arrives (no layout shift). Posts written before
+// 2026-09-25 have no dimensions — the hero falls back to a reserved 3:2 box.
 const PostImageSchema = z.array(z.object({
   url: z.string().url(),
-  publicId: z.string()
+  publicId: z.string(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional()
 })).max(5, 'Maximum 5 images allowed').default([]);
 
 // Base Forum Post Schema (shared fields)
@@ -224,7 +230,9 @@ export const PostDraftSaveSchema = z.object({
   // they must be our own uploads (folder of /api/posts/upload, url ↔ publicId).
   images: z.array(z.object({
     url: z.string().url().startsWith('https://res.cloudinary.com/'),
-    publicId: z.string().startsWith('mahalle/posts/').max(200)
+    publicId: z.string().startsWith('mahalle/posts/').max(200),
+    width: z.number().int().positive().optional(),
+    height: z.number().int().positive().optional()
   }).refine((img) => img.url.includes(img.publicId), { message: 'image url and publicId do not belong together' }))
     .max(5, 'Maximum 5 images allowed').default([])
 });

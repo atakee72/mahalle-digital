@@ -257,6 +257,48 @@ These sections describe the **legacy React forum** (`ForumWrapper` / `ForumConta
 ### Floating „+" on phones (2026-09-20, user request)
 The forum index carries the same floating add button as the calendar and the market (`a[data-forum-fab]` at the end of `ForumIndexInner.svelte` → `/topics/create`; `fixed bottom-16 right-4 z-30`, 56 px, wine + ink print shadow, `lg:hidden`, spoken label `forum.mobile.cta.aria`). Reason: the „+ neues thema" pill scrolls away with the title block. Below `lg` the pill is hidden since the same evening (user: „you can remove the pill"; `hidden lg:inline-flex`), which moved the first post up another 56 px on a 390 px phone (356 → 300 px with three pins); the floating button carries the same `data-tour="forum-new-topic"`, so the tour's last forum stop lands on it on phones (visible-first) and on the pill on desktop. The „+" on all four surfaces is an inline SVG, not a text glyph: a text „+" sits on the font's math axis and looked off-centre on a real phone (user report); probe `scratchpad/fab-centre.cjs` (10 checks: centre offset 0/0 on forum, news, calendar, market). Index only: the detail page has the comment composer fixed at the bottom. News got the same button the same day (`a[data-news-fab]` in `NewsboardIndexInner.svelte` → `/newsboard/submit`, shown in every list state). Colour (user, 2026-09-20 23:15, after first saying „keep wine" and then seeing them): the button takes the PAGE colour — forum wine, market `bg-[#b97a1a]` + `text-paper` since 2026-09-22 (user trial of an ochre button; plain `bg-ochre` gave a paper plus only 1.85:1 contrast and sat invisibly above the ochre bottom bar; `#b97a1a` is 3.1:1, the darkest tone that still reads as ochre, chosen by him over `#a86c12` / `#96600f`), calendar `bg-teal`, News `bg-ink`. All keep the ink border; the shadow is ink, except on the News disc, where ink on ink would vanish — it wears the wine print shadow of every primary ink button (`KioskBtn` primary). Since 2026-09-22 evening the print shadow is 2 px (was 3; 1 px tried and rejected) and the disc carries the lit-edge bevel — see the „frames and bevelled edges" addendum above. Known and shared by all four surfaces: at the very end of a page on a 390 px phone the button covers 31 of the 196 px of the footer's licence link (the link stays tappable). Probe: `scratchpad/fab-probe.cjs` (26 checks, three widths, dev or prod via `PROBE_*`).
 
+### Hero image reserves its height (2026-09-25, CLS fix)
+
+The post detail cover image used to render `w-full h-auto max-h-[440px]` with no
+reserved box, so the whole thread jumped down when the file arrived (measured on
+dev with the image held back 1.2 s: body top 331 → 771 px, CLS 0.190 at 390 px /
+0.079 at 1400 px). It was also the root cause of the flaky scroll-to-comment of
+2026-09-19 (the 1.5 s re-scroll workaround in `b45181e6` can stay).
+
+- `PostImageSchema` (`src/schemas/forum.schema.ts`, shared by topics /
+  announcements / recommendations create + edit AND by the stricter server-draft
+  schema) gained **optional** `width`/`height` (positive ints).
+  `/api/posts/upload` already returned Cloudinary's post-transform size (the
+  route limit-crops to 1200×800); `ComposePageInner.uploadPendingFiles()` now
+  passes it through, and the types in `src/types/index.ts` + `postDrafts.ts`
+  carry it. Optional on purpose: posts written before this date have none, and
+  the draft schema's „our own uploads only" refinement is untouched.
+- The hero box (`ForumPostDetail.svelte`, `data-hero-box`) sets
+  `aspect-ratio: <w> / <h>` from the stored size, **`3 / 2` as the fallback**, plus
+  `max-height: 440px`; the image keeps `object-contain`. So the box is reserved
+  even for old posts — the fallback alone removed the shift, the real ratio also
+  removes the letterbox bands a portrait photo used to get (the box then hugs the
+  image: 370×800 → 203×440).
+- Backfill: `scripts/backfill-post-image-dimensions.ts` — dry run by default,
+  `--apply` writes, refuses a db without „dev" unless `--prod`, reads sizes from
+  Cloudinary `api.resource(publicId)` (cached per publicId, 120 ms pacing),
+  covers topics / announcements / recommendations / postDrafts and only ever
+  `$set`s `images`. **Note the env name: the app reads `CLOUD_NAME`, not
+  `CLOUDINARY_CLOUD_NAME`.** Dev run 2026-09-25: 1 image stamped, 0 skipped. The
+  PROD run is the user's.
+- After (same held-back image): body top and document height identical before and
+  after the image lands at 390 and 1400; every remaining `layout-shift` entry is
+  recorded BEFORE the image arrives (`pre.cls === post.cls`) and its source node
+  is the FOOTER moving as the island hydrates — not the hero. Residual page CLS
+  0.040 (390) / 0.014 (1400) with the fallback box, 0.071 / 0.014 with the real
+  ratio (a taller hero moves the footer further at hydration). **Known, separate,
+  NOT fixed here:** that hydration shift also hits the forum index (CLS 0.175 at
+  390 with zero image-caused movement) — the cards' fixed `imageHeight` box is
+  fine, the shift is the island replacing the SSR shell.
+- Probe: `scratchpad/hero-cls-probe.cjs` (env `PROBE_WIDTH`, `PROBE_TAG`,
+  `PROBE_PATH`; delays every Cloudinary response 1.2 s, installs a
+  `layout-shift` PerformanceObserver before app scripts, reports shift sources).
+
 ### Card numbers are real (2026-09-11)
 - **🔖 on cards is a count**: `attachSavedCounts()` in `src/lib/topicsQuery.ts`
   runs inside `fetchCollectionWithAuthors` (one `$group` over `savedPosts`,
