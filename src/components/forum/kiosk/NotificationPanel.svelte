@@ -81,12 +81,11 @@
   // pointerdown, so the tap's click (≈50–100 ms later) would land on whatever
   // is under the finger — a post card link opened the post (user, 09-25).
   // Swallow exactly that one click; expire if no click follows (scroll gesture).
-  let swallowTimer: ReturnType<typeof setTimeout> | null = null;
   function swallowNextClick() {
     const onClick = (e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); cleanup(); };
-    const cleanup = () => { document.removeEventListener('click', onClick, true); if (swallowTimer) { clearTimeout(swallowTimer); swallowTimer = null; } };
+    const cleanup = () => { document.removeEventListener('click', onClick, true); clearTimeout(timer); };
     document.addEventListener('click', onClick, true);
-    swallowTimer = setTimeout(cleanup, 500);
+    const timer = setTimeout(cleanup, 500); // per call, so two arms never share one timer
   }
 
   function onDocPointerDown(e: PointerEvent) {
