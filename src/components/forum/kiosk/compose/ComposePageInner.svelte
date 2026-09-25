@@ -202,7 +202,7 @@
 
   // Image upload (lazy — fires only on submit).
   async function uploadPendingFiles(files: File[]) {
-    const uploaded: { url: string; publicId: string }[] = [];
+    const uploaded: { url: string; publicId: string; width?: number; height?: number }[] = [];
     for (const file of files) {
       const formData = new FormData();
       formData.append('file', file);
@@ -215,8 +215,9 @@
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Image upload failed');
       }
-      const json = (await res.json()) as { url: string; publicId: string };
-      uploaded.push({ url: json.url, publicId: json.publicId });
+      // width/height ride along so the detail hero can reserve its box (CLS).
+      const json = (await res.json()) as { url: string; publicId: string; width?: number; height?: number };
+      uploaded.push({ url: json.url, publicId: json.publicId, width: json.width, height: json.height });
     }
     return uploaded;
   }

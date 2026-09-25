@@ -305,6 +305,13 @@
   const heroImage = $derived(
     topic.images?.[0]?.url ? optimizeCloudinary(topic.images[0].url) : null
   );
+  // Stored pixel size of the cover image (optional — see PostImageSchema).
+  const heroDims = $derived(
+    topic.images?.[0]?.width && topic.images?.[0]?.height
+      ? { width: topic.images[0].width!, height: topic.images[0].height! }
+      : null
+  );
+  const heroRatio = $derived(heroDims ? `${heroDims.width} / ${heroDims.height}` : '3 / 2');
   const firstTag = $derived(topic.tags?.[0] ?? null);
   // Kiez-verification pipeline (Aug 2026): the badge is earned (admin
   // toggle), strictly on the author's flag. `topic.author` is populated
@@ -760,11 +767,24 @@
       </div>
 
       {#if heroImage && !editing}
-        <div class="mb-5 rounded-md border-[1.5px] border-ink overflow-hidden max-w-prose">
+        <!-- The box reserves its height BEFORE the file arrives (2026-09-25):
+             aspect-ratio from the stored dimensions, 3:2 for posts written
+             before they were stored. Without it the whole thread jumped down
+             when the image loaded. `max-height` clamps tall portraits; the
+             image keeps object-contain, so it letterboxes on paper-soft
+             instead of resizing the page. -->
+        <div
+          class="mb-5 rounded-md border-[1.5px] border-ink overflow-hidden max-w-prose bg-paper-soft"
+          style={`aspect-ratio: ${heroRatio}; max-height: 440px;`}
+          data-hero-box
+          data-hero-ratio={heroRatio}
+        >
           <img
             src={heroImage}
             alt={topic.title}
-            class="w-full h-auto max-h-[440px] object-contain bg-paper-soft"
+            width={heroDims?.width}
+            height={heroDims?.height}
+            class="w-full h-full object-contain"
             loading="lazy"
           />
         </div>

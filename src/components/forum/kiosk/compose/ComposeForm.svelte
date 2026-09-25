@@ -32,7 +32,7 @@
     tags: string[];
     // Pending images — mix of uploaded ({url, publicId}) and to-upload (File).
     pendingFiles: File[];
-    existingImages: { url: string; publicId: string }[];
+    existingImages: { url: string; publicId: string; width?: number; height?: number }[];
   };
 
   let {

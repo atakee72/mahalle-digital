@@ -10,7 +10,7 @@ export type PostDraftInput = {
   title: string;
   body: string;
   tags: string[];
-  images: { url: string; publicId: string }[];
+  images: { url: string; publicId: string; width?: number; height?: number }[];
 };
 
 /** What the API returns and the islands render. Dates are ISO strings. */
