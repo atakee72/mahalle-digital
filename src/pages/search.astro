@@ -1,27 +1,29 @@
 ---
-// /search — forum search (posts of all three kinds + comments). The query
-// runs on the SERVER (src/lib/forum/searchStore.ts): a `?q=` in the URL is
+// /search — site search over Forum, Kalender, Markt, News and Blog (since
+// 2026-09-25; forum only from 09-24, orphaned before that). The query runs
+// on the SERVER (src/lib/search/siteSearchStore.ts): a `?q=` in the URL is
 // answered in this first render, later keystrokes go through
-// GET /api/search from the island. Until 2026-09-24 the page shipped the
-// last 200 discussions + 300 comments and filtered in the browser — it
-// never saw announcements or recommendations, and comments were read with a
-// field name (`topicId`) that no comment has.
+// GET /api/search from the island.
 import KioskLayout from '../layouts/KioskLayout.astro';
-import SearchPage from '../components/forum/kiosk/SearchPage.svelte';
+import SearchPage from '../components/search/SearchPage.svelte';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../lib/mongodb';
 import { normalizeQuery } from '../lib/forum/searchQuery';
-import { searchForum, type SearchResult } from '../lib/forum/searchStore';
+import { searchSite } from '../lib/search/siteSearchStore';
+import { loadBlogSearchEntries } from '../lib/search/blogEntries';
+import { SECTIONS, type SiteSearchResult, type SearchSection } from '../lib/search/siteSearch';
 
 const session = await getSession(Astro.request);
 const userId = session?.user?.id;
 
 const initialQuery = normalizeQuery(Astro.url.searchParams.get('q')) ?? '';
-let initialResults: SearchResult | null = null;
+const sParam = Astro.url.searchParams.get('s');
+const initialSection: SearchSection | 'all' = (SECTIONS as readonly string[]).includes(sParam ?? '') ? (sParam as SearchSection) : 'all';
+let initialResults: SiteSearchResult | null = null;
 if (initialQuery) {
   try {
-    const db = await connectDB();
-    initialResults = await searchForum(db, initialQuery, userId);
+    const [db, blog] = await Promise.all([connectDB(), loadBlogSearchEntries()]);
+    initialResults = await searchSite(db, initialQuery, userId, blog);
   } catch (err) {
     console.error('[search.astro] first query failed:', err);
   }
