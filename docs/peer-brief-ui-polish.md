@@ -47,7 +47,7 @@ CLAUDE.md — not repeated here.
    path AND `git status --porcelain` empty, then `git fetch --prune origin &&
    git reset --hard origin/main`. Continue on the same branch.
 
-## Current state (2026-09-05)
-- Worktree on `fix/ui-polish` @ `6c7014f8` (merged F1), clean, but **3 behind
-  origin/main** — last recycle's reset never ran, remote branch already deleted. First
-  action next time = the guarded reset above. No batch queued.
+## Current state (2026-09-25)
+- Worktree on `fix/ui-polish` @ `c34eb507` after the guarded reset (its hero-CLS commit
+  `dd4e48f3` is merged; origin/fix/ui-polish deleted). Clean, idle, no batch queued.
+  The 09-25 batch ran without a push: the main session reviewed the local branch.
