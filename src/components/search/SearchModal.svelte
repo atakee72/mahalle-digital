@@ -69,6 +69,15 @@
     if (!runner.normalized) return;
     window.location.href = resultsHref;
   }
+  // A hit link can be a same-page hash (e.g. a comment on the post detail
+  // page the modal was opened from) — no page swap happens, so without this
+  // the modal would stay open (and scroll-locked) over the in-page scroll.
+  // Close on any hit-row or footer click; never preventDefault, the
+  // navigation itself must still happen.
+  function onBodyClick(e: MouseEvent) {
+    const a = (e.target as Element | null)?.closest('a.sh, a.sm-foot');
+    if (a) onClose(false);
+  }
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -83,7 +92,8 @@
     {/if}
     <button type="button" class="sm-esc kiosk-tap" onclick={() => close(true)} aria-label={$t['nav.search.close']}>Esc</button>
   </form>
-  <div class="sm-body">
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="sm-body" onclick={onBodyClick}>
     {#if !runner.normalized}
       <p class="sm-note">{$t['search.hint']}</p>
     {:else if runner.failed}
@@ -107,6 +117,6 @@
     {/if}
   </div>
   {#if counts && counts.total > 0}
-    <a class="sm-foot" href={resultsHref}>{tStr($t['search.all'], { n: counts.total })} →</a>
+    <a class="sm-foot" href={resultsHref} onclick={onBodyClick}>{tStr($t['search.all'], { n: counts.total })} →</a>
   {/if}
 </div>

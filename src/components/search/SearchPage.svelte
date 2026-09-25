@@ -23,9 +23,17 @@
   let inputEl = $state<HTMLInputElement | null>(null);
 
   const counts = $derived(runner.hits ? countHits(runner.hits) : null);
+  // `section` is the member's own choice and stays as they set it (so a later
+  // query with hits in that section shows it again); `effective` is what
+  // actually renders — falls back to „Alle" when the chosen section has zero
+  // hits for the current query (?s= deep link, or a new query with nothing
+  // there), so the kicker count and the body never disagree (review 2026-09-25).
+  const effective = $derived.by((): SearchSection | 'all' =>
+    section !== 'all' && counts && counts.bySection[section] === 0 ? 'all' : section
+  );
   const shown = $derived.by((): SearchSection[] => {
     if (!runner.hits) return [];
-    const list = section === 'all' ? SECTIONS : [section];
+    const list = effective === 'all' ? SECTIONS : [effective];
     return list.filter((s) => runner.hits!.hits[s].length > 0);
   });
   const shownTotal = $derived(counts ? shown.reduce((n, s) => n + counts.bySection[s], 0) : 0);
@@ -35,7 +43,7 @@
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
     if (runner.normalized) url.searchParams.set('q', runner.normalized); else url.searchParams.delete('q');
-    if (section !== 'all') url.searchParams.set('s', section); else url.searchParams.delete('s');
+    if (effective !== 'all') url.searchParams.set('s', effective); else url.searchParams.delete('s');
     window.history.replaceState(window.history.state, '', url.toString());
   });
 
@@ -74,13 +82,13 @@
     <!-- Section chips: always all five (the promise is „alle Bereiche"); a zero count is dimmed, not hidden. -->
     {#if counts && counts.total > 0}
       <div class="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={$t['nav.search.aria']}>
-        <button type="button" data-section-chip="all" aria-pressed={section === 'all'} onclick={() => (section = 'all')}
-          class="font-dmmono text-[10px] uppercase tracking-[0.06em] rounded-full border-[1.5px] border-ink px-2.5 py-1 {section === 'all' ? 'bg-ink text-paper' : 'bg-paper text-ink'}">
+        <button type="button" data-section-chip="all" aria-pressed={effective === 'all'} onclick={() => (section = 'all')}
+          class="font-dmmono text-[10px] uppercase tracking-[0.06em] rounded-full border-[1.5px] border-ink px-2.5 py-1 {effective === 'all' ? 'bg-ink text-paper' : 'bg-paper text-ink'}">
           {$t['search.section.all']} · {counts.total}
         </button>
         {#each SECTIONS as s (s)}
-          <button type="button" data-section-chip={s} aria-pressed={section === s} disabled={counts.bySection[s] === 0} onclick={() => (section = s)}
-            class="font-dmmono text-[10px] uppercase tracking-[0.06em] rounded-full border-[1.5px] border-ink px-2.5 py-1 disabled:opacity-40 {section === s ? 'bg-ink text-paper' : 'bg-paper text-ink'}">
+          <button type="button" data-section-chip={s} aria-pressed={effective === s} disabled={counts.bySection[s] === 0} onclick={() => (section = s)}
+            class="font-dmmono text-[10px] uppercase tracking-[0.06em] rounded-full border-[1.5px] border-ink px-2.5 py-1 disabled:opacity-40 {effective === s ? 'bg-ink text-paper' : 'bg-paper text-ink'}">
             {$t[SECTION_LABEL_KEY[s]]} · {counts.bySection[s]}
           </button>
         {/each}

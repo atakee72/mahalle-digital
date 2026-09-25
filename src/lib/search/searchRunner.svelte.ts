@@ -26,6 +26,11 @@ export function createSearchRunner(initial: { query?: string; results?: SiteSear
     try {
       const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
       if (my !== seq) return;
+      // Backspace-to-a-shorter-query case: this answer is for a query that is
+      // no longer current (e.g. "abc" lands after the user backspaced to
+      // "ab", whose own answer already arrived) — drop it, don't overwrite
+      // `results` with a stale query's payload.
+      if (q !== normalized) return;
       if (!r.ok) { failed = true; return; }
       results = (await r.json()) as SiteSearchResult;
     } catch {
@@ -39,7 +44,16 @@ export function createSearchRunner(initial: { query?: string; results?: SiteSear
     const q = normalized;
     clearTimeout(timer);
     if (!q) { loading = false; failed = false; return; }
-    if (results && results.q === q) return; // SSR answer or the same query again
+    if (results && results.q === q) {
+      // Backspace case: an in-flight request for an earlier query (e.g. "abc")
+      // is still running while we're back at a query ("ab") whose answer is
+      // already cached — invalidate it via `seq` so its answer can't land and
+      // overwrite `results`, and drop `loading` (this query has no request in
+      // flight at all).
+      seq++;
+      loading = false;
+      return; // SSR answer or the same query again
+    }
     failed = false;
     timer = setTimeout(() => run(q), 250);
     return () => clearTimeout(timer);
