@@ -48,7 +48,7 @@ import bookmarkletSrc from '../lib/clipper/bookmarklet.js?raw';
   </main>
 </KioskLayout>
 
-<script is:inline define:vars={{ bookmarkletSrc }}>
+<script is:inline data-astro-rerun define:vars={{ bookmarkletSrc }}>
   (function () {
     var link = document.getElementById('clipper-link');
     if (!link) return;

@@ -139,7 +139,7 @@
 
   // Event-clipper v5: the /events/clip landing sets ?clipMiss=1 when the
   // model + markup fallback found no date at all — surfaced as a notice
-  // below the form (state declared next to inlineError below).
+  // above the form (state declared next to inlineError below).
   const clipMissParam =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('clipMiss') === '1';
 

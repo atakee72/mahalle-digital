@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  berlinTodayISO, buildClipMessages, parseClipJson, normalizeClipResult, mergeHint, toComposeParams,
+  berlinTodayISO, buildClipMessages, parseClipJson, normalizeClipResult, mergeHint, toComposeParams, cleanHint,
   CLIP_JSON_SCHEMA,
 } from './extract';
 
@@ -145,4 +145,24 @@ test('toComposeParams: prefill contract of /events/create, selection wins over s
   assert.equal(miss.get('clipMiss'), '1');
   assert.equal(miss.get('from'), null);
   assert.equal(miss.get('title'), 'Page title');
+});
+
+test('toComposeParams: a long selection is capped so the Quelle line always survives the 3000-char body cap', () => {
+  const url = 'https://example.org/' + 'e'.repeat(9);
+  const found = normalizeClipResult({ title: 'x', startDate: '2026-10-03', startTime: null, endDate: null, endTime: null, allDay: false, location: null, summary: null, confidence: 'low' }, today);
+  const p = toComposeParams(found, { title: 'Page title', url, selection: 'S'.repeat(3000) });
+  const body = p.get('body')!;
+  assert.ok(body.length <= 3000);
+  assert.ok(body.endsWith(`Quelle: ${url}`));
+});
+
+test('cleanHint: keeps only valid keys, drops a time-only to, an end before start, and empties to undefined', () => {
+  assert.deepEqual(
+    cleanHint({ from: '2026-10-03', to: '22:00', startTime: '19:00', endTime: 'x', allDay: 'yes', location: ' Park ' }),
+    { from: '2026-10-03', startTime: '19:00', location: 'Park' }
+  );
+  assert.deepEqual(cleanHint({ from: '2026-10-05', to: '2026-10-03' }), { from: '2026-10-05' });
+  assert.equal(cleanHint({ to: '22:00' }), undefined);
+  assert.equal(cleanHint(null), undefined);
+  assert.deepEqual(cleanHint({ allDay: true, location: '' }), { allDay: true });
 });

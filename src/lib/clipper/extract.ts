@@ -126,6 +126,28 @@ export function normalizeClipResult(raw: unknown, todayISO: string): NormalizedC
   };
 }
 
+/** Keeps only the hint keys the API's strict Zod schema would accept, so a
+ * markup hint that fails validation (e.g. a time-only `to`, an over-length
+ * URL companion) never costs the whole POST — and with it the model's
+ * title/summary/location. */
+export function cleanHint(h: unknown): ClipHint | undefined {
+  if (!h || typeof h !== 'object') return undefined;
+  const o = h as Record<string, unknown>;
+  const out: ClipHint = {};
+  const from = ymd(o.from);
+  if (from) out.from = from;
+  const to = ymd(o.to);
+  if (to && (!from || to >= from)) out.to = to;
+  const startTime = hhmm(o.startTime);
+  if (startTime) out.startTime = startTime;
+  const endTime = hhmm(o.endTime);
+  if (endTime) out.endTime = endTime;
+  if (o.allDay === true) out.allDay = true;
+  const location = str(o.location, MAX_LOCATION);
+  if (location) out.location = location;
+  return Object.keys(out).length ? out : undefined;
+}
+
 /** Markup hints (JSON-LD / <time datetime>) fill only what the model left empty. */
 export function mergeHint(result: NormalizedClip, hint?: ClipHint): NormalizedClip {
   if (!hint) return result;
@@ -149,7 +171,12 @@ export function toComposeParams(result: NormalizedClip, page: { title: string; u
   const title = result.title ?? str(page.title, MAX_TITLE);
   if (title) p.set('title', title);
   const lead = page.selection?.trim() || result.summary || '';
-  p.set('body', (lead ? `${lead}\n\n` : '') + `Quelle: ${page.url}`);
+  // The composer caps body at 3000 chars — a long selection must not push
+  // the Quelle line off the end, or the source link is silently lost.
+  const source = `Quelle: ${page.url}`;
+  const room = Math.max(0, 3000 - source.length - 2);
+  const leadCapped = lead.slice(0, room);
+  p.set('body', (leadCapped ? `${leadCapped}\n\n` : '') + source);
   if (result.startDate) {
     p.set('from', result.startDate);
     if (result.endDate && result.endDate !== result.startDate) p.set('to', result.endDate);

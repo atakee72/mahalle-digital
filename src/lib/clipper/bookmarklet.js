@@ -49,7 +49,7 @@
       if (ts.length) {
         var d1 = String(ts[0].getAttribute('datetime')); hint.from = d1.slice(0, 10);
         if (d1.length >= 16) hint.startTime = d1.slice(11, 16);
-        if (ts.length > 1) { var d2 = String(ts[1].getAttribute('datetime')); var dd2 = d2.slice(0, 10); if (dd2 !== hint.from) hint.to = dd2; if (d2.length >= 16) hint.endTime = d2.slice(11, 16); }
+        if (ts.length > 1) { var d2 = String(ts[1].getAttribute('datetime')); var dd2 = d2.slice(0, 10); if (dd2 !== hint.from && /^\d{4}-\d{2}-\d{2}$/.test(dd2)) hint.to = dd2; if (d2.length >= 16) hint.endTime = d2.slice(11, 16); }
       }
     } catch (e) {}
   }
