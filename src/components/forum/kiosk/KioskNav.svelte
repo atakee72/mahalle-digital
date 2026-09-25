@@ -13,7 +13,7 @@
   import AvatarMenu from './AvatarMenu.svelte';
   import NotificationBell from './NotificationBell.svelte';
   import MastSearch from './MastSearch.svelte';
-  import { tick } from 'svelte';
+  import SearchModal from '../../search/SearchModal.svelte';
   import { untrack } from 'svelte';
   import { initialMastState, nextMastState, MAST_HIDE_QUERY } from '../../../lib/nav/hideOnScroll';
 
@@ -25,64 +25,20 @@
   let menuOpen = $state(false);
   let bellOpen = $state(false);
 
-  // ─── Masthead search (2026-09-24) ────────────────────────────────────
-  // The magnifier disc opens a strip under the bar (markup at the end of
-  // <header>, styles .ms-* in global.css). Enter → full navigation to
-  // /search?q= (the page SSRs the first query; the strip must not survive
-  // into a page that has its own box). Escape / a click outside close it.
+  // ─── Site search modal (2026-09-25) ──────────────────────────────────
+  // The magnifier disc opens SearchModal (centred box over a blurred scrim,
+  // mounted as the last child of <header> so it shares the header's z-50
+  // stacking context and covers the bottom nav). Escape / scrim / Esc button
+  // close it inside the modal; the modal reports whether focus should return
+  // to the disc. `searchOpen` also keeps the hide-on-scroll bar in place and
+  // bumps the header's z-index (below), like the menus.
   let searchOpen = $state(false);
-  let searchEl = $state<HTMLInputElement | null>(null);
-  let searchQ = $state('');
-
-  // Placement of the search form: inline in the right cluster from 1280 px
-  // (the bar's max width — measured 2026-09-25: only there is the row's free
-  // space ≥ 237 px; at 1024 it is already −19), the strip under the bar below.
-  // One form is mounted at a time, so bindings and ids stay single.
-  const WIDE_QUERY = '(min-width: 1280px)';
-  let wide = $state(false);
-  $effect(() => {
-    const mq = window.matchMedia(WIDE_QUERY);
-    const sync = () => (wide = mq.matches);
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  });
-  // Re-focus when the form changes side (resize across 1280 px while open).
-  $effect(() => {
-    if (!searchOpen) return;
-    void wide; // dependency
-    tick().then(() => searchEl?.focus());
-  });
-
-  async function toggleSearch() {
-    searchOpen = !searchOpen;
-    if (searchOpen) { await tick(); searchEl?.focus(); } // the strip mounts on the next flush
-  }
+  function toggleSearch() { searchOpen = !searchOpen; }
   function closeSearch(restoreFocus: boolean) {
     if (!searchOpen) return;
     searchOpen = false;
-    searchQ = '';
-    if (restoreFocus) (headerEl?.querySelector('[data-mast-search-btn]') as HTMLElement | null)?.focus();
+    if (restoreFocus) (headerEl?.querySelector('[data-mast-search-btn]') as HTMLElement | null)?.focus({ preventScroll: true });
   }
-  function submitSearch(e: SubmitEvent) {
-    e.preventDefault();
-    const q = searchQ.replace(/\s+/g, ' ').trim();
-    if (q.length < 2) return;
-    window.location.href = `/search?q=${encodeURIComponent(q)}`;
-  }
-  $effect(() => {
-    if (!searchOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeSearch(true); };
-    const onDown = (e: PointerEvent) => {
-      const t = e.target as Node;
-      if (headerEl?.querySelector('#mast-search')?.contains(t)) return;
-      if (headerEl?.querySelector('[data-mast-search-btn]')?.contains(t)) return;
-      closeSearch(false);
-    };
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('pointerdown', onDown);
-    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onDown); };
-  });
   let avatarEl = $state<HTMLElement | null>(null);
 
   // ─── Hide-on-scroll (phones/tablets, 2026-09-19) ─────────────────────
@@ -326,16 +282,6 @@
 
       <!-- User disc (ochre + initials, or photo) -->
       {#if user?.name}
-        {#if searchOpen && wide}
-          <!-- Wide screens: the field slides out of the disc, inside the bar (user, 2026-09-25).
-               Same id as the strip: exactly one of the two is mounted. -->
-          <form id="mast-search" class="ms-inline" role="search" onsubmit={submitSearch}>
-            <label class="ms-field ms-field--inline">
-              <span class="font-dmmono text-[14px] text-ink-mute" aria-hidden="true">⌕</span>
-              <input bind:this={searchEl} bind:value={searchQ} type="text" inputmode="search" enterkeyhint="search" maxlength="80" autocomplete="off" placeholder={$t['nav.search.placeholder']} aria-label={$t['nav.search.aria']} />
-            </label>
-          </form>
-        {/if}
         <MastSearch open={searchOpen} onToggle={toggleSearch} {currentPath} />
         <NotificationBell onOpenChange={(o: boolean) => (bellOpen = o)} />
         <div class="relative">
@@ -383,16 +329,8 @@
       {/if}
     </div>
   </div>
-  {#if searchOpen && !wide}
-    <form id="mast-search" class="ms-strip" role="search" onsubmit={submitSearch}>
-      <div class="ms-strip__inner">
-        <label class="ms-field">
-          <span class="font-dmmono text-[14px] text-ink-mute" aria-hidden="true">⌕</span>
-          <input bind:this={searchEl} bind:value={searchQ} type="text" inputmode="search" enterkeyhint="search" maxlength="80" autocomplete="off" placeholder={$t['nav.search.placeholder']} aria-label={$t['nav.search.aria']} />
-        </label>
-        <button type="button" class="ms-close kiosk-tap" onclick={() => closeSearch(true)} aria-label={$t['nav.search.close']}>×</button>
-      </div>
-    </form>
+  {#if searchOpen}
+    <SearchModal onClose={closeSearch} />
   {/if}
 </header>
 
