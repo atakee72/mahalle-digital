@@ -773,20 +773,27 @@
              when the image loaded. `max-height` clamps tall portraits; the
              image keeps object-contain, so it letterboxes on paper-soft
              instead of resizing the page. -->
-        <div
-          class="mb-5 rounded-md border-[1.5px] border-ink overflow-hidden max-w-prose bg-paper-soft"
-          style={`aspect-ratio: ${heroRatio}; max-height: 440px;`}
-          data-hero-box
-          data-hero-ratio={heroRatio}
-        >
-          <img
-            src={heroImage}
-            alt={topic.title}
-            width={heroDims?.width}
-            height={heroDims?.height}
-            class="w-full h-full object-contain"
-            loading="lazy"
-          />
+        <!-- Prose-wide wrapper keeps landscape covers flush with the text
+             column; the bordered box centres inside it (mx-auto), so a
+             portrait cover — narrowed by max-height through its ratio —
+             sits in the middle instead of hugging the left edge (user
+             decision 2026-09-25: most real covers are portrait). -->
+        <div class="mb-5 max-w-prose">
+          <div
+            class="mx-auto rounded-md border-[1.5px] border-ink overflow-hidden bg-paper-soft"
+            style={`aspect-ratio: ${heroRatio}; max-height: 440px;`}
+            data-hero-box
+            data-hero-ratio={heroRatio}
+          >
+            <img
+              src={heroImage}
+              alt={topic.title}
+              width={heroDims?.width}
+              height={heroDims?.height}
+              class="w-full h-full object-contain"
+              loading="lazy"
+            />
+          </div>
         </div>
       {/if}
 

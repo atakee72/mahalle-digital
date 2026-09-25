@@ -299,6 +299,7 @@ dev with the image held back 1.2 s: body top 331 → 771 px, CLS 0.190 at 390 px
 - Probe: `scratchpad/hero-cls-probe.cjs` (env `PROBE_WIDTH`, `PROBE_TAG`,
   `PROBE_PATH`; delays every Cloudinary response 1.2 s, installs a
   `layout-shift` PerformanceObserver before app scripts, reports shift sources).
+- **Centred since the same afternoon (user decision, `hero-centred-*.png`):** the bordered box sits inside a prose-wide wrapper with `mx-auto`. A portrait cover is narrowed by `max-height` through its ratio (370×800 → 204×440) and now centres in the text column instead of hugging its left edge; landscape covers and the 3:2 fallback still fill the column flush with the text. Most real covers on prod are portrait (5 of 7 at the backfill), which is why.
 
 ### Card numbers are real (2026-09-11)
 - **🔖 on cards is a count**: `attachSavedCounts()` in `src/lib/topicsQuery.ts`
