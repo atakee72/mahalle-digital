@@ -44,6 +44,7 @@
   // popstate (the phone gesture) just follows it, no further history call.
   let searchOpen = $state(false);
   let searchEntryPushed = false; // plain let, not state — bookkeeping only
+  let searchBackPending = false; // plain let, not state — bookkeeping only
   const SEARCH_HASH = '#suche';
 
   function openSearch() {
@@ -69,12 +70,20 @@
     // and not when the close came from popstate (the entry is already gone).
     if (searchEntryPushed && !opts.navigating && location.hash === SEARCH_HASH) {
       searchEntryPushed = false;
+      searchBackPending = true;
       history.back(); // → Astro onPopState: direction back, from.hash → moveToLocation, no fetch; restores the saved scroll
     } else {
       searchEntryPushed = false;
     }
   }
   function onSearchPopState() {
+    // history.back() above is async — if the disc is clicked again before its
+    // popstate lands, this flag says "that traversal is our own consumption,
+    // not a phone back", so a modal reopened in that window survives it.
+    // Accepted degradation: that one reopen has no entry of its own — the
+    // phone's next back leaves the page instead of closing it, and Escape
+    // pushes nothing back.
+    if (searchBackPending) { searchBackPending = false; return; }
     // Astro's moveToLocation() ends a same-page hash move with `location.href = to.href`, a
     // fragment navigation that fires a NATIVE popstate while we are still on #suche — ignore
     // it. A real „back" (or our own history.back()) lands hash-less.
