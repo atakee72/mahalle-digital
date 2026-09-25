@@ -1009,6 +1009,22 @@ option:disabled {
 .ms-field input::placeholder { color: var(--k-ink-mute); font-weight: 400; }
 .ms-close { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; border: 0; background: none; color: var(--k-ink); cursor: pointer; font-size: 18px; line-height: 1; }
 .ms-close:hover { background: rgb(27 26 23 / 0.08); }
+/* Wide placement (≥ 1280 px, JS-gated): the field slides out of the disc,
+   inside the bar's right cluster. 36 px tall like the discs, so the bar keeps
+   its height. 220 px = what the row's measured free space (237 px) allows
+   next to the 12 px gap — wider pushes bell and avatar out of the container. */
+.ms-inline {
+  display: flex; align-items: center; height: 36px; overflow: hidden;
+  width: 220px;
+  animation: ms-inline-in 200ms ease-out both;
+}
+.ms-field--inline { height: 36px; padding: 0 12px; }
+.ms-field--inline input { font-size: 14px; }
+@keyframes ms-inline-in {
+  from { width: 0; opacity: 0; }
+  to   { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .ms-inline { animation: none; } }
 
 .nc-menu {
   position: absolute; top: calc(100% + 10px); right: 0; width: 324px; z-index: 50;

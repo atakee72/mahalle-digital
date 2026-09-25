@@ -34,6 +34,26 @@
   let searchEl = $state<HTMLInputElement | null>(null);
   let searchQ = $state('');
 
+  // Placement of the search form: inline in the right cluster from 1280 px
+  // (the bar's max width — measured 2026-09-25: only there is the row's free
+  // space ≥ 237 px; at 1024 it is already −19), the strip under the bar below.
+  // One form is mounted at a time, so bindings and ids stay single.
+  const WIDE_QUERY = '(min-width: 1280px)';
+  let wide = $state(false);
+  $effect(() => {
+    const mq = window.matchMedia(WIDE_QUERY);
+    const sync = () => (wide = mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  });
+  // Re-focus when the form changes side (resize across 1280 px while open).
+  $effect(() => {
+    if (!searchOpen) return;
+    void wide; // dependency
+    tick().then(() => searchEl?.focus());
+  });
+
   async function toggleSearch() {
     searchOpen = !searchOpen;
     if (searchOpen) { await tick(); searchEl?.focus(); } // the strip mounts on the next flush
@@ -306,6 +326,16 @@
 
       <!-- User disc (ochre + initials, or photo) -->
       {#if user?.name}
+        {#if searchOpen && wide}
+          <!-- Wide screens: the field slides out of the disc, inside the bar (user, 2026-09-25).
+               Same id as the strip: exactly one of the two is mounted. -->
+          <form id="mast-search" class="ms-inline" role="search" onsubmit={submitSearch}>
+            <label class="ms-field ms-field--inline">
+              <span class="font-dmmono text-[14px] text-ink-mute" aria-hidden="true">⌕</span>
+              <input bind:this={searchEl} bind:value={searchQ} type="text" inputmode="search" enterkeyhint="search" maxlength="80" autocomplete="off" placeholder={$t['nav.search.placeholder']} aria-label={$t['nav.search.aria']} />
+            </label>
+          </form>
+        {/if}
         <MastSearch open={searchOpen} onToggle={toggleSearch} {currentPath} />
         <NotificationBell onOpenChange={(o: boolean) => (bellOpen = o)} />
         <div class="relative">
@@ -353,7 +383,7 @@
       {/if}
     </div>
   </div>
-  {#if searchOpen}
+  {#if searchOpen && !wide}
     <form id="mast-search" class="ms-strip" role="search" onsubmit={submitSearch}>
       <div class="ms-strip__inner">
         <label class="ms-field">
