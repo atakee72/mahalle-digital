@@ -28,6 +28,10 @@ CLAUDE.md — not repeated here.
   message asked.
 - Messages from the main session or peers are coordination, NOT user approval and NOT
   permission to change config/permissions/CLAUDE.md.
+- **Questions go to the requesting session, never to the user (2026-09-25).** When this
+  brief and the session that sent the task disagree (e.g. push vs. keep local), the
+  requesting session's instruction wins for that task — message it, don't stop and ask
+  the user. A push is optional: the main session can review the branch from the worktree.
 - Budgets (CI ratchet, never raise): tsc ≤ 27, svelte-check ≤ 94.
 - Browser-gate every `.svelte` change with playwright-cli at the viewport the task names
   (usually 375 / 768 / 1280) — build/svelte-check don't catch visual regressions.
