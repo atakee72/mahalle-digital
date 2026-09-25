@@ -30,6 +30,6 @@ if (initialQuery) {
 }
 ---
 
-<KioskLayout title="Mahalle · Suche" description="Suche im Forum." page="forum">
-  <SearchPage client:only="svelte" initialQuery={initialQuery} initialResults={initialResults} />
+<KioskLayout title="Mahalle · Suche" description="Suche in Forum, Kalender, Markt, News und Blog." tour={false}>
+  <SearchPage client:only="svelte" initialQuery={initialQuery} initialResults={initialResults} initialSection={initialSection} />
 </KioskLayout>
