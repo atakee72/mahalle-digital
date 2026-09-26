@@ -19,8 +19,9 @@ export function plainInline(s: string): string {
   return s
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1') // image → alt text
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1') // link → link text
-    .replace(/(\*\*|__)(.+?)\1/g, '$2') // bold (before italic)
-    .replace(/(\*|_)(.+?)\1/g, '$2') // italic
+    .replace(/(?<![\p{L}\p{N}])(\*\*|__)(?=\S)(.+?)(?<=\S)\1(?![\p{L}\p{N}])/gu, '$2') // bold: markers must not sit inside a word
+    .replace(/(?<![\p{L}\p{N}*])\*(?=\S)(.+?)(?<=\S)\*(?![\p{L}\p{N}*])/gu, '$1') // italic *
+    .replace(/(?<![\p{L}\p{N}_])_(?=\S)(.+?)(?<=\S)_(?![\p{L}\p{N}_])/gu, '$1') // italic _
     .replace(/`([^`]+)`/g, '$1') // inline code
     .replace(/<br\s*\/?>/gi, ' ')
     .replace(/<[^>]+>/g, '') // stray inline html

@@ -9,6 +9,14 @@ test('plainInline strips bold, italic, links, images and code', () => {
   assert.equal(plainInline('Zeile<br />Umbruch  doppelt'), 'Zeile Umbruch doppelt');
 });
 
+test('plainInline leaves intraword underscores and arithmetic asterisks alone', () => {
+  assert.equal(plainInline('Zeile mit some_thing_here im Text.'), 'Zeile mit some_thing_here im Text.');
+  assert.equal(plainInline('5*3=15 und weiter *kursiv* Text.'), '5*3=15 und weiter kursiv Text.');
+  assert.equal(plainInline('__stark__ und _leise_ hier'), 'stark und leise hier');
+  assert.equal(plainInline('**Otto Hempel (Die PARTEI)**: Text'), 'Otto Hempel (Die PARTEI): Text');
+  assert.equal(plainInline('a * b * c'), 'a * b * c');
+});
+
 test('paragraphs join soft line breaks and split on blank lines', () => {
   const md = 'Liebe Nachbarinnen und Nachbarn,\n\neigentlich sollte hier\njemand anderes schreiben.\n\n';
   assert.deepEqual(parseBlocks(md), [
