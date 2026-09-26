@@ -26,7 +26,7 @@ const proseClass = ['bl-prose max-w-[940px] mx-auto pt-2 pb-4', post.data.lede =
       images={(post.data.galleryImages ?? []).map((img, i) => ({ src: img.src, alt: post.data.coverAlt ? `${post.data.coverAlt} (${i + 1})` : undefined }))}
     />
   </div>
-  <BlogTranslate client:only="svelte" slug={meta.id} proseClass={proseClass} />
+  <BlogTranslate client:only="svelte" slug={meta.id} proseClass={proseClass} controlClass="max-w-[940px] mx-auto" />
   <div id="bl-original" class={proseClass}>
     <slot />
   </div>
