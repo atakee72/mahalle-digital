@@ -7,12 +7,15 @@
 // The link goes by userId, so a later handle change never breaks it, and an
 // „@word" in older text never becomes a link or a notification after the fact.
 import { ObjectId, type Db } from 'mongodb';
-import { extractMentionHandles, type MentionRef } from './mentions';
+import { ADMIN_ALIAS, extractMentionHandles, type MentionRef } from './mentions';
 
 export type MentionDb = Pick<Db, 'collection'>;
 
 const PARENT_COLLECTIONS = ['topics', 'announcements', 'recommendations', 'events'] as const;
 
+// „@admin" (2026-09-26): an alias for the member who holds the admin role. A
+// real member owning the handle „admin" always wins (signup refuses it, but a
+// legacy slug could exist). Oldest admin account by _id; tombstones never.
 export async function resolveMentions(db: MentionDb, text: string): Promise<MentionRef[]> {
   const handles = extractMentionHandles(text);
   if (handles.length === 0) return [];
@@ -20,6 +23,11 @@ export async function resolveMentions(db: MentionDb, text: string): Promise<Ment
     .find({ handle: { $in: handles }, anonymized: { $ne: true } }, { projection: { handle: 1 } })
     .toArray();
   const idByHandle = new Map(users.map((u) => [String(u.handle), String(u._id)]));
+  if (handles.includes(ADMIN_ALIAS) && !idByHandle.has(ADMIN_ALIAS)) {
+    const admin = await db.collection('users')
+      .findOne({ role: 'admin', anonymized: { $ne: true } }, { projection: { _id: 1 }, sort: { _id: 1 } });
+    if (admin) idByHandle.set(ADMIN_ALIAS, String(admin._id));
+  }
   return handles.filter((h) => idByHandle.has(h)).map((h) => ({ handle: h, userId: idByHandle.get(h)! }));
 }
 

@@ -9,6 +9,10 @@
 
 export const MAX_MENTIONS = 10;
 
+/** „@admin" (2026-09-26): an alias for whoever holds the admin role — resolved
+ *  server-side in mentionsResolve.ts; the popup offers it as a synthetic row. */
+export const ADMIN_ALIAS = 'admin';
+
 export interface MentionRef { handle: string; userId: string }
 export interface MentionSegment { type: 'text' | 'mention'; value: string; userId?: string }
 

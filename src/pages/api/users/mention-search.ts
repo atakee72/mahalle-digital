@@ -3,6 +3,7 @@ import { getSession } from 'auth-astro/server';
 import { ObjectId } from 'mongodb';
 import { connectDB } from '../../../lib/mongodb';
 import { consumeRateLimit } from '../../../lib/auth/rateLimit';
+import { ADMIN_ALIAS } from '../../../lib/mentions/mentions';
 
 // Autocomplete for „@" in forum posts and comments (2026-09-21). Members only
 // (the middleware gates /api/users too; the session is needed here for the rate
@@ -57,6 +58,10 @@ export const GET: APIRoute = async ({ request, url }) => {
     // when the query could still be typing that handle. Non-admins never do.
     const broadcast = session.user.role === 'admin' && 'alle'.startsWith(q.toLowerCase());
 
+    // „@admin" alias (2026-09-26): every NON-admin member gets a synthetic row when
+    // the query could still be typing „admin". The admin never sees it (self).
+    const admin = session.user.role !== 'admin' && ADMIN_ALIAS.startsWith(q.toLowerCase());
+
     return json(
       {
         users: docs.map((u) => ({
@@ -65,7 +70,8 @@ export const GET: APIRoute = async ({ request, url }) => {
           handle: String(u.handle),
           image: u.image || u.userPicture || null
         })),
-        broadcast
+        broadcast,
+        admin
       },
       200
     );

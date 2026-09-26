@@ -33,6 +33,7 @@ export function slugifyHandle(name: string): string {
 
 // Words a handle must never be: they read as a place in the app or as a group mention.
 export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
+  'admin',
   'alle', 'all', 'everyone', 'here', 'channel', 'kiez', 'nachbarn', 'nachbarschaft',
   'schillerkiez', 'forum', 'kurier', 'markt', 'kalender', 'profil', 'profile', 'login', 'register',
 ]);
