@@ -16,7 +16,7 @@ test('format: a-z 0-9 _ and 3–20 characters', () => {
 });
 
 test('reserved: team words, mention keywords, lookalikes', () => {
-  for (const h of ['admin', 'adm1n', 'mahalle', 'mahalle_team', 'moderation', 'team', 'alle', 'everyone', 'here', 'kiez', 'admin'])
+  for (const h of ['admin', 'adm1n', 'mahalle', 'mahalle_team', 'moderation', 'team', 'alle', 'everyone', 'here', 'kiez'])
     assert.equal(chosenHandleProblem(h), 'reserved', h);
   assert.equal(chosenHandleProblem('teamgeist'), null);
 });
