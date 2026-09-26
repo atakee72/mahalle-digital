@@ -1,5 +1,6 @@
 // src/lib/translation/translateContent.ts
 // SERVER-ONLY: loads content, enforces visibility, returns cached or fresh translation.
+// Mongo-backed types only — blog posts (repo MDX) go through ./translateBlog.ts.
 import { createHash } from 'crypto';
 import { ObjectId } from 'mongodb';
 import { connectDB } from '../mongodb';
