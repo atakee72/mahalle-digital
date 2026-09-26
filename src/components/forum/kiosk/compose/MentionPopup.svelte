@@ -9,7 +9,7 @@
   // no reactive dependencies (Svelte 5 trap, forum area file).
   import { tick } from 'svelte';
   import KioskAvatar from '../KioskAvatar.svelte';
-  import { activeMentionQuery, applyMention } from '../../../../lib/mentions/mentions';
+  import { activeMentionQuery, applyMention, ADMIN_ALIAS } from '../../../../lib/mentions/mentions';
 
   type Hit = { id: string; name: string; handle: string; image: string | null };
 
@@ -49,9 +49,13 @@
         // „@alle" Admin-Hinweis (2026-09-22): admins get a synthetic row ahead
         // of the real members. Picking it goes through the same applyMention
         // path, so the text gets „@alle ".
-        items = data.broadcast === true
-          ? [{ id: 'alle', name: 'alle aktiven Nachbar:innen', handle: 'alle', image: null }, ...hits]
-          : hits;
+        // „@admin" alias (2026-09-26): non-admins get a synthetic row that inserts
+        // „@admin "; the server resolves it to the admin account. „@alle" (admins
+        // only) and „@admin" (non-admins only) never coexist, order is defensive.
+        const extra: Hit[] = [];
+        if (data.broadcast === true) extra.push({ id: 'alle', name: 'alle aktiven Nachbar:innen', handle: 'alle', image: null });
+        if (data.admin === true) extra.push({ id: ADMIN_ALIAS, name: 'Admin · Mahalle-Team', handle: ADMIN_ALIAS, image: null });
+        items = [...extra, ...hits];
         active = 0;
         open = items.length > 0;
       } catch { close(); }
