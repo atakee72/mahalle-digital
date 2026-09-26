@@ -4,7 +4,7 @@
 // then creates a PARTIAL unique index. Never modifies any other field.
 import 'dotenv/config';
 import { MongoClient } from 'mongodb';
-import { slugifyHandle } from '../src/lib/profile/handle';
+import { slugifyHandle, chosenHandleProblem, HANDLE_FALLBACK } from '../src/lib/profile/handle';
 
 async function main() {
   const uri = process.env.MONGODB_URI;
@@ -25,7 +25,8 @@ async function main() {
   console.log(`${missing.length} users without handle, ${taken.size} handles taken`);
 
   for (const u of missing) {
-    const base = slugifyHandle(String(u.name ?? ''));
+    let base = slugifyHandle(String(u.name ?? ''));
+    if (chosenHandleProblem(base) === 'reserved') base = HANDLE_FALLBACK; // never @admin, @forum … (register.ts rule)
     let handle = base;
     for (let n = 2; taken.has(handle); n++) {
       const suffix = String(n);

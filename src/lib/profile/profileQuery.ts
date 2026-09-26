@@ -1,7 +1,7 @@
 // src/lib/profile/profileQuery.ts — SERVER-ONLY (imports mongodb)
 import { ObjectId } from 'mongodb';
 import { connectDB } from '../mongodb';
-import { slugifyHandle } from './handle';
+import { slugifyHandle, chosenHandleProblem, HANDLE_FALLBACK } from './handle';
 import type { ProfileMe } from './profileShared';
 
 /** Lazy self-heal: users registered by old prod code lack a handle. */
@@ -12,7 +12,10 @@ export async function ensureHandle(userId: string): Promise<string> {
   const u = await users.findOne({ _id }, { projection: { handle: 1, name: 1 } });
   if (!u) throw new Error('user not found');
   if (typeof u.handle === 'string') return u.handle;
-  const base = slugifyHandle(String(u.name ?? ''));
+  // Same rule as register.ts: the automatic base must never be a reserved word
+  // (a legacy member called „Admin" would otherwise own the @admin alias).
+  let base = slugifyHandle(String(u.name ?? ''));
+  if (chosenHandleProblem(base) === 'reserved') base = HANDLE_FALLBACK;
   for (let n = 0; n < 20; n++) {
     const suffix = n === 0 ? '' : String(n + 1);
     const handle = base.slice(0, 20 - suffix.length) + suffix;

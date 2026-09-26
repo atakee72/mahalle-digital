@@ -52,10 +52,12 @@
         // „@admin" alias (2026-09-26): non-admins get a synthetic row that inserts
         // „@admin "; the server resolves it to the admin account. „@alle" (admins
         // only) and „@admin" (non-admins only) never coexist, order is defensive.
-        const extra: Hit[] = [];
-        if (data.broadcast === true) extra.push({ id: 'alle', name: 'alle aktiven Nachbar:innen', handle: 'alle', image: null });
-        if (data.admin === true) extra.push({ id: ADMIN_ALIAS, name: 'Admin · Mahalle-Team', handle: ADMIN_ALIAS, image: null });
-        items = [...extra, ...hits];
+        // The admin row goes LAST: it shows from one letter for every member, and
+        // as the first row it would be the default Enter/Tab pick over „@anna"
+        // (final review). „@alle" stays first — the admin picks it on purpose.
+        const alle: Hit[] = data.broadcast === true ? [{ id: 'alle', name: 'alle aktiven Nachbar:innen', handle: 'alle', image: null }] : [];
+        const admin: Hit[] = data.admin === true ? [{ id: ADMIN_ALIAS, name: 'Admin · Mahalle-Team', handle: ADMIN_ALIAS, image: null }] : [];
+        items = [...alle, ...hits, ...admin];
         active = 0;
         open = items.length > 0;
       } catch { close(); }
