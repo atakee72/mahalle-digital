@@ -18,6 +18,7 @@
   import { t } from '../../../lib/kiosk-i18n';
   import BlPostMeta from './BlPostMeta.svelte';
   import type { BeilagePost } from '../../../lib/blog/beilage';
+  import { onMount } from 'svelte';
 
   let {
     post,
@@ -28,6 +29,19 @@
     rank: { no: number; of: number };
     variant: 'standard' | 'hero' | 'gallery';
   } = $props();
+
+  // BlogTranslate.svelte (sibling island) publishes the translated title/standfirst
+  // here through a document event — there is no shared store between islands.
+  let tr = $state<{ title: string; description: string } | null>(null);
+  onMount(() => {
+    const onTr = (e: Event) => {
+      tr = (e as CustomEvent<{ title: string; description: string } | null>).detail;
+    };
+    document.addEventListener('bl:translation', onTr);
+    return () => document.removeEventListener('bl:translation', onTr);
+  });
+  const title = $derived(tr?.title ?? post.title);
+  const description = $derived(tr?.description ?? post.description);
 </script>
 
 {#snippet heroBand()}
@@ -46,7 +60,7 @@
     <div class="font-dmmono" style="font-size: 9.5px; letter-spacing: 0.2em; color: var(--k-rust-on-ink);">
       {$t['blog.strap.hero']} · {$t['blog.strap.rubrik']} {post.tags[0]?.toUpperCase()} · № {rank.no} / {rank.of}
     </div>
-    <h1 class="font-bricolage text-[26px] lg:text-[38px]" style="font-weight: 800; letter-spacing: -0.025em; line-height: 1.02; margin: 8px 0 0;">{post.title}</h1>
+    <h1 class="font-bricolage text-[26px] lg:text-[38px]" style="font-weight: 800; letter-spacing: -0.025em; line-height: 1.02; margin: 8px 0 0;">{title}</h1>
   </div>
 {/snippet}
 
@@ -72,7 +86,7 @@
     </div>
   {/if}
   <div class="text-center" style="padding-top: {post.cover ? '98px' : '24px'};">
-    <div class="font-instrument italic" style="font-size: 19px; line-height: 1.45; color: var(--k-ink-soft); max-width: 780px; margin: 0 auto;">{post.description}</div>
+    <div class="font-instrument italic" style="font-size: 19px; line-height: 1.45; color: var(--k-ink-soft); max-width: 780px; margin: 0 auto;">{description}</div>
     <div class="flex justify-center" style="margin-top: 10px;"><BlPostMeta {post} /></div>
     <div style="width: 56px; height: 3px; background: var(--k-rust); margin: 16px auto 0;"></div>
   </div>
@@ -86,12 +100,12 @@
     <h1
       class="font-bricolage text-[27px] {variant === 'gallery' ? 'lg:text-[44px]' : 'lg:text-[46px]'}"
       style="font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin: 14px 0 12px;"
-    >{post.title}</h1>
+    >{title}</h1>
 
     <div
       class="font-instrument italic"
       style="font-size: {variant === 'gallery' ? '19px' : '20px'}; line-height: 1.45; color: var(--k-ink-soft); max-width: 780px; margin-bottom: 12px;"
-    >{post.description}</div>
+    >{description}</div>
 
     <BlPostMeta {post} />
 

@@ -5,6 +5,7 @@ import type { CollectionEntry } from 'astro:content';
 import ArticleShell from '../../components/blog/kiosk/ArticleShell.astro';
 import BlogArticleHeader from '../../components/blog/kiosk/BlogArticleHeader.svelte';
 import BlogGalleryGrid from '../../components/blog/kiosk/BlogGalleryGrid.svelte';
+import BlogTranslate from '../../components/blog/kiosk/BlogTranslate.svelte';
 import type { BeilagePost, RelatedItem } from '../../lib/blog/beilage';
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
   rank: { no: number; of: number };
 }
 const { post, meta, related, rank } = Astro.props;
+const proseClass = ['bl-prose max-w-[940px] mx-auto pt-2 pb-4', post.data.lede === false ? 'bl-prose--nolede' : ''].join(' ').trim();
 ---
 
 <ArticleShell post={meta} related={related}>
@@ -24,7 +26,8 @@ const { post, meta, related, rank } = Astro.props;
       images={(post.data.galleryImages ?? []).map((img, i) => ({ src: img.src, alt: post.data.coverAlt ? `${post.data.coverAlt} (${i + 1})` : undefined }))}
     />
   </div>
-  <div class:list={["bl-prose max-w-[940px] mx-auto pt-2 pb-4", { "bl-prose--nolede": Astro.props.post.data.lede === false }]}>
+  <BlogTranslate client:only="svelte" slug={meta.id} proseClass={proseClass} />
+  <div id="bl-original" class={proseClass}>
     <slot />
   </div>
 </ArticleShell>

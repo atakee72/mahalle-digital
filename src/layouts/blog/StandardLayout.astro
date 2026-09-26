@@ -4,6 +4,7 @@
 import type { CollectionEntry } from 'astro:content';
 import ArticleShell from '../../components/blog/kiosk/ArticleShell.astro';
 import BlogArticleHeader from '../../components/blog/kiosk/BlogArticleHeader.svelte';
+import BlogTranslate from '../../components/blog/kiosk/BlogTranslate.svelte';
 import type { BeilagePost, RelatedItem } from '../../lib/blog/beilage';
 
 interface Props {
@@ -13,13 +14,15 @@ interface Props {
   rank: { no: number; of: number };
 }
 const { meta, related, rank } = Astro.props;
+const proseClass = ['bl-prose bl-prose--cols pt-2 pb-4', Astro.props.post.data.lede === false ? 'bl-prose--nolede' : ''].join(' ').trim();
 ---
 
 <ArticleShell post={meta} related={related}>
   <div slot="header" class="max-w-[940px] mx-auto px-5 lg:px-0 pt-8">
     <BlogArticleHeader client:only="svelte" post={meta} rank={rank} variant="standard" />
   </div>
-  <div class:list={["bl-prose bl-prose--cols pt-2 pb-4", { "bl-prose--nolede": Astro.props.post.data.lede === false }]}>
+  <BlogTranslate client:only="svelte" slug={meta.id} proseClass={proseClass} />
+  <div id="bl-original" class={proseClass}>
     <slot />
   </div>
 </ArticleShell>

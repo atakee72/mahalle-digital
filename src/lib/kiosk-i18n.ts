@@ -2092,6 +2092,7 @@ const de = {
   'tr.err.rate_limited': 'Zu viele Übersetzungen — bitte später erneut versuchen',
   'tr.err.too_long': 'Beitrag zu lang für die Übersetzung',
   'tr.err.generic': 'Übersetzung fehlgeschlagen',
+  'tr.err.login': 'Zum Übersetzen bitte anmelden',
 } as const;
 
 // Key parity between de/en stays type-enforced; literal-VALUE parity does
@@ -4047,6 +4048,7 @@ const en: Dict = {
   'tr.err.rate_limited': 'Too many translations — please try again later',
   'tr.err.too_long': 'Post too long to translate',
   'tr.err.generic': 'Translation failed',
+  'tr.err.login': 'Please log in to translate',
 };
 
 export const dictionaries: Record<Locale, Dict> = { de, en };
