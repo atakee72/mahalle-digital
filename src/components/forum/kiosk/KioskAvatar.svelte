@@ -13,14 +13,12 @@
     name,
     image = null,
     size = 'md',
-    isOP = false,
     slot: slotOverride,
     class: extraClass = ''
   } = $props<{
     name: string;
     image?: string | null;
     size?: 'sm' | 'md' | 'lg';
-    isOP?: boolean;
     /** Force a specific palette slot. Useful for canvas-fidelity examples
      *  ("Lena K." in the canvas is wine) or branded users (Mahalle-Team). */
     slot?: 'wine' | 'teal' | 'ochre' | 'moss' | 'plum';
@@ -81,12 +79,4 @@
     </div>
   {/if}
 
-  {#if isOP}
-    <span
-      class="absolute -top-1 -right-1 px-1 py-px bg-ink text-paper rounded font-dmmono font-bold uppercase tracking-[0.08em] text-[8px] leading-tight"
-      aria-label="original poster"
-    >
-      OP
-    </span>
-  {/if}
 </div>

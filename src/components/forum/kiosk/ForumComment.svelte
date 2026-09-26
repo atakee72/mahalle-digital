@@ -221,7 +221,6 @@
       name={typeof comment.author === 'object' ? (comment.author?.name ?? '·') : '·'}
       image={typeof comment.author === 'object' ? (comment.author?.image ?? null) : null}
       size="sm"
-      isOP={isOP}
     />
     {#if likeCount > 0}
       <span class="font-dmmono text-[9.5px] tracking-[0.05em] text-ink-mute flex items-center gap-0.5">
