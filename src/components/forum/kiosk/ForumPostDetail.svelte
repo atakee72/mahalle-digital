@@ -70,6 +70,20 @@
   let topic = $state(initialTopic);
   // svelte-ignore state_referenced_locally
   let comments = $state<any[]>(initialComments);
+  // „Wer mitredet": one head per PERSON, not per comment (user, 2026-09-26:
+  // „i am shown there now twice, one for each is enough"). Keyed by author id,
+  // falling back to the name for legacy rows without an author object.
+  const people = $derived.by(() => {
+    const seen = new Set<string>();
+    const out: any[] = [];
+    for (const c of comments) {
+      const key = authorIdOf(c.author) ?? (c.author?.name ? `name:${c.author.name}` : null);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push({ key, name: c.author?.name ?? '·', image: c.author?.image ?? null });
+    }
+    return out;
+  });
 
   function authorIdOf(v: any): string | null {
     if (!v) return null;
@@ -1016,22 +1030,18 @@
             <p
               class="font-dmmono text-[10px] uppercase tracking-[0.12em] text-teal mb-2 flex items-center gap-1.5"
             >
-              <span aria-hidden="true">◆</span> {$t['detail.people.heading']} · {comments.length}
+              <span aria-hidden="true">◆</span> {$t['detail.people.heading']} · {people.length}
             </p>
-            {#if comments.length}
+            {#if people.length}
               <div class="flex flex-wrap gap-1.5">
-                {#each comments.slice(0, 8) as c (c._id)}
-                  <KioskAvatar
-                    name={c.author?.name ?? '·'}
-                    image={c.author?.image ?? null}
-                    size="sm"
-                  />
+                {#each people.slice(0, 8) as p (p.key)}
+                  <KioskAvatar name={p.name} image={p.image} size="sm" />
                 {/each}
-                {#if comments.length > 8}
+                {#if people.length > 8}
                   <div
                     class="w-7 h-7 rounded-full border-[1.5px] border-dashed border-ink-mute flex items-center justify-center font-dmmono text-[9.5px] text-ink-mute"
                   >
-                    +{comments.length - 8}
+                    +{people.length - 8}
                   </div>
                 {/if}
               </div>
