@@ -144,6 +144,13 @@
   --k-bar-pill-border: var(--k-paper); /* frame of the DE/EN pill, the avatar disc and the active desktop tab: paper on every coloured bar (user, 2026-09-22) */
 }
 [data-page="newsboard"] { --k-bar-hover: rgb(255 255 255 / 0.15); }
+/* Markt keeps ink text on its ochre bar, but its frames go paper like the
+   coloured bars (user, 2026-09-27): logo ring, DE/EN pill, search/bell/avatar
+   discs — the ink hairline inside them only reads against a paper frame. */
+[data-page="marketplace"] {
+  --k-bar-disc-ring: 0 0 0 2px var(--k-paper);
+  --k-bar-pill-border: var(--k-paper);
+}
 /* On the INK bar the active desktop pill (bg-ink) would vanish — flip it. */
 [data-page="newsboard"] header nav a[aria-current="page"] {
   background: var(--k-paper);
