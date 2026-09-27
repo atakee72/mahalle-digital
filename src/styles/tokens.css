@@ -132,11 +132,20 @@
 }
 [data-page="forum"]        { --k-bar: var(--k-wine-deep); }
 [data-page="calendar"]     { --k-bar: #3f7e8a; } /* one tick calmer than --k-teal (user, 2026-09-22 15:00); bars only */
-[data-page="marketplace"]  { --k-bar: #b97a1a; } /* the darker ochre of the market „+" (user trial 2026-09-28 00:38; was #df9b2f since 09-22), ink text stays; bars only */
+[data-page="marketplace"]  { --k-bar: #d68a1a; } /* two ticks livelier than the „+"'s #b97a1a (user, 2026-09-28 01:01, seen on dev, after trying up to #faaf2e unseen; #b97a1a and #c88219 held minutes, #df9b2f since 09-22), ink text stays; bars only */
 [data-page="newsboard"]    { --k-bar: var(--k-ink); }
 [data-page="schillerkiez"] { --k-bar: var(--k-moss); }
 [data-page="blog"]         { --k-bar: var(--k-rust); }
-:is([data-page="forum"], [data-page="calendar"], [data-page="newsboard"], [data-page="schillerkiez"], [data-page="blog"]) {
+/* Profil: every section's bar colour in nav order, fading into the next
+   (user trial 2026-09-28 01:06). --k-bar is only ever painted as a
+   `background`, so a gradient rides in the same variable. Paper text like the
+   coloured bars (ink would vanish over the wine + ink segments). */
+[data-page="profile"] {
+  --k-bar: linear-gradient(90deg, var(--k-wine-deep) 0%, #3f7e8a 20%, var(--k-ink) 40%, #d68a1a 60%, var(--k-moss) 80%, var(--k-rust) 100%);
+}
+/* The ink segment sits under the tab row — ink tab frames vanish there. */
+[data-page="profile"] header nav a:not([aria-current="page"]) { border-color: var(--k-paper); }
+:is([data-page="forum"], [data-page="calendar"], [data-page="newsboard"], [data-page="schillerkiez"], [data-page="blog"], [data-page="profile"]) {
   --k-bar-fg: var(--k-paper);
   --k-bar-hover: rgb(0 0 0 / 0.15);
   --k-bar-dim: 1;
