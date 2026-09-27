@@ -80,17 +80,6 @@
   font-weight: 400;
 }
 
-/* ── Nav avatar ring while /profil is active ─────────────────────
-   Profile is NOT a nav tab — while it's the active route, the
-   KioskNav avatar disc carries an ochre ring instead. Consumed by
-   a later task (KioskNav wiring). */
-.prof-nav-avatar-active {
-  /* One ink ring right outside the paper frame. Until 2026-09-28 this was a
-     paper gap + ink ring around an INK frame (a double ring); with paper
-     frames on every bar the gap merged into the frame and the disc read as
-     inflated (user, 00:18). */
-  box-shadow: 0 0 0 2px var(--k-ink);
-}
 
 /* ── Reduced motion ────────────────────────────────────────────
    The Chronik now-dot stays solid ochre (color already carries

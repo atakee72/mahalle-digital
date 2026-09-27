@@ -227,10 +227,10 @@
     return matches.some((m) => currentPath === m || (m !== '/' && currentPath.startsWith(m + '/')));
   }
 
-  // Profile isn't a nav tab — while it's the active route, the avatar disc
-  // itself carries an ochre ring instead (`.prof-nav-avatar-active` in
-  // src/styles/profile.css, which only loads on /profile — harmless no-op
-  // class reference on other pages since profileActive is false there).
+  // Profile isn't a nav tab — while it's the active route only aria-current
+  // marks the avatar. The extra ring it carried until 2026-09-28 (paper gap +
+  // ink ring, later one ink ring) was dropped: with paper frames on every bar
+  // it read as a stray black ring around the disc (user, 00:35).
   const profileActive = $derived(currentPath === '/profile' || currentPath.startsWith('/profile/'));
 
   // Live avatar update — the nav's `user` prop is a session snapshot (only
@@ -341,7 +341,6 @@
             aria-expanded={menuOpen}
             aria-label={user.name}
             aria-current={profileActive ? 'page' : undefined}
-            class:prof-nav-avatar-active={profileActive}
             class="relative w-9 h-9 rounded-full border-2 border-[color:var(--k-bar-pill-border)] flex items-center justify-center font-dmmono font-bold text-[11px] uppercase tracking-wider bg-paper text-ink hover:scale-105 transition-transform duration-[180ms] ease-out kiosk-tap"
           >
             {#if liveImage ?? user.image}
