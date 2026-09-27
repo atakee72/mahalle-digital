@@ -97,3 +97,14 @@
   .prof-save-chip,
   .prof-chip-in { opacity: 1; transform: none; }
 }
+
+/* ── Archive list box (2026-09-28) ─────────────────────────────
+   The ledger keeps a fixed height and scrolls inside; a short list
+   stays short (max-height, not height). Last row's dashed rule is the
+   bottom edge, so a hairline closes the box only while it scrolls. */
+.prof-ledger-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}

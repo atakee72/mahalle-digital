@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { scrollFade } from '../../../lib/scrollFade';
   // Kiez-Chronik strip — compact derived tenure timeline. Sits above the
   // Archiv on the own profile (this task) AND, unmodified, on the public
   // profile (Plan B Task 4 reuses this exact component/prop contract).
@@ -61,10 +62,13 @@
     class="font-dmmono"
     style="font-size: 9.5px; letter-spacing: 0.14em; color: var(--k-ink-mute); margin-right: 18px; flex-shrink: 0;"
   >{$t['profile.chronik.label']}</span>
-  <div style="flex: 1; display: flex; align-items: center; min-width: 0;">
+  <!-- Phones: the stops overflow the 390 px card (user, 2026-09-28 01:51) —
+       the row scrolls sideways with the shared edge fade; the dashed
+       connectors keep a minimum length instead of collapsing. -->
+  <div use:scrollFade class="kiosk-scroll-fade no-scrollbar" style="flex: 1; display: flex; align-items: center; min-width: 0; overflow-x: auto;">
     {#each rows as row, i (row.stop.kind)}
       {#if i > 0}
-        <span style="flex: 1; border-top: 1.5px dashed var(--k-rule); margin: 0 8px;"></span>
+        <span style="flex: 1 0 24px; border-top: 1.5px dashed var(--k-rule); margin: 0 8px;"></span>
       {/if}
       <span style="display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0;">
         <span

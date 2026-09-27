@@ -188,13 +188,18 @@
       {/if}
     </div>
   {:else}
-    {#each items as item (item.id)}
-      <PActivityRow {item} saved={showSaved} />
-    {/each}
-    {#if nextBefore}
-      <div style="margin-top: 14px; text-align: center;">
-        <PBtn small disabled={loadingMore} onclick={loadOlder}>{$t['profile.archiv.older']}</PBtn>
-      </div>
-    {/if}
+    <!-- Bounded list: the card stopped growing with the member's history
+         (user, 2026-09-28 01:51) — rows scroll inside the box, the „older"
+         button sits at the end of the scroll. -->
+    <div class="prof-ledger-scroll">
+      {#each items as item (item.id)}
+        <PActivityRow {item} saved={showSaved} />
+      {/each}
+      {#if nextBefore}
+        <div style="margin-top: 14px; text-align: center;">
+          <PBtn small disabled={loadingMore} onclick={loadOlder}>{$t['profile.archiv.older']}</PBtn>
+        </div>
+      {/if}
+    </div>
   {/if}
 </PCard>
