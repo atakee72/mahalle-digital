@@ -126,9 +126,9 @@
   --k-bar: var(--k-ochre);
   --k-bar-fg: var(--k-ink);
   --k-bar-hover: var(--k-paper-warm);
-  --k-bar-disc-ring: 0 0 0 2px var(--k-ink); /* ink ring on ochre, paper on colour — one rule: frame = bar text colour (user, 2026-09-22) */
+  --k-bar-disc-ring: 0 0 0 2px var(--k-paper); /* paper ring on EVERY bar since 2026-09-28 (user: Markt, then Profil too) — until then ink on the ochre bars (frame = bar text colour, 09-22), where the ink hairline inside it had nothing to read against */
   --k-bar-dim: 0.7;
-  --k-bar-pill-border: var(--k-ink);
+  --k-bar-pill-border: var(--k-paper);
 }
 [data-page="forum"]        { --k-bar: var(--k-wine-deep); }
 [data-page="calendar"]     { --k-bar: #3f7e8a; } /* one tick calmer than --k-teal (user, 2026-09-22 15:00); bars only */
@@ -139,18 +139,9 @@
 :is([data-page="forum"], [data-page="calendar"], [data-page="newsboard"], [data-page="schillerkiez"], [data-page="blog"]) {
   --k-bar-fg: var(--k-paper);
   --k-bar-hover: rgb(0 0 0 / 0.15);
-  --k-bar-disc-ring: 0 0 0 2px var(--k-paper);
   --k-bar-dim: 1;
-  --k-bar-pill-border: var(--k-paper); /* frame of the DE/EN pill, the avatar disc and the active desktop tab: paper on every coloured bar (user, 2026-09-22) */
 }
 [data-page="newsboard"] { --k-bar-hover: rgb(255 255 255 / 0.15); }
-/* Markt keeps ink text on its ochre bar, but its frames go paper like the
-   coloured bars (user, 2026-09-27): logo ring, DE/EN pill, search/bell/avatar
-   discs — the ink hairline inside them only reads against a paper frame. */
-[data-page="marketplace"] {
-  --k-bar-disc-ring: 0 0 0 2px var(--k-paper);
-  --k-bar-pill-border: var(--k-paper);
-}
 /* On the INK bar the active desktop pill (bg-ink) would vanish — flip it. */
 [data-page="newsboard"] header nav a[aria-current="page"] {
   background: var(--k-paper);
