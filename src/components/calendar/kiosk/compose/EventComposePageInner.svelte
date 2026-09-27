@@ -29,6 +29,13 @@
   } from '../../../../lib/calendarMutations';
   import { eventDraft, type EventDraftValues } from '../../../../lib/eventDraftStore';
   import { t } from '../../../../lib/kiosk-i18n';
+  import {
+    berlinDayOf,
+    berlinTodayISO,
+    berlinDayStart,
+    berlinDayEnd,
+    isLegacyUtcAllDay
+  } from '../../../../lib/calendar/berlinDay';
   import { showToast, showSuccess } from '../../../../utils/toast';
   import type { EventCategory, Event as EventDoc } from '../../../../types';
 
@@ -51,6 +58,13 @@
   // we don't need to defer to onMount. Computing synchronously here
   // means EventComposeForm's `$state` seeders fire with the right
   // values on first render.
+  function allDayPrefill(start: Date, end: Date): { start: string; end: string } {
+    if (isLegacyUtcAllDay(start, end)) {
+      return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+    }
+    return { start: berlinDayOf(start), end: berlinDayOf(end) };
+  }
+
   function computeInitialValues(): Partial<EventComposeValues> {
     // Edit mode wins outright — populate from the existing event,
     // never read URL prefill or draft store.
@@ -65,9 +79,13 @@
         title: initialEvent.title ?? '',
         body: initialEvent.body ?? '',
         category: (initialEvent.category ?? 'kiez') as EventCategory,
-        startDate: dateStr(start),
+        // All-day: the stored bounds are Berlin day bounds (since 2026-09-27) —
+        // read the civil day in Berlin, never the browser's local date. Rows
+        // stored before the fix (UTC midnight → 23:59:59Z) carry the meant day
+        // in their UTC date, so read that until the repair script has run.
+        startDate: initialEvent.allDay ? allDayPrefill(start, end).start : dateStr(start),
         startTime: initialEvent.allDay ? '00:00' : timeStr(start),
-        endDate: dateStr(end),
+        endDate: initialEvent.allDay ? allDayPrefill(start, end).end : dateStr(end),
         endTime: initialEvent.allDay ? '23:59' : timeStr(end),
         allDay: !!initialEvent.allDay,
         location: initialEvent.location ?? '',
@@ -151,9 +169,9 @@
     title: initialValues.title ?? '',
     body: initialValues.body ?? '',
     category: (initialValues.category ?? 'kiez') as EventCategory,
-    startDate: initialValues.startDate ?? new Date().toISOString().slice(0, 10),
+    startDate: initialValues.startDate ?? berlinTodayISO(),
     startTime: initialValues.startTime ?? '09:00',
-    endDate: initialValues.endDate ?? new Date().toISOString().slice(0, 10),
+    endDate: initialValues.endDate ?? berlinTodayISO(),
     endTime: initialValues.endTime ?? '17:00',
     allDay: initialValues.allDay ?? false,
     location: initialValues.location ?? '',
@@ -211,9 +229,11 @@
     return null;
   }
 
-  // Compose ISO datetime strings from the date+time inputs.
+  // Compose ISO datetime strings from the date+time inputs. Timed events are
+  // exact instants in the browser's zone; all-day events are Berlin civil
+  // days (storage contract since 2026-09-27, see berlinDay.ts).
   function composeIso(date: string, time: string, allDay: boolean): string {
-    if (allDay) return `${date}T00:00:00.000Z`;
+    if (allDay) return berlinDayStart(date).toISOString();
     return new Date(`${date}T${time || '00:00'}`).toISOString();
   }
 
@@ -231,7 +251,7 @@
     try {
       const startISO = composeIso(values.startDate, values.startTime, values.allDay);
       const endISO = values.allDay
-        ? new Date(`${values.endDate}T23:59:59.000Z`).toISOString()
+        ? berlinDayEnd(values.endDate).toISOString()
         : composeIso(values.endDate, values.endTime, false);
 
       const payload = {

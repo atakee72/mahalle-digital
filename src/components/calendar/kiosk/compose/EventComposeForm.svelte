@@ -28,6 +28,7 @@
   import { CATEGORIES, CATEGORY_ORDER } from '../../../../lib/calendar/categories';
   import { scrollFade } from '../../../../lib/scrollFade';
   import { t } from '../../../../lib/kiosk-i18n';
+  import { berlinTodayISO } from '../../../../lib/calendar/berlinDay';
   import type { EventCategory } from '../../../../types';
 
   let {
@@ -48,7 +49,7 @@
   // must never inherit the current wall-clock (e.g. picking a day at 22:00
   // used to prefill 22:00–23:00). Mirrors the calendar tooltip's prefill.
   function todayISO(): string {
-    return new Date().toISOString().slice(0, 10);
+    return berlinTodayISO(); // Berlin's civil date — between 00:00 and 02:00 CEST the UTC date is still yesterday
   }
   function isTodayISO(d?: string): boolean {
     return (d ?? todayISO()) === todayISO();
