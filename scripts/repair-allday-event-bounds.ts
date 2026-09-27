@@ -38,7 +38,12 @@ async function main() {
       const next = repairedAllDayBounds(start, end);
       if (!next) { skipped++; continue; }
       console.log(`  ${String(r._id)}  ${String(r.title).slice(0, 48).padEnd(48)}  ${start.toISOString()} → ${end.toISOString()}  ⇒  ${berlinDayOf(next.start)} … ${berlinDayOf(next.end)} (Berlin)`);
-      if (APPLY) await events.updateOne({ _id: r._id }, { $set: { startDate: next.start, endDate: next.end, updatedAt: new Date() } });
+      // Filter on the old bounds too: an author edit landing between the read and
+      // this write must win (matchedCount 0 → reported, not overwritten).
+      if (APPLY) {
+        const res = await events.updateOne({ _id: r._id, startDate: start, endDate: end }, { $set: { startDate: next.start, endDate: next.end, updatedAt: new Date() } });
+        if (res.matchedCount === 0) { console.log('    ↳ changed meanwhile, left alone'); continue; }
+      }
       fixed++;
     }
     console.log(`${APPLY ? 'rewrote' : 'would rewrite'} ${fixed}, already fine ${skipped}`);

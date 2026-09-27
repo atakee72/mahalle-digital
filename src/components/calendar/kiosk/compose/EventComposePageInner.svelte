@@ -75,6 +75,7 @@
       const dateStr = (d: Date) =>
         `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
       const timeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      const allDayDays = initialEvent.allDay ? allDayPrefill(start, end) : null;
       return {
         title: initialEvent.title ?? '',
         body: initialEvent.body ?? '',
@@ -83,9 +84,9 @@
         // read the civil day in Berlin, never the browser's local date. Rows
         // stored before the fix (UTC midnight → 23:59:59Z) carry the meant day
         // in their UTC date, so read that until the repair script has run.
-        startDate: initialEvent.allDay ? allDayPrefill(start, end).start : dateStr(start),
+        startDate: allDayDays ? allDayDays.start : dateStr(start),
         startTime: initialEvent.allDay ? '00:00' : timeStr(start),
-        endDate: initialEvent.allDay ? allDayPrefill(start, end).end : dateStr(end),
+        endDate: allDayDays ? allDayDays.end : dateStr(end),
         endTime: initialEvent.allDay ? '23:59' : timeStr(end),
         allDay: !!initialEvent.allDay,
         location: initialEvent.location ?? '',
