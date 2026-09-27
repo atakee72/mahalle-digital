@@ -32,6 +32,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return await next();
     }
 
+    // Stale *.vercel.app links (old preview/branch aliases sent around before the
+    // domain, 2026-09-27) land on the canonical domain: PRODUCTION deployments
+    // only (previews keep their own host for testing), page requests only — the
+    // Vercel cron calls /api/news/fetch-daily on the deployment URL and must not
+    // be redirected. 308 keeps method + path; the query string travels along.
+    if (
+      process.env.VERCEL_ENV === 'production' &&
+      context.url.hostname.endsWith('.vercel.app') &&
+      !context.url.pathname.startsWith('/api/')
+    ) {
+      return context.redirect(`https://mahalle.digital${context.url.pathname}${context.url.search}`, 308);
+    }
+
     try {
       // Get session from NextAuth via auth-astro
       const session = await getSession(context.request);
