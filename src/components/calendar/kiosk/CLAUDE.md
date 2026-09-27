@@ -95,6 +95,7 @@ Until this day `EventComposePageInner.composeIso()` stored an all-day event as `
 - **Prefill** for all-day events reads the civil day in Berlin (`berlinDayOf`), never the browser's local date; rows still in the legacy UTC shape (`isLegacyUtcAllDay`) are read by their UTC dates until repaired. `eventTime.ts` is untouched: with Berlin bounds a Berlin browser computes spans correctly (a member abroad would still see local-zone spans — accepted).
 - **Composer default date** is `berlinTodayISO()` everywhere (form + page fallbacks) — closed the old ticket „between 00:00 and 02:00 the default was yesterday" (UTC date).
 - **Repair**: `scripts/repair-allday-event-bounds.ts` (dry-run default, `--apply`, `--prod` = the user's run; pure mapping `allDayRepair.ts`, tested) rewrites legacy rows to the Berlin bounds of the days their UTC dates name. A row whose end already grew keeps that end day — the author fixes it once in the form.
+- **Prod repair APPLIED 2026-09-27 12:59 by the user** (5 rows rewritten: Kinder-Comic-Tag, Berliner Wahlen, Flowmarkt, Monat der zeitgenössischen Musik, Kamerabörse; dry run first). Kinder-Comic-Tag had grown to 6–7 Sept and was shortened by hand afterwards. The write is guarded by the old bounds (`updateOne({ _id, startDate, endDate })`), so an edit landing meanwhile wins.
 - **Probe**: `scratchpad/e2e-event-allday-berlin.mts` (dev :4655, Berlin zone; create/re-edit/midnight-crossing/legacy prefill/default date).
 
 ## Compose URL prefill + Termin-Clipper (Aug 2026)
