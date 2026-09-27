@@ -2,6 +2,8 @@
 // Dependency-free — imported by the API route (server) AND the /events/clip
 // page script (browser). Never import mongodb/Sentry/env here.
 
+export { berlinTodayISO } from '../calendar/berlinDay';
+
 export type ClipHint = {
   from?: string; to?: string; startTime?: string; endTime?: string; allDay?: boolean; location?: string;
 };
@@ -47,11 +49,6 @@ export const CLIP_JSON_SCHEMA = {
     required: ['title', 'startDate', 'startTime', 'endDate', 'endTime', 'allDay', 'location', 'summary', 'confidence'],
   },
 } as const;
-
-/** Today's date in Europe/Berlin as YYYY-MM-DD (en-CA formats ISO-like). */
-export function berlinTodayISO(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
-}
 
 function weekdayOf(isoDate: string): string {
   return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${isoDate}T12:00:00Z`));
