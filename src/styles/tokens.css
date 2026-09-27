@@ -141,7 +141,7 @@
    `background`, so a gradient rides in the same variable. Paper text like the
    coloured bars (ink would vanish over the wine + ink segments). */
 [data-page="profile"] {
-  --k-bar: linear-gradient(90deg, var(--k-wine-deep) 0%, #3f7e8a 20%, var(--k-ink) 40%, #d68a1a 60%, var(--k-moss) 80%, var(--k-rust) 100%);
+  --k-bar: repeating-linear-gradient(90deg, rgb(27 26 23 / 0.22) 0 1px, transparent 1px 3px), linear-gradient(rgb(243 234 216 / 0.04), rgb(243 234 216 / 0.04)), linear-gradient(90deg, var(--k-ink) 0%, var(--k-wine-deep) 18%, #3f7e8a 34%, #d68a1a 50%, var(--k-moss) 66%, var(--k-rust) 82%, var(--k-ink) 100%); /* the fade under a 1 px ink line every 3 px — print-screen texture (01:16); ink moved from the middle to both edges (01:18); paper wash at 4% over the fade (01:21; 22%, 14%, 8% each held a minute); full-width hard stripes held minutes */
 }
 /* The ink segment sits under the tab row — ink tab frames vanish there. */
 [data-page="profile"] header nav a:not([aria-current="page"]) { border-color: var(--k-paper); }
