@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 Mahalle - A Fullstack Community Web App for Local Neighborhoods. The name means "neighborhood" in Turkish and sounds like "meine Halle" (my hall) in German, reflecting the multicultural community it serves.
 
-**Landing ribbons (2026-09-28):** the mirrored background artwork in `LandingPage.svelte` is at 30 % opacity + `saturate(1.3)` (was 16 %, user: „too pale"). **Landing + forum split (Aug 2026)**: `/` is the public landing page („Das Schaufenster" — `LandingLayout.astro` + `src/components/landing/LandingPage.svelte`), SSR-gated so any logged-in member is redirected straight to `/forum` before render. The forum index itself lives at `src/pages/forum.astro`. See "Landing + login gating" below.
+**Landing ribbons (2026-09-28):** the mirrored background artwork in `LandingPage.svelte` is at 42 % opacity (was 16 %, user: „too pale"); never put a `filter` on that page-tall layer — a `saturate()` made Chrome rasterise it in tiles and the ribbons showed hard cuts while scrolling (user report, reverted the same night). **Kiosk footer (2026-09-28):** the author name in the copyright line links to `https://ercan-atak.de` (`rel="me"`, new tab; keys `footer.copyright.before` / `footer.author` / `footer.copyright.after`). **Landing + forum split (Aug 2026)**: `/` is the public landing page („Das Schaufenster" — `LandingLayout.astro` + `src/components/landing/LandingPage.svelte`), SSR-gated so any logged-in member is redirected straight to `/forum` before render. The forum index itself lives at `src/pages/forum.astro`. See "Landing + login gating" below.
 
 ## Tech Stack
 - **Framework**: Astro 5.x with React 18.2 (hybrid SSR/SSG)

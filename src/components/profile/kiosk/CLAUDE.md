@@ -546,7 +546,11 @@ page — user 02:12, three options offered, he chose this one): the box is
 opens it to full height (`.is-open`), „weniger anzeigen ↑"
 (`profile.archiv.collapse`, DRAFT) at the end clips it again and scrolls
 the card head back under the masthead (`--k-mast-offset`; plain
-`window.scrollTo`, never `scrollIntoView`). The opener only renders when
+`window.scrollTo`, never `scrollIntoView`). Open and close ANIMATE (360 ms
+`max-height` transition in `profile.css`, none under reduced motion): the
+action always writes an explicit px `max-height` — the cut height when
+clipped, the `scrollHeight` when open (re-applied on child changes so
+„older" keeps the box growing) — because `none` cannot be animated. The opener only renders when
 the list overflows (`onOverflow` callback from the action); a filter change
 clips again. The action is idempotent (same max-height → no resize churn)
 and re-measures on child changes + resize. Probe: `scratchpad/ledger-cut.cjs`
