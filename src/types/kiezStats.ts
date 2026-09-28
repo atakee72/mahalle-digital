@@ -217,5 +217,5 @@ export interface AirHistoryDay {
 /** GET /api/kiez-air-history response — Mongo only, independent of live BLUME */
 export interface AirHistoryResponse {
   days: AirHistoryDay[]; // exactly 7, oldest first, last entry = today (Europe/Berlin)
-  lastReading: { ts: string; lqi: number } | null; // latest logged reading (ISO ts), for state §04
+  lastReading: { ts: string; lqi: number; pm10?: number | null; no2?: number | null; o3?: number | null; co?: number | null } | null; // latest logged reading (ISO ts), for state §04
 }

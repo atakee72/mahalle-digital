@@ -7,13 +7,14 @@
   import { advance, activeIndex } from '../../lib/landing/loop';
   import { t, tStr, locale, setLocale } from '../../lib/kiosk-i18n';
   import type { LandingData, HeartbeatRow } from '../../lib/landing';
-  import { buildFrames, type Frame, type SectionKey, type BlogPeek } from '../../lib/landing/frames';
+  import { buildFrames, type Frame, type SectionKey, type BlogPeek, type BlogMeta } from '../../lib/landing/frames';
   import { cloudinaryFit, optimizeCloudinary } from '../../utils/cloudinary';
   import { relTime } from '../../lib/relTime';
 
-  let { data, blog } = $props<{
+  let { data, blog, blogMeta } = $props<{
     data: LandingData;
     blog: BlogPeek[];
+    blogMeta: BlogMeta | null;
   }>();
 
   const GITHUB_URL = 'https://github.com/atakee72/mahalle-digital';
@@ -87,7 +88,7 @@
     schillerkiez: { tint: 'var(--k-moss)', lines: 'var(--k-bar-lines)' },
     blog: { tint: 'var(--k-rust)', lines: 'var(--k-bar-lines)' },
   };
-  const frames: Frame[] = $derived(buildFrames({ ...data, blog: blog[0] ?? null }, FALLBACKS));
+  const frames: Frame[] = $derived(buildFrames({ ...data, blog: blog[0] ?? null, blogMeta, computedAt: data.computedAt }, FALLBACKS));
   // ── motion: one native scroll container, rAF-driven scrollLeft, frames
   //    rendered twice for a seamless wrap (loop.ts). Reduced motion: one copy,
   //    no drive. Pause on any interaction, resume 4 s after the last one. ──

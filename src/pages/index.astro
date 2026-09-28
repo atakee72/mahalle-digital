@@ -8,8 +8,8 @@ import { getSession } from 'auth-astro/server';
 import { getCollection } from 'astro:content';
 import { getLandingData } from '../lib/landing';
 import { getImage } from 'astro:assets';
-import type { BlogPeek } from '../lib/landing/frames';
-import { compareNewest } from '../lib/blog/beilage';
+import type { BlogPeek, BlogMeta } from '../lib/landing/frames';
+import { compareNewest, readingMinutes } from '../lib/blog/beilage';
 
 const session = await getSession(Astro.request);
 if (session?.user) return Astro.redirect('/forum');
@@ -19,27 +19,21 @@ const data = await getLandingData();
 // Blog frame: newest non-draft post with a 480 px WebP of its cover (never the
 // raw asset — that is the full-size file). Fail-soft: no post → no live frame.
 let blog: BlogPeek[] = [];
+let blogMeta: BlogMeta | null = null;
 try {
   const entries = (await getCollection('blog', ({ data: d }) => !d.draft))
     .map((e) => ({ e, id: e.id, pubDateISO: e.data.pubDate.toISOString(), sortISO: e.data.sortDate?.toISOString() }))
-    .sort(compareNewest)
-    .map((x) => x.e)
-    .slice(0, 1);
-  const e = entries[0];
-  if (e) {
+    .sort(compareNewest);
+  const first = entries[0]?.e;
+  const counts = new Map<string, number>();
+  for (const { e } of entries) for (const t of e.data.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
+  blogMeta = { total: entries.length, latestISO: entries[0]?.pubDateISO ?? null, tags: [...counts].map(([tag, n]) => ({ tag, n })).sort((a, b) => b.n - a.n).slice(0, 4) };
+  if (first) {
     let coverSrc: string | undefined;
-    if (e.data.cover) {
-      try {
-        coverSrc = (await getImage({ src: e.data.cover, width: 480, format: 'webp' })).src;
-      } catch (err) {
-        console.error('[landing] blog cover failed:', err);
-      }
-    }
-    blog = [{ slug: e.id, title: e.data.title, description: e.data.description ?? '', pubDateISO: e.data.pubDate.toISOString(), coverSrc }];
+    if (first.data.cover) { try { coverSrc = (await getImage({ src: first.data.cover, width: 480, format: 'webp' })).src; } catch (err) { console.error('[landing] blog cover failed:', err); } }
+    blog = [{ slug: first.id, title: first.data.title, description: first.data.description ?? '', pubDateISO: first.data.pubDate.toISOString(), coverSrc, author: first.data.author, minutes: readingMinutes(first.body ?? '') }];
   }
-} catch (err) {
-  console.error('[landing] blog teaser failed:', err);
-}
+} catch (err) { console.error('[landing] blog teaser failed:', err); }
 
 const jsonLd = [
   {
@@ -65,5 +59,5 @@ const jsonLd = [
   description="Der Kiez hat einen Ort. Reden, tauschen, treffen — hier, wo du wohnst. Community-Plattform für den Schillerkiez in Neukölln."
   jsonLd={jsonLd}
 >
-  <LandingPage client:load {data} {blog} />
+  <LandingPage client:load {data} {blog} {blogMeta} />
 </LandingLayout>

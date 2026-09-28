@@ -39,7 +39,7 @@ const fmtDelta = (curr: number, prev: number): string => {
   return d >= 0 ? `+${d}` : `−${Math.abs(d)}`; // U+2212 minus
 };
 
-function formatStand(lastUpdated: string): string {
+export function formatStand(lastUpdated: string): string {
   const [y, m, d] = lastUpdated.split('-');
   return `${d}.${m}.${y}`;
 }

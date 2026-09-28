@@ -13,7 +13,13 @@
 import { connectDB } from './mongodb';
 import { getAirHistory } from './kiez/airLog';
 import * as Sentry from '@sentry/astro';
-import type { SchaufensterData, ForumPeek, EventPeek, ListingPeek, KurierPeek } from './landing/frames';
+import { getISOWeek } from 'date-fns';
+import { berlinYearMonth } from './landing/frames';
+import type { SchaufensterData, ForumPeek, EventPeek, ListingPeek, KurierPeek, ForumStats, CalendarPeek, MarketStats, KurierStats, KiezPeek } from './landing/frames';
+import type { AirHistoryResponse } from '../types/kiezStats';
+import { resolveSektion } from './newsboard/newsTaxonomy';
+import { computeIssueNumber } from './newsboard/newsFormat';
+import { formatStand } from './kiez/kiezViewModel';
 export type { SchaufensterData, ForumPeek, EventPeek, ListingPeek, KurierPeek } from './landing/frames';
 
 export interface HeartbeatRow {
@@ -106,13 +112,17 @@ async function compute(now: Date): Promise<LandingData> {
   let airGrade: number | null = null;
   let airSpark: (number | null)[] = [];
   let airRow: HeartbeatRow | null = null;
+  let freshReading: AirHistoryResponse['lastReading'] = null;
+  let lastTs: string | null = null;
   try {
     const hist = await getAirHistory(db, now);
     airSpark = hist.days.map((d) => d.lqiMean);
+    lastTs = hist.lastReading?.ts ?? null;
     const fresh =
       hist.lastReading && now.getTime() - Date.parse(hist.lastReading.ts) <= AIR_FRESH_MS;
     if (fresh && hist.lastReading) {
       airGrade = hist.lastReading.lqi;
+      freshReading = hist.lastReading;
       airRow = { kind: 'air', value: airGrade, spark: airSpark };
     } else {
       // §03 Luft-Absent-State: row STAYS, mute dash — never a stale value.
@@ -159,6 +169,7 @@ async function compute(now: Date): Promise<LandingData> {
   //    (UTC-keyed) — match that, not Berlin. ──
   let kurier: LandingData['kurier'] = [];
   let kurierToday = false;
+  let kurierStats: KurierStats | null = null;
   try {
     const todayKey = now.toISOString().split('T')[0];
     const latest = await db
@@ -177,7 +188,7 @@ async function compute(now: Date): Promise<LandingData> {
         .collection('news')
         .find(
           { fetchDate: issueDay, moderationStatus: 'approved' },
-          { projection: { title: 1, sourceName: 1, sourceUrl: 1, aiRelevanceScore: 1, imageUrl: 1 } },
+          { projection: { title: 1, sourceName: 1, sourceUrl: 1, aiRelevanceScore: 1, imageUrl: 1, category: 1 } },
         )
         .sort({ aiRelevanceScore: -1 })
         .limit(3)
@@ -187,7 +198,19 @@ async function compute(now: Date): Promise<LandingData> {
         sourceName: String(d.sourceName ?? ''),
         sourceUrl: String(d.sourceUrl ?? ''),
         ...(typeof d.imageUrl === 'string' && d.imageUrl.startsWith('https://') ? { imageUrl: d.imageUrl } : {}),
+        sektion: resolveSektion(typeof d.category === 'string' ? d.category : null),
       }));
+      try {
+        const q = { fetchDate: issueDay, moderationStatus: 'approved' };
+        kurierStats = {
+          issue: computeIssueNumber(now),
+          articles: await db.collection('news').countDocuments(q),
+          sources: (await db.collection('news').distinct('sourceName', q)).length,
+        };
+      } catch (err) {
+        kurierStats = null;
+        failures.push(['schaufenster.kurierStats', err]);
+      }
     }
   } catch (err) {
     kurier = [];
@@ -222,17 +245,24 @@ async function compute(now: Date): Promise<LandingData> {
     const pick = async (col: string, kind: ForumPeek['kind']): Promise<ForumPeek | null> => {
       const d = await db
         .collection(col)
-        .find({ ...PUBLIC_MOD, hasWarningLabel: { $ne: true } }, { projection: { title: 1, tags: 1, createdAt: 1 } })
+        .find({ ...PUBLIC_MOD, hasWarningLabel: { $ne: true } }, { projection: { title: 1, tags: 1, createdAt: 1, images: 1, likes: 1, views: 1 } })
         .sort({ createdAt: -1 })
         .limit(1)
         .toArray();
       const doc = d[0];
       if (!doc || typeof doc.title !== 'string' || !doc.title.trim()) return null;
+      const firstImg = Array.isArray(doc.images) ? doc.images[0] : null;
+      const imgUrl = firstImg && typeof firstImg.url === 'string' && firstImg.url.startsWith('https://') ? firstImg.url : null;
+      const comments = await db.collection('comments').countDocuments({ relevantPostId: doc._id, moderationStatus: { $nin: ['pending', 'rejected'] } });
       return {
         kind,
         title: doc.title,
         tags: Array.isArray(doc.tags) ? doc.tags.filter((t: unknown) => typeof t === 'string').slice(0, 3) : [],
         createdAt: new Date(doc.createdAt ?? now).toISOString(),
+        ...(imgUrl ? { image: imgUrl } : {}),
+        likes: typeof doc.likes === 'number' ? doc.likes : 0,
+        comments,
+        views: typeof doc.views === 'number' ? doc.views : 0,
       };
     };
     const cands = (
@@ -280,7 +310,7 @@ async function compute(now: Date): Promise<LandingData> {
           status: 'available',
           $expr: { $gte: [{ $ifNull: ['$lastBumpedAt', '$createdAt'] }, freshSince] },
         },
-        { projection: { title: 1, images: 1, listingType: 1, listingKind: 1, price: 1 } },
+        { projection: { title: 1, images: 1, listingType: 1, listingKind: 1, price: 1, createdAt: 1 } },
       )
       .sort({ createdAt: -1 })
       .limit(1)
@@ -296,12 +326,78 @@ async function compute(now: Date): Promise<LandingData> {
         image: typeof first === 'string' && first.startsWith('http') ? first : null,
         kind,
         price: kind === 'sell' && typeof doc.price === 'number' ? doc.price : null,
+        photos: Array.isArray(doc.images) ? doc.images.length : 0,
+        createdAt: new Date(doc.createdAt ?? now).toISOString(),
       };
     }
   } catch (err) {
     failures.push(['schaufenster.listing', err]);
   }
-  const schaufenster: SchaufensterData = { forum: sfForum, event: sfEvent, listing: sfListing };
+
+  const dayMs = 86_400_000;
+  const sinceYesterday = new Date(now.getTime() - dayMs); // the pages use rolling 24 h
+  const since3h = new Date(now.getTime() - 3 * 3_600_000);
+  const NO_WARN = { hasWarningLabel: { $ne: true } };
+
+  // forum stats — „Themen" = the full public feed; „diskutiert heute" = posts whose newest visible comment is < 24 h old
+  let forumStats: ForumStats | null = null;
+  try {
+    const cols = ['topics', 'announcements', 'recommendations'];
+    const [totals, news] = await Promise.all([
+      Promise.all(cols.map((c) => db.collection(c).countDocuments({ ...PUBLIC_MOD, ...NO_WARN }))),
+      Promise.all(cols.map((c) => db.collection(c).countDocuments({ ...PUBLIC_MOD, ...NO_WARN, createdAt: { $gte: sinceYesterday } }))),
+    ]);
+    const recent = await db.collection('comments').aggregate([
+      { $match: { createdAt: { $gte: sinceYesterday }, moderationStatus: { $nin: ['pending', 'rejected'] } } },
+      { $group: { _id: '$relevantPostId' } }, { $count: 'n' },
+    ]).toArray();
+    forumStats = { total: totals.reduce((a, b) => a + b, 0), newSinceYesterday: news.reduce((a, b) => a + b, 0), discussedToday: recent[0]?.n ?? 0 };
+  } catch (err) { failures.push(['schaufenster.forumStats', err]); }
+
+  // calendar — current Berlin month: count + one entry per day with a public event (first category)
+  let calendar: CalendarPeek | null = null;
+  try {
+    const { year, month } = berlinYearMonth(now.toISOString());
+    const from = berlinMidnightUTC(year, month, 1);
+    const to = berlinMidnightUTC(month === 12 ? year + 1 : year, month === 12 ? 1 : month + 1, 1);
+    const docs = await db.collection('events').find(
+      { ...PUBLIC_MOD, ...NO_WARN, visibility: { $ne: 'private' }, startDate: { $gte: from, $lt: to } },
+      { projection: { startDate: 1, category: 1 } }).sort({ startDate: 1 }).toArray();
+    const seen = new Map<number, string>();
+    for (const d of docs) { const day = berlinYearMonth(new Date(d.startDate).toISOString()).day; if (!seen.has(day)) seen.set(day, typeof d.category === 'string' ? d.category : 'kiez'); }
+    calendar = { monthCount: docs.length, days: [...seen].map(([day, category]) => ({ day, category })) };
+  } catch (err) { failures.push(['schaufenster.calendar', err]); }
+
+  // market stats — the browse page's list (available, fresh ≤ 21 d) and its two windows
+  let marketStats: MarketStats | null = null;
+  try {
+    const base = { ...PUBLIC_MOD, ...NO_WARN, status: 'available', $expr: { $gte: [{ $ifNull: ['$lastBumpedAt', '$createdAt'] }, new Date(now.getTime() - 21 * dayMs)] } };
+    const [available, newSince, fresh] = await Promise.all([
+      db.collection('listings').countDocuments(base),
+      db.collection('listings').countDocuments({ ...base, createdAt: { $gte: sinceYesterday } }),
+      db.collection('listings').countDocuments({ ...base, createdAt: { $gte: since3h } }),
+    ]);
+    marketStats = { available, newSinceYesterday: newSince, fresh };
+  } catch (err) { failures.push(['schaufenster.marketStats', err]); }
+
+  let kiez: KiezPeek | null = null;
+  try {
+    const latest = await db.collection('schillerkiez_demographics').aggregate([
+      { $sort: { period: -1 } }, { $group: { _id: '$period', areas: { $addToSet: '$plr_code' }, date: { $first: '$date' } } }, { $sort: { _id: -1 } }, { $limit: 1 },
+    ]).toArray();
+    const valid = airSpark.filter((v): v is number => typeof v === 'number');
+    const lr = freshReading;
+    kiez = {
+      stand: latest[0]?.date ? formatStand(String(latest[0].date)) : null,
+      areas: Array.isArray(latest[0]?.areas) ? latest[0].areas.length : null,
+      kw: getISOWeek(now),
+      lqiWeekMean: valid.length ? Math.round((valid.reduce((a, b) => a + b, 0) / valid.length) * 10) / 10 : null,
+      components: lr ? { pm10: lr.pm10 ?? null, no2: lr.no2 ?? null, o3: lr.o3 ?? null, co: lr.co ?? null } : null,
+      readingAt: lastTs,
+    };
+  } catch (err) { failures.push(['schaufenster.kiez', err]); }
+
+  const schaufenster: SchaufensterData = { forum: sfForum, forumStats, event: sfEvent, calendar, listing: sfListing, marketStats, kurierStats, kiez };
 
   // ── zero rule, SERVER-SIDE (§03): a row without life is omitted; the
   //    mute air row is life ("measurement paused" is information). ──

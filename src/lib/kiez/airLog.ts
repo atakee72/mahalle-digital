@@ -171,7 +171,7 @@ export async function getAirHistory(db: Db, now: Date = new Date()): Promise<Air
 
   const last = await db
     .collection(AIR_LOG_COLLECTION)
-    .find({ lqi: { $gte: 1, $lte: 5 } }, { projection: { ts: 1, lqi: 1 } }) // never a stored „no measurement" row
+    .find({ lqi: { $gte: 1, $lte: 5 } }, { projection: { ts: 1, lqi: 1, pm10: 1, no2: 1, o3: 1, co: 1 } }) // never a stored „no measurement" row
     .sort({ ts: -1 })
     .limit(1)
     .toArray();
@@ -179,7 +179,14 @@ export async function getAirHistory(db: Db, now: Date = new Date()): Promise<Air
   return {
     days: out,
     lastReading: last[0]
-      ? { ts: (last[0].ts as Date).toISOString(), lqi: last[0].lqi as number }
+      ? {
+          ts: (last[0].ts as Date).toISOString(),
+          lqi: last[0].lqi as number,
+          pm10: (last[0].pm10 as number | undefined) ?? null,
+          no2: (last[0].no2 as number | undefined) ?? null,
+          o3: (last[0].o3 as number | undefined) ?? null,
+          co: (last[0].co as number | undefined) ?? null,
+        }
       : null,
   };
 }
