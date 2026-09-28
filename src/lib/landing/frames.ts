@@ -19,12 +19,25 @@ export const SECTION_HREF: Record<SectionKey, string> = {
   blog: '/blog',
 };
 
-export interface ForumPeek { kind: 'discussion' | 'announcement' | 'recommendation'; title: string; tags: string[]; createdAt: string }
+export interface ForumStats { total: number; newSinceYesterday: number; discussedToday: number }
+export interface ForumPeek { kind: 'discussion' | 'announcement' | 'recommendation'; title: string; tags: string[]; createdAt: string; image?: string; likes?: number; comments?: number; views?: number }
 export interface EventPeek { title: string; startISO: string; allDay: boolean; category: string | null }
-export interface ListingPeek { title: string; image: string | null; kind: 'sell' | 'exchange' | 'gift'; price: number | null }
-export interface SchaufensterData { forum: ForumPeek | null; event: EventPeek | null; listing: ListingPeek | null }
-export interface KurierPeek { title: string; sourceName: string; sourceUrl: string; imageUrl?: string }
-export interface BlogPeek { slug: string; title: string; description: string; pubDateISO: string; coverSrc?: string }
+export interface CalendarPeek { monthCount: number; days: { day: number; category: string }[] }
+export interface MarketStats { available: number; newSinceYesterday: number; fresh: number }
+export interface ListingPeek { title: string; image: string | null; kind: 'sell' | 'exchange' | 'gift'; price: number | null; photos?: number; createdAt?: string }
+export interface KurierStats { issue: number; articles: number; sources: number }
+export interface KurierPeek { title: string; sourceName: string; sourceUrl: string; imageUrl?: string; sektion?: string }
+export interface AirComponents { pm10: number | null; no2: number | null; o3: number | null; co: number | null }
+export interface KiezPeek { stand: string | null; areas: number | null; kw: number; lqiWeekMean: number | null; components: AirComponents | null; readingAt: string | null }
+export interface SchaufensterData {
+  forum: ForumPeek | null; forumStats?: ForumStats | null;
+  event: EventPeek | null; calendar?: CalendarPeek | null;
+  listing: ListingPeek | null; marketStats?: MarketStats | null;
+  kurierStats?: KurierStats | null;
+  kiez?: KiezPeek | null;
+}
+export interface BlogPeek { slug: string; title: string; description: string; pubDateISO: string; coverSrc?: string; author?: string; minutes?: number }
+export interface BlogMeta { total: number; latestISO: string | null; tags: { tag: string; n: number }[] }
 
 export interface FrameInput {
   rows: { kind: string; value?: number }[];
@@ -35,57 +48,55 @@ export interface FrameInput {
   /** Absent on payloads cached before this field existed — treated as empty. */
   schaufenster?: Partial<SchaufensterData> | null;
   blog: BlogPeek | null;
+  blogMeta?: BlogMeta | null;
+  computedAt?: string;
 }
 
 export type Live =
-  | { key: 'forum'; kind: ForumPeek['kind']; title: string; tags: string[]; createdAt: string; weekCount: number }
-  | { key: 'calendar'; title: string; startISO: string; allDay: boolean; category: string | null; weekendCount: number }
-  | { key: 'marketplace'; title: string; image: string | null; kind: ListingPeek['kind']; price: number | null }
-  | { key: 'newsboard'; lead: KurierPeek; more: KurierPeek[] }
-  | { key: 'schillerkiez'; airGrade: number | null; airSpark: (number | null)[]; population: number | null }
-  | { key: 'blog'; slug: string; title: string; description: string; pubDateISO: string; coverSrc?: string };
+  | { key: 'forum'; kind: ForumPeek['kind']; title: string; tags: string[]; createdAt: string; image?: string; likes?: number; comments?: number; views?: number; stats: ForumStats | null }
+  | { key: 'calendar'; monthCount: number | null; days: { day: number; category: string }[]; next: EventPeek | null }
+  | { key: 'marketplace'; title: string; image: string | null; kind: ListingPeek['kind']; price: number | null; photos: number | null; createdAt: string | null; stats: MarketStats | null }
+  | { key: 'newsboard'; lead: KurierPeek; more: KurierPeek[]; stats: KurierStats | null }
+  | { key: 'schillerkiez'; airGrade: number | null; airSpark: (number | null)[]; population: number | null; kiez: KiezPeek | null }
+  | { key: 'blog'; slug: string; title: string; description: string; pubDateISO: string; coverSrc?: string; author?: string; minutes?: number; meta: BlogMeta | null };
 
 export interface Frame { key: SectionKey; href: string; live: Live | null; fallback: string | null }
 
 const hasText = (s: unknown): s is string => typeof s === 'string' && s.trim().length > 0;
 
-function rowValue(rows: FrameInput['rows'], kind: string): number {
-  const v = rows.find((r) => r.kind === kind)?.value;
-  return typeof v === 'number' && v > 0 ? v : 0;
-}
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
 
 function liveFor(key: SectionKey, input: FrameInput): Live | null {
   const sf = input.schaufenster ?? {};
   switch (key) {
     case 'forum': {
-      const f = sf.forum;
-      if (!f || !hasText(f.title)) return null;
-      return { key, kind: f.kind, title: f.title.trim(), tags: (f.tags ?? []).filter(hasText).slice(0, 3), createdAt: f.createdAt, weekCount: rowValue(input.rows, 'forum') };
+      const f = sf.forum; if (!f || !hasText(f.title)) return null;
+      return { key, kind: f.kind, title: f.title.trim(), tags: (f.tags ?? []).filter(hasText).slice(0, 3), createdAt: f.createdAt,
+        image: hasText(f.image) ? f.image : undefined, likes: num(f.likes), comments: num(f.comments), views: num(f.views), stats: sf.forumStats ?? null };
     }
     case 'calendar': {
-      const e = sf.event;
-      if (!e || !hasText(e.title)) return null;
-      return { key, title: e.title.trim(), startISO: e.startISO, allDay: e.allDay === true, category: e.category ?? null, weekendCount: rowValue(input.rows, 'events') };
+      const cal = sf.calendar ?? null; const e = sf.event ?? null;
+      if (!cal && !(e && hasText(e.title))) return null;
+      return { key, monthCount: cal ? cal.monthCount : null, days: cal?.days ?? [], next: e && hasText(e.title) ? { ...e, title: e.title.trim() } : null };
     }
     case 'marketplace': {
-      const l = sf.listing;
-      if (!l || !hasText(l.title)) return null;
-      return { key, title: l.title.trim(), image: hasText(l.image) ? l.image : null, kind: l.kind, price: l.kind === 'sell' && typeof l.price === 'number' ? l.price : null };
+      const l = sf.listing; if (!l || !hasText(l.title)) return null;
+      return { key, title: l.title.trim(), image: hasText(l.image) ? l.image : null, kind: l.kind, price: l.kind === 'sell' && typeof l.price === 'number' ? l.price : null,
+        photos: typeof l.photos === 'number' ? l.photos : null, createdAt: hasText(l.createdAt) ? l.createdAt : null, stats: sf.marketStats ?? null };
     }
     case 'newsboard': {
       const items = (input.kurier ?? []).filter((k) => hasText(k.title));
       if (items.length === 0) return null;
-      return { key, lead: items[0], more: items.slice(1, 3) };
+      return { key, lead: items[0], more: items.slice(1, 3), stats: sf.kurierStats ?? null };
     }
     case 'schillerkiez': {
       const spark = input.airSpark ?? [];
       const alive = input.airGrade != null || spark.some((v) => v != null) || input.population != null;
-      return alive ? { key, airGrade: input.airGrade, airSpark: spark, population: input.population } : null;
+      return alive ? { key, airGrade: input.airGrade, airSpark: spark, population: input.population, kiez: sf.kiez ?? null } : null;
     }
     case 'blog': {
-      const b = input.blog;
-      if (!b || !hasText(b.title)) return null;
-      return { key, slug: b.slug, title: b.title.trim(), description: b.description ?? '', pubDateISO: b.pubDateISO, coverSrc: b.coverSrc };
+      const b = input.blog; if (!b || !hasText(b.title)) return null;
+      return { key, slug: b.slug, title: b.title.trim(), description: b.description ?? '', pubDateISO: b.pubDateISO, coverSrc: b.coverSrc, author: b.author, minutes: b.minutes, meta: input.blogMeta ?? null };
     }
   }
 }
@@ -99,4 +110,26 @@ export function buildFrames(input: FrameInput, fallbacks: Partial<Record<Section
     out.push({ key, href: SECTION_HREF[key], live, fallback });
   }
   return out;
+}
+
+/** Europe/Berlin calendar parts of an ISO instant. */
+export function berlinYearMonth(iso: string): { year: number; month: number; day: number } {
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(iso));
+  const g = (t: string) => Number(p.find((x) => x.type === t)?.value ?? 0);
+  return { year: g('year'), month: g('month'), day: g('day') };
+}
+
+/** 42 month-grid cells, Monday first; `null` day = padding. Category = the first event's category that day. */
+export function monthCells(year: number, month1to12: number, days: { day: number; category: string }[]): { day: number | null; category: string | null }[] {
+  const first = new Date(Date.UTC(year, month1to12 - 1, 1));
+  const lead = (first.getUTCDay() + 6) % 7; // 0 = Monday
+  const count = new Date(Date.UTC(year, month1to12, 0)).getUTCDate();
+  const byDay = new Map<number, string>();
+  for (const d of days) if (!byDay.has(d.day)) byDay.set(d.day, d.category);
+  const cells: { day: number | null; category: string | null }[] = [];
+  for (let i = 0; i < 42; i++) {
+    const day = i - lead + 1;
+    cells.push(day >= 1 && day <= count ? { day, category: byDay.get(day) ?? null } : { day: null, category: null });
+  }
+  return cells;
 }
