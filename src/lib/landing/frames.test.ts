@@ -27,7 +27,7 @@ const FULL: FrameInput = {
   ],
   schaufenster: {
     forum: { kind: 'announcement', title: 'Die Quartiersseite berichtet über uns.', tags: ['kiez', 'event'], createdAt: '2026-09-23T10:00:00.000Z' },
-    event: { title: 'Tag der offenen Tür', startISO: '2026-09-28T13:00:00.000Z', allDay: false, category: 'kiez' },
+    calendar: { monthCount: 3, days: [{ day: 4, category: 'kiez' }] },
     listing: { title: 'Bike Zipper', image: 'https://res.cloudinary.com/demo/image/upload/v1/x.jpg', kind: 'gift', price: null },
   },
   blog: { slug: 'kandidaten-check', title: 'So kam der Check zustande', description: 'Sieben Gastbeiträge.', pubDateISO: '2026-09-18T00:00:00.000Z', coverSrc: '/_astro/cover.webp' },
@@ -42,7 +42,7 @@ test('six frames in nav order, all live, with the count lines from the rows', ()
   assert.equal(forum.key, 'forum');
   if (forum.key === 'forum') assert.equal(forum.stats, null);
   const cal = frames[1].live!;
-  if (cal.key === 'calendar') assert.equal(cal.monthCount, null);
+  if (cal.key === 'calendar') assert.equal(cal.monthCount, 3);
   const news = frames[3].live!;
   if (news.key === 'newsboard') { assert.equal(news.lead.title, 'Lead'); assert.deepEqual(news.more.map((m) => m.title), ['Two', 'Three']); }
 });
@@ -77,20 +77,25 @@ test('tags are capped at three and the newsboard keeps at most two more titles',
 });
 
 test('new stats ride on the live view models and are null on an old payload', () => {
-  const frames = buildFrames({ ...FULL, schaufenster: { ...FULL.schaufenster, forumStats: { total: 17, newSinceYesterday: 2, discussedToday: 1 }, calendar: { monthCount: 26, days: [{ day: 4, category: 'kiez' }] }, marketStats: { available: 1, newSinceYesterday: 0, fresh: 0 }, kurierStats: { issue: 269, articles: 6, sources: 9 }, kiez: { stand: '30.06.2026', areas: 4, kw: 40, lqiWeekMean: 2.4, components: { pm10: 2, no2: 1, o3: 3, co: 1 }, readingAt: '2026-09-28T17:00:00.000Z' } }, blogMeta: { total: 11, latestISO: '2026-09-23T00:00:00.000Z', tags: [{ tag: 'wahl2026', n: 9 }] } }, FALLBACKS);
+  const frames = buildFrames({ ...FULL, schaufenster: { ...FULL.schaufenster, forumStats: { total: 17, newSinceYesterday: 2, discussedToday: 1 }, calendar: { monthCount: 26, days: [{ day: 4, category: 'kiez' }] }, marketStats: { available: 1, newSinceYesterday: 0, fresh: 0 }, kurierStats: { issue: 269, articles: 6, sources: 9, today: true }, kiez: { stand: '30.06.2026', areas: 4, kw: 40, lqiWeekMean: 2.4, components: { pm10: 2, no2: 1, o3: 3, co: 1 }, readingAt: '2026-09-28T17:00:00.000Z' } }, blogMeta: { total: 11, latestISO: '2026-09-23T00:00:00.000Z', tags: [{ tag: 'wahl2026', n: 9 }] } }, FALLBACKS);
   const f = frames[0].live!; if (f.key === 'forum') assert.equal(f.stats?.total, 17);
   const c = frames[1].live!; if (c.key === 'calendar') { assert.equal(c.monthCount, 26); assert.equal(c.days[0].day, 4); }
   const m = frames[2].live!; if (m.key === 'marketplace') assert.equal(m.stats?.available, 1);
   const n = frames[3].live!; if (n.key === 'newsboard') assert.equal(n.stats?.issue, 269);
   const k = frames[4].live!; if (k.key === 'schillerkiez') assert.equal(k.kiez?.components?.o3, 3);
   const b = frames[5].live!; if (b.key === 'blog') assert.equal(b.meta?.total, 11);
-  const old = buildFrames(FULL, FALLBACKS); // no new fields
+  const old = buildFrames({ ...FULL, schaufenster: { ...FULL.schaufenster, calendar: undefined } }, FALLBACKS); // no new fields
   const of = old[0].live!; if (of.key === 'forum') assert.equal(of.stats, null);
-  const oc = old[1].live!; if (oc.key === 'calendar') { assert.equal(oc.monthCount, null); assert.deepEqual(oc.days, []); assert.equal(oc.next?.title, 'Tag der offenen Tür'); }
+  assert.equal(old[1].live, null); // calendar without month data is not live (falls back)
+});
+
+test('a Kurier sektion rides through to lead.sektion', () => {
+  const frames = buildFrames({ ...EMPTY, kurier: [{ title: 'T', sourceName: 'S', sourceUrl: 'https://s', sektion: 'politik' }] }, {});
+  const n = frames[0].live!; if (n.key === 'newsboard') assert.equal(n.lead.sektion, 'politik'); else assert.fail('not newsboard');
 });
 
 test('calendar frame is live from the month data alone, even with zero events', () => {
-  const frames = buildFrames({ ...EMPTY, schaufenster: { forum: null, event: null, listing: null, calendar: { monthCount: 0, days: [] } } }, {});
+  const frames = buildFrames({ ...EMPTY, schaufenster: { forum: null, listing: null, calendar: { monthCount: 0, days: [] } } }, {});
   assert.deepEqual(frames.map((f) => f.key), ['calendar']);
 });
 
@@ -110,6 +115,6 @@ test('berlinYearMonth reads Europe/Berlin parts', () => {
 });
 
 test('kiez components all null stay null (muted strip), never zeroed', () => {
-  const frames = buildFrames({ ...EMPTY, airSpark: [2], schaufenster: { forum: null, event: null, listing: null, kiez: { stand: null, areas: null, kw: 40, lqiWeekMean: null, components: { pm10: null, no2: null, o3: null, co: null }, readingAt: null } } }, {});
+  const frames = buildFrames({ ...EMPTY, airSpark: [2], schaufenster: { forum: null, listing: null, kiez: { stand: null, areas: null, kw: 40, lqiWeekMean: null, components: { pm10: null, no2: null, o3: null, co: null }, readingAt: null } } }, {});
   const k = frames[0].live!; if (k.key === 'schillerkiez') assert.equal(k.kiez?.components?.pm10, null);
 });

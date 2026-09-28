@@ -20,18 +20,17 @@ export const SECTION_HREF: Record<SectionKey, string> = {
 };
 
 export interface ForumStats { total: number; newSinceYesterday: number; discussedToday: number }
-export interface ForumPeek { kind: 'discussion' | 'announcement' | 'recommendation'; title: string; tags: string[]; createdAt: string; image?: string; likes?: number; comments?: number; views?: number }
-export interface EventPeek { title: string; startISO: string; allDay: boolean; category: string | null }
+export interface ForumPeek { kind: 'discussion' | 'announcement' | 'recommendation'; title: string; tags: string[]; createdAt: string; image?: string; likes?: number; comments?: number; saves?: number }
 export interface CalendarPeek { monthCount: number; days: { day: number; category: string }[] }
 export interface MarketStats { available: number; newSinceYesterday: number; fresh: number }
 export interface ListingPeek { title: string; image: string | null; kind: 'sell' | 'exchange' | 'gift'; price: number | null; photos?: number; createdAt?: string }
-export interface KurierStats { issue: number; articles: number; sources: number }
+export interface KurierStats { issue: number; articles: number; sources: number; today: boolean }
 export interface KurierPeek { title: string; sourceName: string; sourceUrl: string; imageUrl?: string; sektion?: string }
 export interface AirComponents { pm10: number | null; no2: number | null; o3: number | null; co: number | null }
 export interface KiezPeek { stand: string | null; areas: number | null; kw: number; lqiWeekMean: number | null; components: AirComponents | null; readingAt: string | null }
 export interface SchaufensterData {
   forum: ForumPeek | null; forumStats?: ForumStats | null;
-  event: EventPeek | null; calendar?: CalendarPeek | null;
+  calendar?: CalendarPeek | null;
   listing: ListingPeek | null; marketStats?: MarketStats | null;
   kurierStats?: KurierStats | null;
   kiez?: KiezPeek | null;
@@ -53,8 +52,8 @@ export interface FrameInput {
 }
 
 export type Live =
-  | { key: 'forum'; kind: ForumPeek['kind']; title: string; tags: string[]; createdAt: string; image?: string; likes?: number; comments?: number; views?: number; stats: ForumStats | null }
-  | { key: 'calendar'; monthCount: number | null; days: { day: number; category: string }[]; next: EventPeek | null }
+  | { key: 'forum'; kind: ForumPeek['kind']; title: string; tags: string[]; createdAt: string; image?: string; likes?: number; comments?: number; saves?: number; stats: ForumStats | null }
+  | { key: 'calendar'; monthCount: number | null; days: { day: number; category: string }[] }
   | { key: 'marketplace'; title: string; image: string | null; kind: ListingPeek['kind']; price: number | null; photos: number | null; createdAt: string | null; stats: MarketStats | null }
   | { key: 'newsboard'; lead: KurierPeek; more: KurierPeek[]; stats: KurierStats | null }
   | { key: 'schillerkiez'; airGrade: number | null; airSpark: (number | null)[]; population: number | null; kiez: KiezPeek | null }
@@ -72,12 +71,12 @@ function liveFor(key: SectionKey, input: FrameInput): Live | null {
     case 'forum': {
       const f = sf.forum; if (!f || !hasText(f.title)) return null;
       return { key, kind: f.kind, title: f.title.trim(), tags: (f.tags ?? []).filter(hasText).slice(0, 3), createdAt: f.createdAt,
-        image: hasText(f.image) ? f.image : undefined, likes: num(f.likes), comments: num(f.comments), views: num(f.views), stats: sf.forumStats ?? null };
+        image: hasText(f.image) ? f.image : undefined, likes: num(f.likes), comments: num(f.comments), saves: num(f.saves), stats: sf.forumStats ?? null };
     }
     case 'calendar': {
-      const cal = sf.calendar ?? null; const e = sf.event ?? null;
-      if (!cal && !(e && hasText(e.title))) return null;
-      return { key, monthCount: cal ? cal.monthCount : null, days: cal?.days ?? [], next: e && hasText(e.title) ? { ...e, title: e.title.trim() } : null };
+      const cal = sf.calendar ?? null;
+      if (!cal) return null;
+      return { key, monthCount: cal.monthCount, days: cal.days ?? [] };
     }
     case 'marketplace': {
       const l = sf.listing; if (!l || !hasText(l.title)) return null;

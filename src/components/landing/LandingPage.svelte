@@ -278,7 +278,7 @@
       {/if}
       <div class="px-5 py-4">
         <div class="flex items-start justify-between gap-3 mb-2.5">
-          <div class="font-dmmono text-[10px] tracking-[0.05em] text-ink-mute pt-1">{relTime(l.createdAt, $locale)}</div>
+          <div class="font-dmmono text-[10px] tracking-[0.05em] text-ink-mute pt-1">{relTime(l.createdAt, $locale, Date.parse(data.computedAt))}</div>
           {#if !isAnn && !isRec}
             <span class="inline-flex items-center font-dmmono font-medium text-[10px] tracking-[0.08em] text-paper border border-ink rounded-lg px-[9px] py-[3px] bg-wine">{$t[`chip.${l.kind}`].toUpperCase()}</span>
           {/if}
@@ -297,7 +297,7 @@
           <span class="flex items-center gap-3">
             <span class="flex items-center gap-1"><span aria-hidden="true">♥</span> {l.likes ?? 0}</span>
             <span class="flex items-center gap-1"><span aria-hidden="true">💬</span> {l.comments ?? 0}</span>
-            <span class="flex items-center gap-1"><span aria-hidden="true">👁</span> {l.views ?? 0}</span>
+            <span class="flex items-center gap-1"><span aria-hidden="true">🔖</span> {l.saves ?? 0}</span>
           </span>
           <span class="flex items-center gap-1">→ {$t['card.cta.read']}</span>
         </div>
@@ -393,7 +393,7 @@
         <span class={pillOff}>{$t['market.filter.kind.tausch']}</span>
         <span class={pillOff}>{$t['market.filter.kind.verschenken']}</span>
       </div>
-      <input type="search" readonly tabindex="-1" aria-hidden="true" placeholder={$t['market.filter.search']} class="font-dmmono text-[12px] w-full outline-none" style="padding: 5px 10px; background: var(--k-paper-soft); border: 1px solid var(--k-rule); border-radius: var(--k-radius-md, 8px); min-width: 0;" />
+      <span class="font-dmmono text-[12px] w-full truncate" style="padding: 5px 10px; background: var(--k-paper-soft); border: 1px solid var(--k-rule); border-radius: var(--k-radius-md, 8px); min-width: 0; display: block; color: var(--k-ink-mute);">{$t['market.filter.search']}</span>
     </div>
     <div class="pb-3 flex items-center gap-3 overflow-hidden">
       <span class={lab}>{$t['market.filter.category.label']}</span>
@@ -406,9 +406,9 @@
     <div class="flex items-center justify-between gap-2 px-3 py-1.5 bg-ink text-paper font-dmmono font-semibold uppercase tracking-[0.14em] text-[9.5px]">
       {#if today}
         <span class="whitespace-nowrap overflow-hidden text-ellipsis">★ {$t['market.lead.banner']}</span>
-        <span class="shrink-0 whitespace-nowrap" style="color: var(--k-ochre);">● {dm} {$locale === 'de' ? 'EINGESTELLT' : ''}</span>
+        <span class="shrink-0 whitespace-nowrap" style="color: var(--k-ochre);">● {dm}</span>
       {:else}
-        <span class="shrink-0 whitespace-nowrap" style="color: var(--k-ochre);">● {relTime(l.createdAt, $locale)}</span>
+        <span class="shrink-0 whitespace-nowrap" style="color: var(--k-ochre);">● {relTime(l.createdAt, $locale, Date.parse(data.computedAt))}</span>
       {/if}
     </div>
     <div class="px-3.5 pt-2.5 pb-3" style="border-bottom: 1px dashed var(--k-rule);">
@@ -416,12 +416,7 @@
         {#if l.image}<img src={cloudinaryFit(optimizeCloudinary(l.image), 480)} alt="" class="absolute inset-0 w-full h-full object-cover" width="480" height="300" loading="lazy" decoding="async" onerror={hideOnError}>{/if}
       </div>
       {#if l.photos}
-        <div class="flex gap-1 mt-2 items-center">
-          {#each { length: Math.min(l.photos, 5) } as _, i}
-            <div class="shrink-0 rounded-[4px] {i === 0 ? 'border-2 border-ink' : 'border border-rule'}" style="width: 38px; height: 30px; background: {i === 0 ? 'var(--k-ochre)' : 'var(--k-paper-soft)'}; opacity: {i === 0 ? 0.55 : 0.5};"></div>
-          {/each}
-          <span class="font-dmmono text-[10px] text-ink-mute ml-1.5">{l.photos} {$locale === 'de' ? 'Fotos' : 'photos'}</span>
-        </div>
+        <div class="mt-2"><span class="font-dmmono text-[10px] text-ink-mute">{l.photos} {$locale === 'de' ? 'Fotos' : 'photos'}</span></div>
       {/if}
     </div>
     <div class="px-3.5 pt-3.5 pb-4 flex flex-col gap-2.5 min-w-0">
@@ -469,12 +464,12 @@
   <div class="px-4">
     <div class="flex items-center" style="gap:12px; margin:10px 0 4px;">
       <div class="flex-1" style="height:1px; border-top:1px dashed var(--k-rule);"></div>
-      <span class="font-dmmono uppercase" style="font-size:10px; font-weight:700; color:var(--k-ink-mute); letter-spacing:0.18em;">{$t['news.divider.today']}</span>
+      <span class="font-dmmono uppercase" style="font-size:10px; font-weight:700; color:var(--k-ink-mute); letter-spacing:0.18em;">{l.stats && !l.stats.today ? $t['news.divider.yesterday'] : $t['news.divider.today']}</span>
       <div class="flex-1" style="height:1px; border-top:1px dashed var(--k-rule);"></div>
     </div>
     <article class="flex flex-col" style="background:var(--k-paper); border:var(--k-border-hair); border-radius:var(--k-radius-md); padding:14px; gap:12px;">
       {#if l.lead.imageUrl}
-        <img src={optimizeCloudinary(l.lead.imageUrl)} alt="" class="w-full object-cover shrink-0" style="height:96px; border:var(--k-border-ink); border-radius:var(--k-radius-md);" width="480" height="240" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={hideOnError}>
+        <img src={cloudinaryFit(optimizeCloudinary(l.lead.imageUrl), 480)} alt="" class="w-full object-cover shrink-0" style="height:96px; border:var(--k-border-ink); border-radius:var(--k-radius-md);" width="480" height="240" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={hideOnError}>
       {/if}
       <div class="flex flex-col min-w-0 shrink-0">
         <div class="flex items-center flex-wrap" style="gap:6px; margin-bottom:8px;">
@@ -806,7 +801,6 @@
   .lnd-sf-dot { width: 6px; height: 6px; border-radius: 3px; transition: width 240ms ease; }
   .lnd-sf-dot--on { width: 18px; }
   .lnd-sf-pausebtn { background: none; border: 1px solid var(--k-rule); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 9.5px; letter-spacing: 0.12em; color: var(--k-ink-soft); cursor: pointer; min-height: 28px; }
-  .lnd-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .lnd-clamp3 { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .lnd-sf-track::-webkit-scrollbar { display: none; } .lnd-sf-track { scrollbar-width: none; }
 

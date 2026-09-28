@@ -15,12 +15,12 @@ import { getAirHistory } from './kiez/airLog';
 import * as Sentry from '@sentry/astro';
 import { getISOWeek } from 'date-fns';
 import { berlinYearMonth } from './landing/frames';
-import type { SchaufensterData, ForumPeek, EventPeek, ListingPeek, KurierPeek, ForumStats, CalendarPeek, MarketStats, KurierStats, KiezPeek } from './landing/frames';
+import type { SchaufensterData, ForumPeek, ListingPeek, KurierPeek, ForumStats, CalendarPeek, MarketStats, KurierStats, KiezPeek } from './landing/frames';
 import type { AirHistoryResponse } from '../types/kiezStats';
 import { resolveSektion } from './newsboard/newsTaxonomy';
 import { computeIssueNumber } from './newsboard/newsFormat';
 import { formatStand } from './kiez/kiezViewModel';
-export type { SchaufensterData, ForumPeek, EventPeek, ListingPeek, KurierPeek } from './landing/frames';
+export type { SchaufensterData, ForumPeek, ListingPeek, KurierPeek } from './landing/frames';
 
 export interface HeartbeatRow {
   kind: 'air' | 'forum' | 'events' | 'kurier';
@@ -188,7 +188,7 @@ async function compute(now: Date): Promise<LandingData> {
         .collection('news')
         .find(
           { fetchDate: issueDay, moderationStatus: 'approved' },
-          { projection: { title: 1, sourceName: 1, sourceUrl: 1, aiRelevanceScore: 1, imageUrl: 1, category: 1 } },
+          { projection: { title: 1, sourceName: 1, sourceUrl: 1, aiRelevanceScore: 1, imageUrl: 1, aiCategory: 1 } },
         )
         .sort({ aiRelevanceScore: -1 })
         .limit(3)
@@ -198,12 +198,13 @@ async function compute(now: Date): Promise<LandingData> {
         sourceName: String(d.sourceName ?? ''),
         sourceUrl: String(d.sourceUrl ?? ''),
         ...(typeof d.imageUrl === 'string' && d.imageUrl.startsWith('https://') ? { imageUrl: d.imageUrl } : {}),
-        sektion: resolveSektion(typeof d.category === 'string' ? d.category : null),
+        sektion: resolveSektion(typeof d.aiCategory === 'string' ? d.aiCategory : null),
       }));
       try {
         const q = { fetchDate: issueDay, moderationStatus: 'approved' };
         kurierStats = {
-          issue: computeIssueNumber(now),
+          issue: computeIssueNumber(new Date(`${issueDay}T12:00:00Z`)),
+          today: kurierToday,
           articles: await db.collection('news').countDocuments(q),
           sources: (await db.collection('news').distinct('sourceName', q)).length,
         };
@@ -245,7 +246,7 @@ async function compute(now: Date): Promise<LandingData> {
     const pick = async (col: string, kind: ForumPeek['kind']): Promise<ForumPeek | null> => {
       const d = await db
         .collection(col)
-        .find({ ...PUBLIC_MOD, hasWarningLabel: { $ne: true } }, { projection: { title: 1, tags: 1, createdAt: 1, images: 1, likes: 1, views: 1 } })
+        .find({ ...PUBLIC_MOD, hasWarningLabel: { $ne: true } }, { projection: { title: 1, tags: 1, createdAt: 1, images: 1, likes: 1 } })
         .sort({ createdAt: -1 })
         .limit(1)
         .toArray();
@@ -253,7 +254,10 @@ async function compute(now: Date): Promise<LandingData> {
       if (!doc || typeof doc.title !== 'string' || !doc.title.trim()) return null;
       const firstImg = Array.isArray(doc.images) ? doc.images[0] : null;
       const imgUrl = firstImg && typeof firstImg.url === 'string' && firstImg.url.startsWith('https://') ? firstImg.url : null;
-      const comments = await db.collection('comments').countDocuments({ relevantPostId: doc._id, moderationStatus: { $nin: ['pending', 'rejected'] } });
+      const [comments, saves] = await Promise.all([
+        db.collection('comments').countDocuments({ relevantPostId: doc._id, moderationStatus: { $nin: ['pending', 'rejected'] } }),
+        db.collection('savedPosts').countDocuments({ postId: String(doc._id) }),
+      ]);
       return {
         kind,
         title: doc.title,
@@ -262,7 +266,7 @@ async function compute(now: Date): Promise<LandingData> {
         ...(imgUrl ? { image: imgUrl } : {}),
         likes: typeof doc.likes === 'number' ? doc.likes : 0,
         comments,
-        views: typeof doc.views === 'number' ? doc.views : 0,
+        saves,
       };
     };
     const cands = (
@@ -272,30 +276,6 @@ async function compute(now: Date): Promise<LandingData> {
     sfForum = cands[0] ?? null;
   } catch (err) {
     failures.push(['schaufenster.forum', err]);
-  }
-
-  let sfEvent: EventPeek | null = null;
-  try {
-    const d = await db
-      .collection('events')
-      .find(
-        { ...PUBLIC_MOD, hasWarningLabel: { $ne: true }, visibility: { $ne: 'private' }, startDate: { $gte: now } },
-        { projection: { title: 1, startDate: 1, allDay: 1, category: 1 } },
-      )
-      .sort({ startDate: 1 })
-      .limit(1)
-      .toArray();
-    const doc = d[0];
-    if (doc && typeof doc.title === 'string' && doc.title.trim()) {
-      sfEvent = {
-        title: doc.title,
-        startISO: new Date(doc.startDate).toISOString(),
-        allDay: doc.allDay === true,
-        category: typeof doc.category === 'string' ? doc.category : null,
-      };
-    }
-  } catch (err) {
-    failures.push(['schaufenster.event', err]);
   }
 
   let sfListing: ListingPeek | null = null;
@@ -344,8 +324,8 @@ async function compute(now: Date): Promise<LandingData> {
   try {
     const cols = ['topics', 'announcements', 'recommendations'];
     const [totals, news] = await Promise.all([
-      Promise.all(cols.map((c) => db.collection(c).countDocuments({ ...PUBLIC_MOD, ...NO_WARN }))),
-      Promise.all(cols.map((c) => db.collection(c).countDocuments({ ...PUBLIC_MOD, ...NO_WARN, createdAt: { $gte: sinceYesterday } }))),
+      Promise.all(cols.map((c) => db.collection(c).countDocuments({ ...PUBLIC_MOD }))),
+      Promise.all(cols.map((c) => db.collection(c).countDocuments({ ...PUBLIC_MOD, createdAt: { $gte: sinceYesterday } }))),
     ]);
     const recent = await db.collection('comments').aggregate([
       { $match: { createdAt: { $gte: sinceYesterday }, moderationStatus: { $nin: ['pending', 'rejected'] } } },
@@ -353,7 +333,7 @@ async function compute(now: Date): Promise<LandingData> {
     ]).toArray();
     const ids = recent.map((r) => r._id);
     const discussed = ids.length
-      ? (await Promise.all(cols.map((c) => db.collection(c).countDocuments({ _id: { $in: ids }, ...PUBLIC_MOD, ...NO_WARN })))).reduce((a, b) => a + b, 0)
+      ? (await Promise.all(cols.map((c) => db.collection(c).countDocuments({ _id: { $in: ids }, ...PUBLIC_MOD })))).reduce((a, b) => a + b, 0)
       : 0;
     forumStats = { total: totals.reduce((a, b) => a + b, 0), newSinceYesterday: news.reduce((a, b) => a + b, 0), discussedToday: discussed };
   } catch (err) { failures.push(['schaufenster.forumStats', err]); }
@@ -375,7 +355,7 @@ async function compute(now: Date): Promise<LandingData> {
   // market stats — the browse page's list (available, fresh ≤ 21 d) and its two windows
   let marketStats: MarketStats | null = null;
   try {
-    const base = { ...PUBLIC_MOD, ...NO_WARN, status: 'available', $expr: { $gte: [{ $ifNull: ['$lastBumpedAt', '$createdAt'] }, new Date(now.getTime() - 21 * dayMs)] } };
+    const base = { ...PUBLIC_MOD, status: { $in: ['available', 'reserved'] }, $expr: { $gte: [{ $ifNull: ['$lastBumpedAt', '$createdAt'] }, new Date(now.getTime() - 21 * dayMs)] } };
     const [available, newSince, fresh] = await Promise.all([
       db.collection('listings').countDocuments(base),
       db.collection('listings').countDocuments({ ...base, createdAt: { $gte: sinceYesterday } }),
@@ -401,7 +381,7 @@ async function compute(now: Date): Promise<LandingData> {
     };
   } catch (err) { failures.push(['schaufenster.kiez', err]); }
 
-  const schaufenster: SchaufensterData = { forum: sfForum, forumStats, event: sfEvent, calendar, listing: sfListing, marketStats, kurierStats, kiez };
+  const schaufenster: SchaufensterData = { forum: sfForum, forumStats, calendar, listing: sfListing, marketStats, kurierStats, kiez };
 
   // ── zero rule, SERVER-SIDE (§03): a row without life is omitted; the
   //    mute air row is life ("measurement paused" is information). ──
