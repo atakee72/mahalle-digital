@@ -1,6 +1,6 @@
 # Landing „Das Schaufenster" — live section frames (design spec)
 
-**Date:** 2026-09-28 · **Status:** draft for the owner's review · **Surface:** `/` (public landing, `src/components/landing/LandingPage.svelte`, `src/pages/index.astro`, `src/lib/landing.ts`)
+**Date:** 2026-09-28 · **Status:** implemented on branch feat/landing-schaufenster (2026-09-28), owner's copy pending · **Surface:** `/` (public landing, `src/components/landing/LandingPage.svelte`, `src/pages/index.astro`, `src/lib/landing.ts`)
 
 ## 1. Why
 
