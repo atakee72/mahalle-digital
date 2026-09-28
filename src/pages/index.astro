@@ -7,25 +7,33 @@ import LandingPage from '../components/landing/LandingPage.svelte';
 import { getSession } from 'auth-astro/server';
 import { getCollection } from 'astro:content';
 import { getLandingData } from '../lib/landing';
+import { getImage } from 'astro:assets';
+import type { BlogPeek } from '../lib/landing/frames';
 
 const session = await getSession(Astro.request);
 if (session?.user) return Astro.redirect('/forum');
 
 const data = await getLandingData();
 
-// Blog teaser: newest two non-draft posts (build-time content collection —
-// no caching needed). Fail-soft: an empty collection renders an empty slot.
-let blog: { slug: string; title: string; description: string; pubDateISO: string }[] = [];
+// Blog frame: newest non-draft post with a 480 px WebP of its cover (never the
+// raw asset — that is the full-size file). Fail-soft: no post → no live frame.
+let blog: BlogPeek[] = [];
 try {
   const entries = (await getCollection('blog', ({ data: d }) => !d.draft))
     .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-    .slice(0, 2);
-  blog = entries.map((e) => ({
-    slug: e.id,
-    title: e.data.title,
-    description: e.data.description ?? '',
-    pubDateISO: e.data.pubDate.toISOString(),
-  }));
+    .slice(0, 1);
+  const e = entries[0];
+  if (e) {
+    let coverSrc: string | undefined;
+    if (e.data.cover) {
+      try {
+        coverSrc = (await getImage({ src: e.data.cover, width: 480, format: 'webp' })).src;
+      } catch (err) {
+        console.error('[landing] blog cover failed:', err);
+      }
+    }
+    blog = [{ slug: e.id, title: e.data.title, description: e.data.description ?? '', pubDateISO: e.data.pubDate.toISOString(), coverSrc }];
+  }
 } catch (err) {
   console.error('[landing] blog teaser failed:', err);
 }

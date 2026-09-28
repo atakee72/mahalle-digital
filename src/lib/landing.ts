@@ -13,6 +13,8 @@
 import { connectDB } from './mongodb';
 import { getAirHistory } from './kiez/airLog';
 import * as Sentry from '@sentry/astro';
+import type { SchaufensterData, ForumPeek, EventPeek, ListingPeek, KurierPeek } from './landing/frames';
+export type { SchaufensterData, ForumPeek, EventPeek, ListingPeek, KurierPeek } from './landing/frames';
 
 export interface HeartbeatRow {
   kind: 'air' | 'forum' | 'events' | 'kurier';
@@ -26,7 +28,9 @@ export interface LandingData {
   population: number | null;
   airGrade: number | null;
   airSpark: (number | null)[];
-  kurier: { title: string; sourceName: string; sourceUrl: string }[];
+  kurier: KurierPeek[];
+  /** Landing Schaufenster peeks (2026-09-28). Absent on payloads cached before the field existed — readers treat that as empty. */
+  schaufenster?: SchaufensterData | null;
   computedAt: string;
 }
 
@@ -173,7 +177,7 @@ async function compute(now: Date): Promise<LandingData> {
         .collection('news')
         .find(
           { fetchDate: issueDay, moderationStatus: 'approved' },
-          { projection: { title: 1, sourceName: 1, sourceUrl: 1, aiRelevanceScore: 1 } },
+          { projection: { title: 1, sourceName: 1, sourceUrl: 1, aiRelevanceScore: 1, imageUrl: 1 } },
         )
         .sort({ aiRelevanceScore: -1 })
         .limit(3)
@@ -182,6 +186,7 @@ async function compute(now: Date): Promise<LandingData> {
         title: String(d.title ?? ''),
         sourceName: String(d.sourceName ?? ''),
         sourceUrl: String(d.sourceUrl ?? ''),
+        ...(typeof d.imageUrl === 'string' && d.imageUrl.startsWith('http') ? { imageUrl: d.imageUrl } : {}),
       }));
     }
   } catch (err) {
@@ -209,6 +214,94 @@ async function compute(now: Date): Promise<LandingData> {
     failures.push(['population', err]);
   }
 
+  // ── Schaufenster peeks (2026-09-28): newest public forum post, next public
+  //    event, newest fresh listing. Titles only — never an author. Each
+  //    source is fail-soft like the rows above. ──
+  let sfForum: ForumPeek | null = null;
+  try {
+    const pick = async (col: string, kind: ForumPeek['kind']): Promise<ForumPeek | null> => {
+      const d = await db
+        .collection(col)
+        .find(PUBLIC_MOD, { projection: { title: 1, tags: 1, createdAt: 1 } })
+        .sort({ createdAt: -1 })
+        .limit(1)
+        .toArray();
+      const doc = d[0];
+      if (!doc || typeof doc.title !== 'string' || !doc.title.trim()) return null;
+      return {
+        kind,
+        title: doc.title,
+        tags: Array.isArray(doc.tags) ? doc.tags.filter((t: unknown) => typeof t === 'string').slice(0, 3) : [],
+        createdAt: new Date(doc.createdAt ?? now).toISOString(),
+      };
+    };
+    const cands = (
+      await Promise.all([pick('topics', 'discussion'), pick('announcements', 'announcement'), pick('recommendations', 'recommendation')])
+    ).filter((c): c is ForumPeek => c !== null);
+    cands.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    sfForum = cands[0] ?? null;
+  } catch (err) {
+    failures.push(['schaufenster.forum', err]);
+  }
+
+  let sfEvent: EventPeek | null = null;
+  try {
+    const d = await db
+      .collection('events')
+      .find(
+        { ...PUBLIC_MOD, visibility: { $ne: 'private' }, startDate: { $gte: now } },
+        { projection: { title: 1, startDate: 1, allDay: 1, category: 1 } },
+      )
+      .sort({ startDate: 1 })
+      .limit(1)
+      .toArray();
+    const doc = d[0];
+    if (doc && typeof doc.title === 'string' && doc.title.trim()) {
+      sfEvent = {
+        title: doc.title,
+        startISO: new Date(doc.startDate).toISOString(),
+        allDay: doc.allDay === true,
+        category: typeof doc.category === 'string' ? doc.category : null,
+      };
+    }
+  } catch (err) {
+    failures.push(['schaufenster.event', err]);
+  }
+
+  let sfListing: ListingPeek | null = null;
+  try {
+    const freshSince = new Date(now.getTime() - 21 * 86_400_000); // same 21-day clock as the browse page
+    const d = await db
+      .collection('listings')
+      .find(
+        {
+          ...PUBLIC_MOD,
+          status: 'available',
+          $expr: { $gte: [{ $ifNull: ['$lastBumpedAt', '$createdAt'] }, freshSince] },
+        },
+        { projection: { title: 1, images: 1, listingType: 1, listingKind: 1, price: 1 } },
+      )
+      .sort({ createdAt: -1 })
+      .limit(1)
+      .toArray();
+    const doc = d[0];
+    if (doc && typeof doc.title === 'string' && doc.title.trim()) {
+      // The create route writes `listingType`; older/seeded docs carry `listingKind`.
+      const raw = doc.listingType ?? doc.listingKind;
+      const kind: ListingPeek['kind'] = raw === 'exchange' || raw === 'gift' ? raw : 'sell';
+      const first = Array.isArray(doc.images) ? doc.images[0] : null;
+      sfListing = {
+        title: doc.title,
+        image: typeof first === 'string' && first.startsWith('http') ? first : null,
+        kind,
+        price: kind === 'sell' && typeof doc.price === 'number' ? doc.price : null,
+      };
+    }
+  } catch (err) {
+    failures.push(['schaufenster.listing', err]);
+  }
+  const schaufenster: SchaufensterData = { forum: sfForum, event: sfEvent, listing: sfListing };
+
   // ── zero rule, SERVER-SIDE (§03): a row without life is omitted; the
   //    mute air row is life ("measurement paused" is information). ──
   const rows: HeartbeatRow[] = [];
@@ -231,7 +324,7 @@ async function compute(now: Date): Promise<LandingData> {
     } catch { /* best-effort */ }
   }
 
-  return { rows, population, airGrade, airSpark, kurier, computedAt: now.toISOString() };
+  return { rows, population, airGrade, airSpark, kurier, schaufenster, computedAt: now.toISOString() };
 }
 
 export async function getLandingData(now: Date = new Date()): Promise<LandingData> {
@@ -260,6 +353,6 @@ export async function getLandingData(now: Date = new Date()): Promise<LandingDat
     } catch { /* best-effort */ }
     // Total failure → empty data; the strip collapses, the manifest carries
     // the page (§03 Totalausfall). Never throw into the route.
-    return { rows: [], population: null, airGrade: null, airSpark: [], kurier: [], computedAt: now.toISOString() };
+    return { rows: [], population: null, airGrade: null, airSpark: [], kurier: [], schaufenster: null, computedAt: now.toISOString() };
   }
 }
