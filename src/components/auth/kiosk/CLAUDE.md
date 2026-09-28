@@ -160,8 +160,14 @@ truncated to 32 chars (same salt as the contact relay).
   send skipped). Also bounds the CWE-208 timing side-channel. Lookup now
   collation-insensitive (strength 2).
 - **register**: 40/h per IP + 3/h per email → 429 (`auth.err.tooMany` in the
-  UI). IP gate placed BEFORE the OpenAI profanity check (cost guard); the
-  email gate sits after the format check. **IP gates are ROOM-sized since
+  UI; since 2026-09-28 `auth.err.tooManyIn` „in etwa {min} Minuten" when the
+  body carries `retryAfterSec` — DRAFT copy, his wording open). IP gate placed
+  BEFORE the OpenAI profanity check (cost guard); **the email gate moved on
+  2026-09-28 to AFTER `checkNameProfanity()`, right before the duplicate-email
+  lookup** — a restaurant owner had three names refused (GPT labelled „Berlin
+  Cigkofte" an advert, see root CLAUDE.md „Username validation") and the fourth
+  try hit the hour-long e-mail lock; the bucket still caps duplicate-e-mail
+  probing. **IP gates are ROOM-sized since
   2026-09-14** (Schillermarkt stand prep): a tablet doing assisted signups, a
   phone hotspot or a venue Wi-Fi is ONE public IP, and the old 5/h refused
   the sixth neighbour of the hour. The per-email bucket is the per-person
