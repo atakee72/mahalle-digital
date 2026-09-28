@@ -1346,6 +1346,8 @@ const de = {
   'auth.err.lockedBody.a': 'Aus Sicherheitsgründen pausiert. Versuch es in ',
   'auth.err.lockedBody.b': ' Min. erneut.',
   'auth.err.tooMany': 'Zu viele Versuche — warte kurz und versuch es später erneut.',
+  // DRAFT copy (2026-09-28) — the owner words UI copy himself
+  'auth.err.tooManyIn': 'Zu viele Versuche — versuch es in etwa {min} Minuten noch einmal.',
 
   // ── Auth (ban enforcement) ──
   'auth.banned.title.a': 'Konto ',
@@ -3309,6 +3311,8 @@ const en: Dict = {
   'auth.err.lockedBody.a': 'Paused for security. Try again in ',
   'auth.err.lockedBody.b': ' min.',
   'auth.err.tooMany': 'Too many attempts — wait a bit and try again later.',
+  // DRAFT copy (2026-09-28) — the owner words UI copy himself
+  'auth.err.tooManyIn': 'Too many attempts — try again in about {min} minutes.',
 
   // ── Auth (ban enforcement) ──
   'auth.banned.title.a': 'Account ',

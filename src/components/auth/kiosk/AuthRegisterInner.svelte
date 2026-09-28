@@ -1,6 +1,6 @@
 <script lang="ts">
   import { signIn } from 'auth-astro/client';
-  import { t } from '../../../lib/kiosk-i18n';
+  import { t, tStr } from '../../../lib/kiosk-i18n';
   import { cleanDisplayName, isValidDisplayName } from '../../../lib/profile/nameRules';
   import { slugifyHandle, normalizeChosenHandle, chosenHandleProblem } from '../../../lib/profile/handle';
   import AuthField from './primitives/AuthField.svelte';
@@ -82,7 +82,13 @@
         if (code === 'handle_invalid') { handleErr = $t['auth.err.handleInvalid']; status = 'idle'; return; }
         if (code === 'handle_reserved') { handleErr = $t['auth.err.handleReserved']; status = 'idle'; return; }
         if (res.status === 409) { emailTaken = true; status = 'idle'; return; }
-        if (res.status === 429) { nameErr = $t['auth.err.tooMany']; status = 'idle'; return; }
+        if (res.status === 429) {
+          const sec = Number(data?.retryAfterSec);
+          nameErr = Number.isFinite(sec) && sec > 0
+            ? tStr($t['auth.err.tooManyIn'], { min: String(Math.max(1, Math.ceil(sec / 60))) })
+            : $t['auth.err.tooMany'];
+          status = 'idle'; return;
+        }
         // 400 (e.g. profanity) or 500 → inline on the relevant field / generic
         // The server's reason is English (moderation lib) — never show it raw.
         nameErr = /inappropriate|display name/i.test(String(data?.error ?? '')) ? $t['auth.err.nameBlocked'] : $t['auth.err.generic'];

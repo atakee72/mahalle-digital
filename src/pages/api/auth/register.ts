@@ -53,8 +53,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         const ipLimit = await consumeRateLimit(`reg:ip:${ipHash}`, 40, 60 * 60 * 1000);
         if (ipLimit.limited) {
             return new Response(
-                JSON.stringify({ error: 'rate_limited' }),
-                { status: 429, headers: { 'Content-Type': 'application/json' } }
+                JSON.stringify({ error: 'rate_limited', retryAfterSec: ipLimit.retryAfterSec }),
+                { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': String(ipLimit.retryAfterSec) } }
             );
         }
 
@@ -83,17 +83,6 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
             return new Response(
                 JSON.stringify({ error: 'Invalid email address' }),
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
-            );
-        }
-
-        // Per-email throttle: 3 attempts/hour for the same address. The
-        // person-level brake now that the IP gate is room-sized; also caps
-        // the duplicate-account probing (409) a single address can do.
-        const emailLimit = await consumeRateLimit(`reg:email:${emailNorm}`, 3, 60 * 60 * 1000);
-        if (emailLimit.limited) {
-            return new Response(
-                JSON.stringify({ error: 'rate_limited' }),
-                { status: 429, headers: { 'Content-Type': 'application/json' } }
             );
         }
 
@@ -146,6 +135,19 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
             return new Response(
                 JSON.stringify({ error: nameCheck.reason || 'Invalid display name' }),
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
+        // Per-email throttle: 3 attempts/hour for the same address — charged only
+        // once the name has passed every check (2026-09-28: three refused names
+        // used to lock a newcomer out for the hour; the IP gate above stays the
+        // cheap abuse brake). Still caps the duplicate-account probing (409) a
+        // single address can do.
+        const emailLimit = await consumeRateLimit(`reg:email:${emailNorm}`, 3, 60 * 60 * 1000);
+        if (emailLimit.limited) {
+            return new Response(
+                JSON.stringify({ error: 'rate_limited', retryAfterSec: emailLimit.retryAfterSec }),
+                { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': String(emailLimit.retryAfterSec) } }
             );
         }
 
