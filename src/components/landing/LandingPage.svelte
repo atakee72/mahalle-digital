@@ -464,6 +464,7 @@
   .lnd-sf-card { flex-shrink: 0; margin-top: 4px; background: var(--k-paper-warm); border: 1.5px solid var(--k-ink); border-radius: 8px; padding: 8px 9px; display: flex; flex-direction: column; gap: 5px; box-shadow: 2px 2px 0 var(--k-ink); overflow: hidden; }
   .lnd-sf-card-row { flex-direction: row; align-items: center; gap: 9px; }
   .lnd-sf-card > * { flex-shrink: 0; }
+  .lnd-sf-card-row > .lnd-sf-col { flex: 1 1 auto; min-width: 0; }
   .lnd-sf-card-photo { padding: 0; }
   .lnd-sf-card-news .lnd-sf-photo { height: 72px; }
   .lnd-sf-card-photo > :not(img) { margin: 0 9px; }
