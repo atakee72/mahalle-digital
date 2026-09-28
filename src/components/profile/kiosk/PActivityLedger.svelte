@@ -97,6 +97,17 @@
     fetchPage(null, false);
   });
 
+  let cardEl = $state<HTMLElement | null>(null);
+  function collapseLedger() {
+    ledgerOpen = false;
+    // Scroll the card's top edge under the masthead (its published height,
+    // 0 while hidden on scroll) — never `scrollIntoView`, the ClientRouter
+    // keeps its own scroll bookkeeping and this is a plain in-page move.
+    const mast = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k-mast-offset')) || 0;
+    const top = (cardEl?.getBoundingClientRect().top ?? 0) + window.scrollY - mast - 12;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+  }
+
   function selectFilter(f: ActivityFilter) {
     if (f === filter) return;
     filter = f;
@@ -168,7 +179,7 @@
 </script>
 
 <PCard pad={24}>
-  <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; gap: 10px; flex-wrap: wrap;">
+  <div bind:this={cardEl} style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; gap: 10px; flex-wrap: wrap;">
     <div class="hidden lg:block">
       <PCardHead n="01" title={headingDesktop} />
     </div>
@@ -241,6 +252,13 @@
     {#if ledgerOverflows && !ledgerOpen}
       <div class="lg:hidden" style="margin-top: 10px; text-align: center;">
         <PBtn small onclick={() => { ledgerOpen = true; }}>{$t['profile.archiv.expand']}</PBtn>
+      </div>
+    {:else if ledgerOpen}
+      <!-- Closer at the end of the opened list (user, 02:21): clips the list
+           again and brings the card head back under the masthead, so the
+           reader lands where the opener was instead of far below. -->
+      <div class="lg:hidden" style="margin-top: 10px; text-align: center;">
+        <PBtn small onclick={collapseLedger}>{$t['profile.archiv.collapse']}</PBtn>
       </div>
     {/if}
   {/if}

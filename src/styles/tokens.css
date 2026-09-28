@@ -149,6 +149,7 @@ body {
 [data-page="marketplace"]  { --k-bar-tint: #d68a1a; } /* two ticks livelier than the „+"'s #b97a1a (user, 2026-09-28 01:01, seen on dev, after trying up to #faaf2e unseen; #b97a1a and #c88219 held minutes, #df9b2f since 09-22); paper text since 01:45 like every coloured bar (ink text stayed until then); bars only */
 [data-page="newsboard"]    { --k-bar-tint: var(--k-ink); --k-bar-lines: repeating-linear-gradient(90deg, rgb(243 234 216 / 0.12) 0 1px, transparent 1px 3px); } /* ink lines on ink are invisible — paper lines here */
 [data-page="schillerkiez"] { --k-bar-tint: var(--k-moss); }
+[data-page="search"]       { --k-bar-tint: #d68a1a; } /* the search results page wears the Markt bar (user, 2026-09-28 02:24); bars only, no market accents */
 [data-page="blog"]         { --k-bar-tint: var(--k-rust); }
 /* Profil: every section's bar colour in nav order, fading into the next
    (user trial 2026-09-28 01:06). --k-bar is only ever painted as a
@@ -159,7 +160,7 @@ body {
 }
 /* The ink segment sits under the tab row — ink tab frames vanish there. */
 [data-page="profile"] header nav a:not([aria-current="page"]) { border-color: var(--k-paper); }
-:is([data-page="forum"], [data-page="calendar"], [data-page="newsboard"], [data-page="marketplace"], [data-page="schillerkiez"], [data-page="blog"], [data-page="profile"]) {
+:is([data-page="forum"], [data-page="calendar"], [data-page="newsboard"], [data-page="marketplace"], [data-page="schillerkiez"], [data-page="blog"], [data-page="profile"], [data-page="search"]) {
   --k-bar-fg: var(--k-paper);
   --k-bar-hover: rgb(0 0 0 / 0.15);
   --k-bar-dim: 1;

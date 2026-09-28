@@ -1767,6 +1767,7 @@ const de = {
   'profile.filter.entwuerfe': 'Entwürfe →',
   'profile.archiv.older': 'ältere laden ↓',
   'profile.archiv.expand': 'alle anzeigen ↓', // DRAFT copy (2026-09-28) — user words UI copy
+  'profile.archiv.collapse': 'weniger anzeigen ↑', // DRAFT copy (2026-09-28)
   'profile.archiv.by': 'von {name}',
   'profile.archiv.loadfailed': 'Archiv konnte nicht geladen werden.',
   'profile.empty.line': 'Noch keine Spuren im Kiez.',
@@ -3726,6 +3727,7 @@ const en: Dict = {
   'profile.filter.entwuerfe': 'Drafts →',
   'profile.archiv.older': 'load older ↓',
   'profile.archiv.expand': 'show all ↓', // DRAFT copy (2026-09-28)
+  'profile.archiv.collapse': 'show less ↑', // DRAFT copy (2026-09-28)
   'profile.archiv.by': 'by {name}',
   'profile.archiv.loadfailed': 'Archive could not be loaded.',
   'profile.empty.line': 'No traces in the kiez yet.',
