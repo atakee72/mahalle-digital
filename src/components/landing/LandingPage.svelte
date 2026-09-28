@@ -7,7 +7,9 @@
   import { advance, activeIndex } from '../../lib/landing/loop';
   import { t, tStr, locale, setLocale } from '../../lib/kiosk-i18n';
   import type { LandingData, HeartbeatRow } from '../../lib/landing';
-  import { buildFrames, type Frame, type SectionKey, type BlogPeek, type BlogMeta } from '../../lib/landing/frames';
+  import { buildFrames, monthCells, berlinYearMonth, type Frame, type Live, type SectionKey, type BlogPeek, type BlogMeta } from '../../lib/landing/frames';
+  import { CATEGORIES, CATEGORY_ORDER } from '../../lib/calendar/categories';
+  import type { EventCategory } from '../../types';
   import { cloudinaryFit, optimizeCloudinary } from '../../utils/cloudinary';
   import { relTime } from '../../lib/relTime';
 
@@ -200,13 +202,17 @@
     };
   });
 
-  function berlinDayDisc(iso: string): { wd: string; day: string; time: string } {
-    const d = new Date(iso);
+  function kickerDate(iso: string | undefined): { dow: string; dm: string; hhmm: string } {
+    const d = new Date(iso ?? Date.now());
     const loc = $locale === 'de' ? 'de-DE' : 'en-GB';
-    const wd = new Intl.DateTimeFormat(loc, { weekday: 'short', timeZone: 'Europe/Berlin' }).format(d).replace('.', '').toUpperCase();
-    const day = new Intl.DateTimeFormat(loc, { day: 'numeric', timeZone: 'Europe/Berlin' }).format(d);
-    const time = new Intl.DateTimeFormat(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }).format(d);
-    return { wd, day, time };
+    const f = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(loc, { timeZone: 'Europe/Berlin', ...o }).format(d);
+    return { dow: f({ weekday: 'long' }).toUpperCase(), dm: f({ day: 'numeric', month: 'short' }).toUpperCase(), hhmm: f({ hour: '2-digit', minute: '2-digit' }) };
+  }
+  function monthYearLabel(iso: string): string {
+    return new Intl.DateTimeFormat($locale === 'de' ? 'de-DE' : 'en-GB', { timeZone: 'Europe/Berlin', month: 'long', year: 'numeric' }).format(new Date(iso)).toUpperCase();
+  }
+  function catStyle(cat: string | null) {
+    return CATEGORIES[((cat ?? 'kiez') in CATEGORIES ? (cat ?? 'kiez') : 'kiez') as EventCategory];
   }
   function priceFmt(n: number): string {
     return new Intl.NumberFormat($locale === 'de' ? 'de-DE' : 'en-GB', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
@@ -224,6 +230,203 @@
     return title ? `${bar}: ${cap} — ${title}` : `${bar}: ${cap}`;
   }
 </script>
+
+{#snippet bar(key: SectionKey)}
+  {@const S = SECTION[key]}
+  {@const de = $locale === 'de'}
+  <div class="lnd-sf-repbar border-b-2 border-ink" style="background: {S.lines}, var(--k-bar-wash), var(--k-bar-shade), linear-gradient({S.tint}, {S.tint})" aria-hidden="true">
+    <div class="px-4 py-2 flex items-center justify-between">
+      <span class="w-9 h-9 rounded-full bg-wine text-paper flex items-center justify-center font-bricolage font-bold text-xl leading-none" style="box-shadow: 0 0 0 2px var(--k-paper), inset 0 -0.25px 0 1.75px var(--k-wine), inset 0 0 0 2px var(--k-ink)">m</span>
+      <span class="flex items-center gap-2">
+        <span class="inline-flex items-center h-[25px] rounded-full border-2 border-paper font-dmmono text-[11px] uppercase tracking-[0.12em] bg-ink"><span class="inline-flex items-center justify-center h-[21px] px-2.5 leading-none rounded-l-full {de ? 'bg-paper text-ink' : 'bg-ink text-paper'}">DE</span><span class="inline-flex items-center justify-center h-[21px] px-2.5 leading-none rounded-r-full {de ? 'bg-ink text-paper' : 'bg-paper text-ink'}">EN</span></span>
+        <span class="w-9 h-9 rounded-full border-2 border-paper bg-paper text-ink flex items-center justify-center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg></span>
+        <span class="w-9 h-9 rounded-full border-2 border-paper bg-paper text-ink flex items-center justify-center"><svg width="19" height="19" viewBox="0 0 24 24"><path d="M12 4.4c-3.3 0-4.9 2.5-4.9 5.9v3.5L5.3 16.1h13.4l-1.8-2.3v-3.5c0-3.4-1.6-5.9-4.9-5.9z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" /><path d="M9.7 18.6a2.3 2.3 0 004.6 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /></svg></span>
+        <span class="w-9 h-9 rounded-full border-2 border-paper bg-paper"></span>
+      </span>
+    </div>
+  </div>
+{/snippet}
+
+{#snippet forumRep(l: Extract<Live, { key: 'forum' }>)}
+  {@const k = kickerDate(data.computedAt)}
+  {@const isAnn = l.kind === 'announcement'}
+  {@const isRec = l.kind === 'recommendation'}
+  {@const pill = 'shrink-0 px-4 py-1 rounded-full font-bricolage font-medium text-sm border-2'}
+  <div class="px-4 pt-5 pb-8">
+    <section class="mb-3 pb-4 border-b border-dashed border-rule">
+      <p class="font-dmmono text-[11px] uppercase tracking-[0.18em] text-wine mb-2">FORUM · {k.dow} {k.dm} · {k.hhmm}</p>
+      <h1 class="font-bricolage font-extrabold text-4xl tracking-tight leading-[0.95] text-ink">
+        {$t['forum.title.prefix']}
+        <em class="font-instrument italic font-normal text-wine">{$t['forum.title.accent']}</em>
+        {$t['forum.title.suffix']}
+      </h1>
+      {#if l.stats}
+        <div class="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 mt-3 font-dmmono text-[10px] text-ink-mute">
+          <span class="whitespace-nowrap"><span class="font-bold text-ink">{l.stats.total}</span> {$t['forum.stats.topics']}</span>
+          <span class="whitespace-nowrap"><span class="font-bold text-ink">{l.stats.newSinceYesterday}</span> {$t['forum.stats.new']}</span>
+          <span class="whitespace-nowrap"><span class="font-bold text-ink">{l.stats.discussedToday}</span> {$t['forum.stats.discussed']}</span>
+        </div>
+      {/if}
+    </section>
+    <div class="mb-5 flex items-center gap-2">
+      <div class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
+        <span class="{pill} bg-ink text-paper border-ink">{$t['filter.all']}</span>
+        <span class="{pill} bg-transparent text-ink border-ink/30">{$t['filter.discussion']}</span>
+        <span class="{pill} bg-transparent text-ink border-ink/30">{$t['filter.announcement']}</span>
+        <span class="{pill} bg-transparent text-ink border-ink/30">{$t['filter.recommendation']}</span>
+      </div>
+      <span class="shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full font-bricolage font-medium text-sm bg-transparent text-ink border-2 border-ink/30"><span>{$t['filter.tagsChip']}</span><span aria-hidden="true" class="text-[10px]">▾</span></span>
+    </div>
+    <article class="bg-paper-warm {isAnn ? 'border-[1.5px] border-teal shadow-[2px_2px_0_var(--k-teal)]' : isRec ? 'border-[1.5px] border-moss shadow-[2px_2px_0_var(--k-moss)]' : 'border border-wine'} flex flex-col overflow-hidden rounded-lg">
+      {#if isAnn || isRec}
+        <div class="{isAnn ? 'bg-teal' : 'bg-moss'} text-paper border-b border-ink flex items-center justify-between gap-3 px-3.5 py-1">
+          <span class="font-dmmono text-[9.5px] uppercase font-semibold tracking-[0.12em]">{isAnn ? $t['card.strap.announcement'] : $t['card.strap.recommendation']}</span>
+        </div>
+      {/if}
+      <div class="px-5 py-4">
+        <div class="flex items-start justify-between gap-3 mb-2.5">
+          <div class="font-dmmono text-[10px] tracking-[0.05em] text-ink-mute pt-1">{relTime(l.createdAt, $locale)}</div>
+          {#if !isAnn && !isRec}
+            <span class="inline-flex items-center font-dmmono font-medium text-[10px] tracking-[0.08em] text-paper border border-ink rounded-lg px-[9px] py-[3px] bg-wine">{$t[`chip.${l.kind}`].toUpperCase()}</span>
+          {/if}
+        </div>
+        {#if l.image}
+          <div class="relative mb-3 rounded-md border-[1.5px] border-ink overflow-hidden h-[100px]">
+            <img src={cloudinaryFit(optimizeCloudinary(l.image), 480)} alt="" class="w-full h-full object-cover" width="480" height="200" loading="lazy" decoding="async" onerror={hideOnError}>
+            <div class="pointer-events-none absolute inset-0" style="background: repeating-linear-gradient(0deg, transparent 0 4px, rgba(0,0,0,0.04) 4px 5px);"></div>
+          </div>
+        {/if}
+        <h3 class="font-bricolage font-extrabold tracking-tight leading-[1.18] mb-2 text-balance text-ink text-[16.5px] lnd-clamp3">{l.title}</h3>
+        {#if l.tags.length}
+          <div class="flex gap-2 flex-wrap font-dmmono text-[10px] mb-2.5 text-ink-mute">{#each l.tags as tg (tg)}<span>#{tg}</span>{/each}</div>
+        {/if}
+        <div class="flex items-center justify-between font-dmmono text-[11px] pt-2.5 border-t border-dashed border-rule text-ink-mute">
+          <span class="flex items-center gap-3">
+            <span class="flex items-center gap-1"><span aria-hidden="true">♥</span> {l.likes ?? 0}</span>
+            <span class="flex items-center gap-1"><span aria-hidden="true">💬</span> {l.comments ?? 0}</span>
+            <span class="flex items-center gap-1"><span aria-hidden="true">👁</span> {l.views ?? 0}</span>
+          </span>
+          <span class="flex items-center gap-1">→ {$t['card.cta.read']}</span>
+        </div>
+      </div>
+    </article>
+  </div>
+{/snippet}
+
+{#snippet calendarRep(l: Extract<Live, { key: 'calendar' }>)}
+  {@const k = kickerDate(data.computedAt)}
+  {@const ym = berlinYearMonth(data.computedAt)}
+  {@const views = ['month', 'agenda', 'day']}
+  <section class="px-4 pt-5 pb-3 border-b border-dashed border-rule">
+    <div class="font-dmmono text-[11px] uppercase tracking-[0.18em] text-teal mb-2">{$t['cal.title.kicker']} · {k.dow} {k.dm} · {k.hhmm}</div>
+    <h1 class="font-bricolage font-extrabold text-ink leading-[0.95] tracking-tight text-4xl">
+      {$t['cal.title.q1']}
+      <span class="font-instrument italic font-normal text-teal">{$t['cal.title.q2']}</span>
+      {$t['cal.title.q3']}
+    </h1>
+    <div class="flex items-center justify-end gap-2 mt-4">
+      <div class="inline-flex items-center border-[1.5px] border-ink rounded-full font-dmmono text-[11px] font-semibold leading-none">
+        <span class="px-2.5 py-1">‹</span>
+        <span class="px-3 py-1 border-l-[1.5px] border-r-[1.5px] border-ink uppercase tracking-[0.05em]">{monthYearLabel(data.computedAt)}</span>
+        <span class="px-2.5 py-1">›</span>
+      </div>
+    </div>
+    <div class="flex items-center justify-between gap-3 mt-3">
+      <div class="font-dmmono text-[11px] text-ink-mute">{#if l.monthCount != null}<b class="text-ink">{l.monthCount}</b> {$t['cal.mobile.statsMonthEvents']}{/if}</div>
+      <div class="inline-flex border-2 border-ink rounded-full font-dmmono text-[12px] font-semibold shrink-0">
+        {#each views as v, i (v)}
+          <span class="px-3 py-1 {v === 'month' ? 'bg-ink text-paper' : 'bg-transparent text-ink'} {i > 0 ? 'border-l-2 border-ink' : ''} {i === 0 ? 'rounded-l-full' : i === views.length - 1 ? 'rounded-r-full' : ''}">{($t as Record<string, string>)[`cal.view.${v}`]}</span>
+        {/each}
+      </div>
+    </div>
+  </section>
+  <section class="px-4 py-3 flex items-center gap-2 border-b border-dashed border-rule overflow-hidden">
+    <span class="shrink-0 inline-flex items-center px-3.5 py-1 rounded-full font-bricolage font-semibold text-[12px] border-[1.5px] border-ink bg-ink text-paper">{$t['cal.filter.all']}</span>
+    {#each CATEGORY_ORDER.slice(0, 3) as cat (cat)}
+      <span class="shrink-0 inline-flex items-center gap-2 px-3 py-1 rounded-full font-bricolage font-semibold text-[12px] border-[1.5px] border-ink bg-transparent text-ink">
+        <span class="w-[8px] h-[8px] {CATEGORIES[cat].bgClass} border border-ink/40"></span>
+        <span>{catLabel(cat)}</span>
+      </span>
+    {/each}
+  </section>
+  <div class="px-4 pt-4">
+    <div class="grid grid-cols-7 gap-[2px] font-dmmono text-[12px]">
+      {#each ($locale === 'de' ? ['M','D','M','D','F','S','S'] : ['M','T','W','T','F','S','S']) as label, i (`${label}-${i}`)}
+        <div class="text-ink-mute py-0.5 text-center tracking-[0.05em]">{label}</div>
+      {/each}
+      {#each monthCells(ym.year, ym.month, l.days) as c, i (i)}
+        {@const today = c.day === ym.day}
+        <div class="relative py-2 text-center {today ? 'lnd-sf-today bg-teal text-paper border border-ink rounded-[4px] font-bold' : 'text-ink'}">
+          {c.day ?? ''}
+          {#if c.day != null && c.category && !today}
+            <div class="absolute left-1/2 -translate-x-1/2 bottom-0.5 w-1 h-1 rounded-full {catStyle(c.category).bgClass}"></div>
+          {/if}
+        </div>
+      {/each}
+    </div>
+    <div class="mt-4 bg-paper-warm border border-dashed border-rule rounded-sm px-3 py-2.5 font-instrument italic text-[13px] text-ink-soft leading-[1.5]">{$t['cal.agenda.quote']}</div>
+  </div>
+{/snippet}
+
+{#snippet marketRep(l: Extract<Live, { key: 'marketplace' }>)}
+  <div class="lnd-sf-body">
+    <div class="lnd-sf-kicker font-dmmono">{$t['lnd.sf.bar.marketplace']}</div>
+    <div class="lnd-sf-title font-bricolage">{@html $t['lnd.sf.title.marketplace']}</div>
+                    <div class="lnd-sf-card lnd-sf-card-photo">
+                      {#if l.image}<img class="lnd-sf-photo" src={cloudinaryFit(optimizeCloudinary(l.image), 480)} alt="" width="480" height="240" loading="lazy" decoding="async" onerror={hideOnError}>{/if}
+                      <div class="lnd-sf-row font-dmmono"><span class="lnd-sf-chip" style="background:var(--sf-tint)">{$t[`lnd.sf.kind.${l.kind}`]}</span>{#if l.price != null}<span>{priceFmt(l.price)}</span>{/if}</div>
+                      <div class="lnd-sf-h2 lnd-clamp2">{l.title}</div>
+                    </div>
+  </div>
+{/snippet}
+
+{#snippet kurierRep(l: Extract<Live, { key: 'newsboard' }>)}
+  <div class="lnd-sf-body">
+    <div class="lnd-sf-kicker font-dmmono">{$t['lnd.sf.bar.newsboard']}</div>
+    <div class="lnd-sf-title font-bricolage">{@html $t['lnd.sf.title.newsboard']}</div>
+                    <div class="lnd-sf-card lnd-sf-card-photo lnd-sf-card-news">
+                      {#if l.lead.imageUrl}<img class="lnd-sf-photo" src={l.lead.imageUrl} alt="" width="480" height="240" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={hideOnError}>{/if}
+                      <div class="lnd-sf-h2 lnd-clamp3">{l.lead.title}</div>
+                      <div class="lnd-sf-mute font-dmmono">{l.lead.sourceName.toUpperCase()} ↗</div>
+                    </div>
+                    {#if l.more.length}
+                      <div class="lnd-sf-more">
+                        <div class="lnd-sf-mute font-dmmono">{$t['lnd.sf.more']}</div>
+                        {#each l.more as m}<div class="lnd-sf-h3 lnd-clamp2">{m.title}</div>{/each}
+                      </div>
+                    {/if}
+  </div>
+{/snippet}
+
+{#snippet kiezRep(l: Extract<Live, { key: 'schillerkiez' }>)}
+  <div class="lnd-sf-body">
+    <div class="lnd-sf-kicker font-dmmono">{$t['lnd.sf.bar.schillerkiez']}</div>
+    <div class="lnd-sf-title font-bricolage">{@html $t['lnd.sf.title.schillerkiez']}</div>
+                    <div class="lnd-sf-card lnd-sf-card-ink">
+                      <div class="lnd-sf-mute font-dmmono">{l.airGrade != null ? $t['lnd.sf.air'] : $t['lnd.sf.airMute']}</div>
+                      {#if l.airGrade != null}<div class="lnd-sf-big font-dmmono">{l.airGrade} · {($t as Record<string, string>)[`lnd.daten.grade.${l.airGrade}`] ?? ''}</div>{/if}
+                      {#if l.airSpark.some((v: number | null) => v != null)}
+                        <div class="lnd-sf-bars" aria-hidden="true">
+                          {#each l.airSpark as v}<span class="lnd-sf-barv" style="height:{v == null ? 4 : Math.round(6 + (5 - Math.min(5, Math.max(1, v))) * 6)}px; opacity:{v == null ? 0.3 : 1}"></span>{/each}
+                        </div>
+                      {/if}
+                      {#if l.population != null}<div class="lnd-sf-pop font-bricolage">{new Intl.NumberFormat($locale === 'de' ? 'de-DE' : 'en-GB').format(l.population)}</div><div class="lnd-sf-mute font-dmmono">{$t['lnd.sf.pop']}</div>{/if}
+                    </div>
+  </div>
+{/snippet}
+
+{#snippet blogRep(l: Extract<Live, { key: 'blog' }>)}
+  <div class="lnd-sf-body">
+    <div class="lnd-sf-kicker font-dmmono">{$t['lnd.sf.bar.blog']}</div>
+    <div class="lnd-sf-title font-bricolage">{@html $t['lnd.sf.title.blog']}</div>
+                    <div class="lnd-sf-card lnd-sf-card-photo">
+                      {#if l.coverSrc}<img class="lnd-sf-photo" src={l.coverSrc} alt="" width="480" height="240" loading="lazy" decoding="async" onerror={hideOnError}>{/if}
+                      <div class="lnd-sf-h2 lnd-clamp3">{l.title}</div>
+                      <div class="lnd-sf-desc lnd-clamp2 font-instrument">{l.description}</div>
+                      <div class="lnd-sf-mute font-dmmono">{fmtBlogDate(l.pubDateISO)}</div>
+                    </div>
+  </div>
+{/snippet}
 
 <div class="lnd-root">
   <!-- §02 VOLLBILD GESPIEGELT — z0 layer; every sibling is z1 via CSS below -->
@@ -278,68 +481,15 @@
           <div class="lnd-sf-item" aria-hidden={dup ? 'true' : undefined}>
             <a class="lnd-sf-frame" href={f.live?.key === 'blog' ? `/blog/${f.live.slug}` : f.href} tabindex={dup ? -1 : undefined} aria-label={frameLabel(f)} style="--sf-tint:{S.tint}">
               {#if f.live}
-                <div class="lnd-sf-bar" style="background: {S.lines}, var(--k-bar-wash), var(--k-bar-shade), linear-gradient(var(--sf-tint), var(--sf-tint))">
-                  <span class="lnd-sf-disc font-bricolage">m</span>
-                  <span class="lnd-sf-barname font-dmmono">{$t[`lnd.sf.bar.${f.key}`]}</span>
-                </div>
-                <div class="lnd-sf-body">
-                  <div class="lnd-sf-kicker font-dmmono">{$t[`lnd.sf.bar.${f.key}`]}</div>
-                  <div class="lnd-sf-title font-bricolage">{@html $t[`lnd.sf.title.${f.key}`]}</div>
-                  {#if f.live.key === 'forum'}
-                    <div class="lnd-sf-card">
-                      <div class="lnd-sf-row font-dmmono"><span class="lnd-sf-chip" style="background:var(--sf-tint)">{$t[`chip.${f.live.kind}`]}</span><span class="lnd-sf-mute">{relTime(f.live.createdAt, $locale)}</span></div>
-                      <div class="lnd-sf-h2 lnd-clamp2">{f.live.title}</div>
-                      {#if f.live.tags.length}<div class="lnd-sf-tags font-dmmono">{f.live.tags.map((g) => `#${g}`).join(' ')}</div>{/if}
-                    </div>
-                    {#if f.live.weekCount > 0}<div class="lnd-sf-count font-dmmono">{tStr($t['lnd.sf.forum.week'], { n: f.live.weekCount })}</div>{/if}
-                  {:else if f.live.key === 'calendar'}
-                    {@const d = berlinDayDisc(f.live.startISO)}
-                    <div class="lnd-sf-card lnd-sf-card-row">
-                      <div class="lnd-sf-daydisc" style="background:var(--sf-tint)"><span class="font-dmmono">{d.wd}</span><span class="font-bricolage lnd-sf-daynum">{d.day}</span></div>
-                      <div class="lnd-sf-col">
-                        <div class="lnd-sf-mute font-dmmono">{f.live.allDay ? $t['lnd.sf.allDay'] : d.time}{#if catLabel(f.live.category)} · {catLabel(f.live.category)}{/if}</div>
-                        <div class="lnd-sf-h2 lnd-clamp2">{f.live.title}</div>
-                      </div>
-                    </div>
-                    {#if f.live.weekendCount > 0}<div class="lnd-sf-count font-dmmono">{tStr($t['lnd.sf.event.weekend'], { n: f.live.weekendCount })}</div>{/if}
-                  {:else if f.live.key === 'marketplace'}
-                    <div class="lnd-sf-card lnd-sf-card-photo">
-                      {#if f.live.image}<img class="lnd-sf-photo" src={cloudinaryFit(optimizeCloudinary(f.live.image), 480)} alt="" width="480" height="240" loading="lazy" decoding="async" onerror={hideOnError}>{/if}
-                      <div class="lnd-sf-row font-dmmono"><span class="lnd-sf-chip" style="background:var(--sf-tint)">{$t[`lnd.sf.kind.${f.live.kind}`]}</span>{#if f.live.price != null}<span>{priceFmt(f.live.price)}</span>{/if}</div>
-                      <div class="lnd-sf-h2 lnd-clamp2">{f.live.title}</div>
-                    </div>
-                  {:else if f.live.key === 'newsboard'}
-                    <div class="lnd-sf-card lnd-sf-card-photo lnd-sf-card-news">
-                      {#if f.live.lead.imageUrl}<img class="lnd-sf-photo" src={f.live.lead.imageUrl} alt="" width="480" height="240" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={hideOnError}>{/if}
-                      <div class="lnd-sf-h2 lnd-clamp3">{f.live.lead.title}</div>
-                      <div class="lnd-sf-mute font-dmmono">{f.live.lead.sourceName.toUpperCase()} ↗</div>
-                    </div>
-                    {#if f.live.more.length}
-                      <div class="lnd-sf-more">
-                        <div class="lnd-sf-mute font-dmmono">{$t['lnd.sf.more']}</div>
-                        {#each f.live.more as m}<div class="lnd-sf-h3 lnd-clamp2">{m.title}</div>{/each}
-                      </div>
-                    {/if}
-                  {:else if f.live.key === 'schillerkiez'}
-                    <div class="lnd-sf-card lnd-sf-card-ink">
-                      <div class="lnd-sf-mute font-dmmono">{f.live.airGrade != null ? $t['lnd.sf.air'] : $t['lnd.sf.airMute']}</div>
-                      {#if f.live.airGrade != null}<div class="lnd-sf-big font-dmmono">{f.live.airGrade} · {($t as Record<string, string>)[`lnd.daten.grade.${f.live.airGrade}`] ?? ''}</div>{/if}
-                      {#if f.live.airSpark.some((v: number | null) => v != null)}
-                        <div class="lnd-sf-bars" aria-hidden="true">
-                          {#each f.live.airSpark as v}<span class="lnd-sf-barv" style="height:{v == null ? 4 : Math.round(6 + (5 - Math.min(5, Math.max(1, v))) * 6)}px; opacity:{v == null ? 0.3 : 1}"></span>{/each}
-                        </div>
-                      {/if}
-                      {#if f.live.population != null}<div class="lnd-sf-pop font-bricolage">{new Intl.NumberFormat($locale === 'de' ? 'de-DE' : 'en-GB').format(f.live.population)}</div><div class="lnd-sf-mute font-dmmono">{$t['lnd.sf.pop']}</div>{/if}
-                    </div>
-                  {:else if f.live.key === 'blog'}
-                    <div class="lnd-sf-card lnd-sf-card-photo">
-                      {#if f.live.coverSrc}<img class="lnd-sf-photo" src={f.live.coverSrc} alt="" width="480" height="240" loading="lazy" decoding="async" onerror={hideOnError}>{/if}
-                      <div class="lnd-sf-h2 lnd-clamp3">{f.live.title}</div>
-                      <div class="lnd-sf-desc lnd-clamp2 font-instrument">{f.live.description}</div>
-                      <div class="lnd-sf-mute font-dmmono">{fmtBlogDate(f.live.pubDateISO)}</div>
-                    </div>
-                  {/if}
-                </div>
+                <div class="lnd-sf-repbox"><div class="lnd-sf-rep">
+                  {@render bar(f.key)}
+                  {#if f.live.key === 'forum'}{@render forumRep(f.live)}
+                  {:else if f.live.key === 'calendar'}{@render calendarRep(f.live)}
+                  {:else if f.live.key === 'marketplace'}{@render marketRep(f.live)}
+                  {:else if f.live.key === 'newsboard'}{@render kurierRep(f.live)}
+                  {:else if f.live.key === 'schillerkiez'}{@render kiezRep(f.live)}
+                  {:else if f.live.key === 'blog'}{@render blogRep(f.live)}{/if}
+                </div></div>
               {:else}
                 <img class="lnd-sf-shot" src={f.fallback} alt="" width="480" height="800" loading="lazy" decoding="async">
               {/if}
@@ -455,17 +605,18 @@
   .lnd-sf-track:focus-visible { outline: 2px dashed var(--k-ink); outline-offset: 2px; }
   .lnd-sf-item { flex: 0 0 200px; min-width: 0; scroll-snap-align: start; display: flex; flex-direction: column; gap: 8px; }
   .lnd-sf-frame { display: flex; flex-direction: column; width: 200px; aspect-ratio: 3 / 5; box-sizing: border-box; border: 3px solid var(--sf-tint); border-radius: 16px; overflow: hidden; background: var(--k-paper); box-shadow: 3px 3px 0 var(--k-ink); text-decoration: none; color: var(--k-ink); }
-  .lnd-sf-bar { flex: 0 0 44px; display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--k-paper); }
-  .lnd-sf-disc { width: 26px; height: 26px; border-radius: 50%; background: var(--k-wine); color: var(--k-paper); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; box-shadow: 0 0 0 2px var(--k-paper); }
-  .lnd-sf-barname { font-size: 10px; letter-spacing: 0.16em; font-weight: 500; }
+  .lnd-sf-frame { --sf-scale: calc(194 / 390); }
+  .lnd-sf-repbox { width: 100%; aspect-ratio: 390 / 650; overflow: hidden; position: relative; background: var(--k-paper); }
+  .lnd-sf-rep { position: absolute; top: 0; left: 0; width: 390px; height: 650px; transform-origin: top left; transform: scale(var(--sf-scale)); overflow: hidden; background: var(--k-paper); color: var(--k-ink); font-size: 14px; line-height: 1.5; }
+  .lnd-sf-repbar { height: 54px; }
+  /* transitional: the four not-yet-rebuilt sections keep their old 200px-frame bodies, enlarged to the 390px canvas (Tasks 4-5 replace them) */
+  .lnd-sf-rep .lnd-sf-body { zoom: 1.95; height: calc(596px / 1.95); }
   .lnd-sf-body { flex: 1; min-height: 0; padding: 10px 10px 8px; display: flex; flex-direction: column; gap: 6px; }
   .lnd-sf-kicker { font-size: 8.5px; letter-spacing: 0.16em; color: var(--sf-tint); }
   .lnd-sf-title { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
   .lnd-sf-title :global(em) { font-family: var(--k-font-serif); font-style: italic; font-weight: 400; color: var(--sf-tint); }
   .lnd-sf-card { flex-shrink: 0; margin-top: 4px; background: var(--k-paper-warm); border: 1.5px solid var(--k-ink); border-radius: 8px; padding: 8px 9px; display: flex; flex-direction: column; gap: 5px; box-shadow: 2px 2px 0 var(--k-ink); overflow: hidden; }
-  .lnd-sf-card-row { flex-direction: row; align-items: center; gap: 9px; }
   .lnd-sf-card > * { flex-shrink: 0; }
-  .lnd-sf-card-row > .lnd-sf-col { flex: 1 1 auto; min-width: 0; }
   .lnd-sf-card-photo { padding: 0; }
   .lnd-sf-card-news .lnd-sf-photo { height: 72px; }
   .lnd-sf-card-photo > :not(img) { margin: 0 9px; }
@@ -484,10 +635,6 @@
   .lnd-sf-mute { font-size: 8.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); }
   .lnd-sf-count { margin-top: auto; font-size: 8.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); padding-top: 6px; border-top: 1px dashed var(--k-rule); }
   .lnd-sf-more { margin-top: 2px; flex: 1 1 auto; min-height: 0; overflow: hidden; }
-  .lnd-sf-daydisc { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; color: var(--k-paper); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
-  .lnd-sf-daydisc span:first-child { font-size: 7.5px; letter-spacing: 0.1em; }
-  .lnd-sf-daynum { font-size: 17px; font-weight: 800; }
-  .lnd-sf-col { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   .lnd-sf-big { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
   .lnd-sf-bars { display: flex; align-items: flex-end; gap: 3px; height: 32px; }
   .lnd-sf-barv { flex: 1; background: #9db97c; border-radius: 1px; }
@@ -535,7 +682,7 @@
     .lnd-sf-hint-desktop { display: none; }
     .lnd-sf-track { gap: 14px; padding: 4px 16px 6px; scroll-padding-left: 16px; }
     .lnd-sf-item { flex-basis: 236px; }
-    .lnd-sf-frame { width: 236px; }
+    .lnd-sf-frame { width: 236px; --sf-scale: calc(230 / 390); }
     .lnd-sf-title { font-size: 19px; }
     .lnd-sf-h2 { font-size: 14.5px; }
     .lnd-sf-photo, .lnd-sf-card-news .lnd-sf-photo { height: 112px; }
