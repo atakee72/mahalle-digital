@@ -164,7 +164,10 @@
         .map((c) => { const r = c.getBoundingClientRect(); return { top: r.top - boxTop, height: r.height }; });
       const h = halfRowCutHeight(rows, LEDGER_CAP);
       cur.onOverflow(h !== null);
-      node.style.maxHeight = h === null || cur.open ? '' : `${h}px`;
+      // Open: the full content height as an explicit px value, so the CSS
+      // transition has two numbers to run between (a `none` cannot animate);
+      // re-applied on child changes, so „older" keeps the box growing.
+      node.style.maxHeight = h === null ? '' : cur.open ? `${node.scrollHeight}px` : `${h}px`;
     };
     apply();
     const mo = new MutationObserver(apply);
@@ -239,7 +242,7 @@
     <!-- Bounded list: the card stopped growing with the member's history
          (user, 2026-09-28 01:51) — rows scroll inside the box, the „older"
          button sits at the end of the scroll. -->
-    <div class="prof-ledger-scroll" class:is-open={ledgerOpen} use:halfRowCut={{ open: ledgerOpen, onOverflow: (v) => { ledgerOverflows = v; } }}>
+    <div class="prof-ledger-scroll" use:halfRowCut={{ open: ledgerOpen, onOverflow: (v) => { ledgerOverflows = v; } }}>
       {#each items as item (item.id)}
         <PActivityRow {item} saved={showSaved} />
       {/each}

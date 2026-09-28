@@ -198,8 +198,11 @@
     position: absolute; inset: 0; z-index: 0; pointer-events: none;
     background-image: url('/assets/background_landing_page.webp');
     background-size: cover; background-repeat: no-repeat; background-position: center top;
-    /* opacity 0.16 → 0.3 + a little saturation (user, 2026-09-28 01:56: „too pale") */
-    mix-blend-mode: multiply; opacity: 0.3; filter: saturate(1.3); transform: rotate(180deg);
+    /* opacity 0.16 → 0.42 (user, 2026-09-28: „too pale", then „remove that
+       paleness"). NO `filter` here: a saturate() on this page-tall layer made
+       Chrome rasterise it in tiles and the ribbons appeared cut while
+       scrolling (user report 02:40). */
+    mix-blend-mode: multiply; opacity: 0.42; transform: rotate(180deg);
   }
 
   /* ── date line ── */

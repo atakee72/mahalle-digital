@@ -105,8 +105,9 @@
 .prof-ledger-scroll {
   max-height: 520px;
   overflow: hidden; /* phones: clipped, opened by „alle anzeigen" — a 520 px inner scroller trapped the page (user, 02:12) */
+  transition: max-height 360ms cubic-bezier(0.4, 0, 0.2, 1); /* the action animates the inline max-height between the cut and the full height (user, 02:40: „opens and closes abruptly") */
 }
-.prof-ledger-scroll.is-open { max-height: none !important; overflow: visible; }
+@media (prefers-reduced-motion: reduce) { .prof-ledger-scroll { transition: none; } }
 @media (min-width: 1024px) {
   .prof-ledger-scroll {
     overflow-y: auto; /* desktop: a wheel over a box is no trap */
