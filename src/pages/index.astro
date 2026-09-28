@@ -9,6 +9,7 @@ import { getCollection } from 'astro:content';
 import { getLandingData } from '../lib/landing';
 import { getImage } from 'astro:assets';
 import type { BlogPeek } from '../lib/landing/frames';
+import { compareNewest } from '../lib/blog/beilage';
 
 const session = await getSession(Astro.request);
 if (session?.user) return Astro.redirect('/forum');
@@ -20,7 +21,9 @@ const data = await getLandingData();
 let blog: BlogPeek[] = [];
 try {
   const entries = (await getCollection('blog', ({ data: d }) => !d.draft))
-    .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+    .map((e) => ({ e, id: e.id, pubDateISO: e.data.pubDate.toISOString(), sortISO: e.data.sortDate?.toISOString() }))
+    .sort(compareNewest)
+    .map((x) => x.e)
     .slice(0, 1);
   const e = entries[0];
   if (e) {

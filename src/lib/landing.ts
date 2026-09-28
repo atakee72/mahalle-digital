@@ -186,7 +186,7 @@ async function compute(now: Date): Promise<LandingData> {
         title: String(d.title ?? ''),
         sourceName: String(d.sourceName ?? ''),
         sourceUrl: String(d.sourceUrl ?? ''),
-        ...(typeof d.imageUrl === 'string' && d.imageUrl.startsWith('http') ? { imageUrl: d.imageUrl } : {}),
+        ...(typeof d.imageUrl === 'string' && d.imageUrl.startsWith('https://') ? { imageUrl: d.imageUrl } : {}),
       }));
     }
   } catch (err) {
@@ -222,7 +222,7 @@ async function compute(now: Date): Promise<LandingData> {
     const pick = async (col: string, kind: ForumPeek['kind']): Promise<ForumPeek | null> => {
       const d = await db
         .collection(col)
-        .find(PUBLIC_MOD, { projection: { title: 1, tags: 1, createdAt: 1 } })
+        .find({ ...PUBLIC_MOD, hasWarningLabel: { $ne: true } }, { projection: { title: 1, tags: 1, createdAt: 1 } })
         .sort({ createdAt: -1 })
         .limit(1)
         .toArray();
@@ -249,7 +249,7 @@ async function compute(now: Date): Promise<LandingData> {
     const d = await db
       .collection('events')
       .find(
-        { ...PUBLIC_MOD, visibility: { $ne: 'private' }, startDate: { $gte: now } },
+        { ...PUBLIC_MOD, hasWarningLabel: { $ne: true }, visibility: { $ne: 'private' }, startDate: { $gte: now } },
         { projection: { title: 1, startDate: 1, allDay: 1, category: 1 } },
       )
       .sort({ startDate: 1 })
@@ -276,6 +276,7 @@ async function compute(now: Date): Promise<LandingData> {
       .find(
         {
           ...PUBLIC_MOD,
+          hasWarningLabel: { $ne: true },
           status: 'available',
           $expr: { $gte: [{ $ifNull: ['$lastBumpedAt', '$createdAt'] }, freshSince] },
         },

@@ -1,7 +1,8 @@
 <script lang="ts">
   // Das Schaufenster — public landing (design/handoffs/design_handoff_landing).
-  // Data is SSR-provided via props (lib-direct, 1h cache); the ONLY runtime
-  // JS behaviors are the locale toggle and the date line. Pulse is pure CSS.
+  // Data is SSR-provided via props (lib-direct, 1h cache). Runtime JS: the
+  // locale toggle, the date line and the Schaufenster strip's rAF drive
+  // (pause/resume, wrap). Pulse is pure CSS.
   import { onMount } from 'svelte';
   import { advance, activeIndex } from '../../lib/landing/loop';
   import { t, tStr, locale, setLocale } from '../../lib/kiosk-i18n';
@@ -95,7 +96,7 @@
   let trackEl = $state<HTMLDivElement | null>(null);
   let reduced = $state(false);
   let looping = $derived(!reduced && frames.length >= 2);
-  let copies = $state(2); // 3 when one copy is narrower than the viewport plus a frame (wide screens), else the wrap point is unreachable
+  let copies = $state(2); // grows on wide screens until one period covers the viewport plus a frame, else the wrap point is unreachable
   let renderFrames = $derived(looping ? Array.from({ length: copies }, () => frames).flat() : frames);
   let paused = $state(false);       // user-held pause (toggle button)
   let interacting = $state(false);  // pointer/touch/wheel/focus/hover hold
@@ -139,6 +140,9 @@
   function stop() {
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
+  }
+  // Snap comes back only while the user actively scrolls (never on a hover pause: it would jump the strip).
+  function snapOn() {
     if (trackEl) trackEl.style.scrollSnapType = '';
   }
   function hold() {
@@ -157,6 +161,7 @@
   function onKey(e: KeyboardEvent) {
     if (!trackEl || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
     e.preventDefault();
+    snapOn();
     hold();
     trackEl.scrollBy({ left: e.key === 'ArrowRight' ? step() : -step(), behavior: 'auto' });
     release();
@@ -169,7 +174,7 @@
   function fitCopies() {
     if (!trackEl || !looping) return;
     const period = step() * frames.length;
-    if (period > 0) copies = period + trackEl.clientWidth + 100 > 2 * period ? 3 : 2;
+    if (period > 0) copies = Math.max(2, Math.ceil((trackEl.clientWidth + 100) / period) + 1);
   }
 
   onMount(() => {
@@ -246,14 +251,14 @@
 
   <!-- Das Schaufenster (2026-09-28): six phone frames, live content, per-frame fallback -->
   {#if frames.length > 0}
-    <section class="lnd-sf" aria-label={$t['lnd.sf.region']}>
+    <section class="lnd-sf">
       <div class="lnd-sf-head font-dmmono">
         <span class="lnd-sf-head-kicker">{$t['lnd.sf.kicker']}</span>
         <span class="lnd-sf-head-right">
           {#if !looping}<span class="lnd-sf-hint-phone">{$t['lnd.sf.hint.phone']}</span>{/if}
           <span class="lnd-sf-hint-desktop">{$t['lnd.sf.hint.desktop']}</span>
           {#if looping}
-            <button type="button" class="lnd-sf-pausebtn font-dmmono" aria-pressed={paused} onclick={() => { paused = !paused; }}>{paused ? $t['lnd.sf.play'] : $t['lnd.sf.pause']}</button>
+            <button type="button" class="lnd-sf-pausebtn font-dmmono" onclick={() => { paused = !paused; }}>{paused ? $t['lnd.sf.play'] : $t['lnd.sf.pause']}</button>
           {/if}
         </span>
       </div>
@@ -261,23 +266,23 @@
       <div class="lnd-sf-track no-scrollbar" role="region" aria-label={$t['lnd.sf.region']} tabindex="0"
         bind:this={trackEl}
         onscroll={onScroll}
-        onpointerdown={hold} onpointerup={release} onpointercancel={release}
-        ontouchstart={hold} ontouchend={release} ontouchcancel={release}
-        onwheel={() => { hold(); release(); }} onpointerenter={(e) => { if (e.pointerType === 'mouse') { hovering = true; hold(); } }} onpointerleave={(e) => { if (e.pointerType === 'mouse') { hovering = false; release(); } }}
+        onpointerdown={() => { snapOn(); hold(); }} onpointerup={release} onpointercancel={release}
+        ontouchstart={() => { snapOn(); hold(); }} ontouchend={release} ontouchcancel={release}
+        onwheel={() => { snapOn(); hold(); release(); }} onpointerenter={(e) => { if (e.pointerType === 'mouse') { hovering = true; hold(); } }} onpointerleave={(e) => { if (e.pointerType === 'mouse') { hovering = false; release(); } }}
         onfocusin={hold} onfocusout={release}
         onkeydown={onKey}>
         {#each renderFrames as f, i (`${f.key}-${i}`)}
           {@const dup = i >= frames.length}
           {@const S = SECTION[f.key]}
           <div class="lnd-sf-item" aria-hidden={dup ? 'true' : undefined}>
-            <a class="lnd-sf-frame" href={f.href} tabindex={dup ? -1 : undefined} aria-label={frameLabel(f)} style="--sf-tint:{S.tint}">
+            <a class="lnd-sf-frame" href={f.live?.key === 'blog' ? `/blog/${f.live.slug}` : f.href} tabindex={dup ? -1 : undefined} aria-label={frameLabel(f)} style="--sf-tint:{S.tint}">
               {#if f.live}
                 <div class="lnd-sf-bar" style="background: {S.lines}, var(--k-bar-wash), var(--k-bar-shade), linear-gradient(var(--sf-tint), var(--sf-tint))">
                   <span class="lnd-sf-disc font-bricolage">m</span>
                   <span class="lnd-sf-barname font-dmmono">{$t[`lnd.sf.bar.${f.key}`]}</span>
                 </div>
                 <div class="lnd-sf-body">
-                  <div class="lnd-sf-kicker font-dmmono">{$t[`lnd.sf.bar.${f.key}`]} · {$t['lnd.sf.today']}</div>
+                  <div class="lnd-sf-kicker font-dmmono">{$t[`lnd.sf.bar.${f.key}`]}</div>
                   <div class="lnd-sf-title font-bricolage">{@html $t[`lnd.sf.title.${f.key}`]}</div>
                   {#if f.live.key === 'forum'}
                     <div class="lnd-sf-card">
@@ -303,7 +308,7 @@
                       <div class="lnd-sf-h2 lnd-clamp2">{f.live.title}</div>
                     </div>
                   {:else if f.live.key === 'newsboard'}
-                    <div class="lnd-sf-card lnd-sf-card-photo">
+                    <div class="lnd-sf-card lnd-sf-card-photo lnd-sf-card-news">
                       {#if f.live.lead.imageUrl}<img class="lnd-sf-photo" src={f.live.lead.imageUrl} alt="" width="480" height="240" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror={hideOnError}>{/if}
                       <div class="lnd-sf-h2 lnd-clamp3">{f.live.lead.title}</div>
                       <div class="lnd-sf-mute font-dmmono">{f.live.lead.sourceName.toUpperCase()} ↗</div>
@@ -447,7 +452,7 @@
   .lnd-sf-hint-phone { display: none; }
   .lnd-sf-track { display: flex; gap: 24px; padding: 4px 48px 6px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; scroll-padding-left: 48px; scroll-behavior: auto; outline: none; -webkit-overflow-scrolling: touch; }
   .lnd-sf-track:focus-visible { outline: 2px dashed var(--k-ink); outline-offset: 2px; }
-  .lnd-sf-item { flex: 0 0 200px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 8px; }
+  .lnd-sf-item { flex: 0 0 200px; min-width: 0; scroll-snap-align: start; display: flex; flex-direction: column; gap: 8px; }
   .lnd-sf-frame { display: flex; flex-direction: column; width: 200px; aspect-ratio: 3 / 5; box-sizing: border-box; border: 3px solid var(--sf-tint); border-radius: 16px; overflow: hidden; background: var(--k-paper); box-shadow: 3px 3px 0 var(--k-ink); text-decoration: none; color: var(--k-ink); }
   .lnd-sf-bar { flex: 0 0 44px; display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--k-paper); }
   .lnd-sf-disc { width: 26px; height: 26px; border-radius: 50%; background: var(--k-wine); color: var(--k-paper); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; box-shadow: 0 0 0 2px var(--k-paper); }
@@ -456,9 +461,11 @@
   .lnd-sf-kicker { font-size: 8.5px; letter-spacing: 0.16em; color: var(--sf-tint); }
   .lnd-sf-title { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
   .lnd-sf-title :global(em) { font-family: var(--k-font-serif); font-style: italic; font-weight: 400; color: var(--sf-tint); }
-  .lnd-sf-card { margin-top: 4px; background: var(--k-paper-warm); border: 1.5px solid var(--k-ink); border-radius: 8px; padding: 8px 9px; display: flex; flex-direction: column; gap: 5px; box-shadow: 2px 2px 0 var(--k-ink); overflow: hidden; }
+  .lnd-sf-card { flex-shrink: 0; margin-top: 4px; background: var(--k-paper-warm); border: 1.5px solid var(--k-ink); border-radius: 8px; padding: 8px 9px; display: flex; flex-direction: column; gap: 5px; box-shadow: 2px 2px 0 var(--k-ink); overflow: hidden; }
   .lnd-sf-card-row { flex-direction: row; align-items: center; gap: 9px; }
+  .lnd-sf-card > * { flex-shrink: 0; }
   .lnd-sf-card-photo { padding: 0; }
+  .lnd-sf-card-news .lnd-sf-photo { height: 72px; }
   .lnd-sf-card-photo > :not(img) { margin: 0 9px; }
   .lnd-sf-card-photo > :last-child { margin-bottom: 8px; }
   .lnd-sf-card-photo > .lnd-sf-row { margin-top: 7px; }
@@ -474,7 +481,7 @@
   .lnd-sf-tags { font-size: 8.5px; letter-spacing: 0.06em; color: var(--k-ink-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lnd-sf-mute { font-size: 8.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); }
   .lnd-sf-count { margin-top: auto; font-size: 8.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); padding-top: 6px; border-top: 1px dashed var(--k-rule); }
-  .lnd-sf-more { margin-top: 2px; }
+  .lnd-sf-more { margin-top: 2px; flex: 1 1 auto; min-height: 0; overflow: hidden; }
   .lnd-sf-daydisc { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; color: var(--k-paper); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
   .lnd-sf-daydisc span:first-child { font-size: 7.5px; letter-spacing: 0.1em; }
   .lnd-sf-daynum { font-size: 17px; font-weight: 800; }
@@ -484,9 +491,9 @@
   .lnd-sf-barv { flex: 1; background: #9db97c; border-radius: 1px; }
   .lnd-sf-pop { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-top: 4px; }
   .lnd-sf-shot { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
-  .lnd-sf-cap { display: flex; flex-direction: column; gap: 1px; padding: 0 2px; }
+  .lnd-sf-cap { min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 0 2px; }
   .lnd-sf-cap-label { font-size: 9px; letter-spacing: 0.16em; font-weight: 500; }
-  .lnd-sf-cap-line { font-style: italic; font-size: 14px; color: var(--k-ink-soft); }
+  .lnd-sf-cap-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; font-size: 14px; color: var(--k-ink-soft); }
   .lnd-sf-dots { display: flex; justify-content: center; gap: 6px; padding: 10px 0 16px; }
   .lnd-sf-dot { width: 6px; height: 6px; border-radius: 3px; transition: width 240ms ease; }
   .lnd-sf-dot--on { width: 18px; }
@@ -496,7 +503,7 @@
   .lnd-sf-track::-webkit-scrollbar { display: none; } .lnd-sf-track { scrollbar-width: none; }
 
   /* ── CTA (§08) ── */
-  .lnd-cta { text-align: center; padding: 26px 48px 28px; border-top: 1px dashed var(--k-ochre); background: rgba(176, 117, 21, 0.10); }
+  .lnd-cta { margin-top: auto; text-align: center; padding: 26px 48px 28px; border-top: 1px dashed var(--k-ochre); background: rgba(176, 117, 21, 0.10); }
   .lnd-cta h2 { font-size: 30px; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 16px; }
   .lnd-cta-btn { display: inline-block; background: var(--k-ink); color: var(--k-paper); font-size: 16px; font-weight: 700; padding: 13px 30px; min-height: 48px; box-sizing: border-box; border-radius: 999px; border: 1.5px solid var(--k-ink); box-shadow: 3px 3px 0 var(--k-ochre); text-decoration: none; }
   .lnd-cta-sub { margin-top: 13px; }
@@ -508,7 +515,7 @@
   .lnd-footlinks a { font-size: 10px; letter-spacing: 0.08em; color: var(--k-ink-soft); text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 3px; }
   .lnd-copy { font-size: 10px; letter-spacing: 0.08em; color: var(--k-ink-mute); }
 
-  /* ── mobile (§10): stacked, strip as row-stack, teasers in one opaque wrapper ── */
+  /* ── mobile (§10): stacked, strip as row-stack, Schaufenster frames a little wider ── */
   @media (max-width: 1023px) {
     .lnd-dateline { padding: 10px 18px; font-size: 9px; }
     .lnd-loc { display: none; }
@@ -529,7 +536,8 @@
     .lnd-sf-frame { width: 236px; }
     .lnd-sf-title { font-size: 19px; }
     .lnd-sf-h2 { font-size: 14.5px; }
-    .lnd-sf-photo { height: 112px; }
+    .lnd-sf-photo, .lnd-sf-card-news .lnd-sf-photo { height: 112px; }
+    .lnd-sf-pausebtn { min-height: 44px; }
     .lnd-cta { padding: 26px 18px; }
     .lnd-cta h2 { font-size: 26px; }
     .lnd-cta-btn { font-size: 15px; padding: 13px 26px; }
