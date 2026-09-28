@@ -248,7 +248,7 @@
   {#if frames.length > 0}
     <section class="lnd-sf" aria-label={$t['lnd.sf.region']}>
       <div class="lnd-sf-head font-dmmono">
-        <span class="lnd-sf-kicker">{$t['lnd.sf.kicker']}</span>
+        <span class="lnd-sf-head-kicker">{$t['lnd.sf.kicker']}</span>
         <span class="lnd-sf-head-right">
           {#if !looping}<span class="lnd-sf-hint-phone">{$t['lnd.sf.hint.phone']}</span>{/if}
           <span class="lnd-sf-hint-desktop">{$t['lnd.sf.hint.desktop']}</span>
@@ -443,7 +443,7 @@
   .lnd-sf { padding: 12px 0 0; }
   .lnd-sf-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 48px 10px; font-size: 10.5px; letter-spacing: 0.14em; color: var(--k-ink-mute); }
   .lnd-sf-head-right { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; white-space: nowrap; }
-  .lnd-sf-kicker { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .lnd-sf-head-kicker { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .lnd-sf-hint-phone { display: none; }
   .lnd-sf-track { display: flex; gap: 24px; padding: 4px 48px 6px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; scroll-padding-left: 48px; scroll-behavior: auto; outline: none; -webkit-overflow-scrolling: touch; }
   .lnd-sf-track:focus-visible { outline: 2px dashed var(--k-ink); outline-offset: 2px; }
