@@ -105,6 +105,7 @@
   let active = $state(0);
   let raf = 0;
   let last = 0;
+  let pos = 0;
   let resumeTimer: ReturnType<typeof setTimeout> | undefined;
   let hovering = false;
 
@@ -121,7 +122,10 @@
     if (!trackEl || !running) { raf = 0; return; }
     const dt = last ? Math.min(64, t - last) : 16;
     last = t;
-    trackEl.scrollLeft = advance(trackEl.scrollLeft, step() * frames.length, (SPEED_PX_S * dt) / 1000);
+    // float accumulator: scrollLeft reads back device-pixel-rounded, which skews or stalls the speed
+    if (Math.abs(trackEl.scrollLeft - pos) > 1) pos = trackEl.scrollLeft;
+    pos = advance(pos, step() * frames.length, (SPEED_PX_S * dt) / 1000);
+    trackEl.scrollLeft = pos;
     raf = requestAnimationFrame(tick);
   }
 
@@ -129,6 +133,7 @@
     if (!trackEl || raf || !running) return;
     trackEl.style.scrollSnapType = 'none'; // a snap container re-snaps on every programmatic scroll
     last = 0;
+    pos = trackEl.scrollLeft;
     raf = requestAnimationFrame(tick);
   }
   function stop() {
@@ -158,6 +163,8 @@
   }
 
   $effect(() => { if (running) start(); else stop(); });
+
+  $effect(() => { if (looping && trackEl) fitCopies(); });
 
   function fitCopies() {
     if (!trackEl || !looping) return;
@@ -241,9 +248,9 @@
   {#if frames.length > 0}
     <section class="lnd-sf" aria-label={$t['lnd.sf.region']}>
       <div class="lnd-sf-head font-dmmono">
-        <span>{$t['lnd.sf.kicker']}</span>
+        <span class="lnd-sf-kicker">{$t['lnd.sf.kicker']}</span>
         <span class="lnd-sf-head-right">
-          <span class="lnd-sf-hint-phone">{$t['lnd.sf.hint.phone']}</span>
+          {#if !looping}<span class="lnd-sf-hint-phone">{$t['lnd.sf.hint.phone']}</span>{/if}
           <span class="lnd-sf-hint-desktop">{$t['lnd.sf.hint.desktop']}</span>
           {#if looping}
             <button type="button" class="lnd-sf-pausebtn font-dmmono" aria-pressed={paused} onclick={() => { paused = !paused; }}>{paused ? $t['lnd.sf.play'] : $t['lnd.sf.pause']}</button>
@@ -256,7 +263,7 @@
         onscroll={onScroll}
         onpointerdown={hold} onpointerup={release} onpointercancel={release}
         ontouchstart={hold} ontouchend={release} ontouchcancel={release}
-        onwheel={() => { hold(); release(); }} onmouseenter={() => { hovering = true; hold(); }} onmouseleave={() => { hovering = false; release(); }}
+        onwheel={() => { hold(); release(); }} onpointerenter={(e) => { if (e.pointerType === 'mouse') { hovering = true; hold(); } }} onpointerleave={(e) => { if (e.pointerType === 'mouse') { hovering = false; release(); } }}
         onfocusin={hold} onfocusout={release}
         onkeydown={onKey}>
         {#each renderFrames as f, i (`${f.key}-${i}`)}
@@ -435,7 +442,8 @@
   /* ── Das Schaufenster (2026-09-28) ── */
   .lnd-sf { padding: 12px 0 0; }
   .lnd-sf-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 48px 10px; font-size: 10.5px; letter-spacing: 0.14em; color: var(--k-ink-mute); }
-  .lnd-sf-head-right { display: inline-flex; align-items: center; gap: 12px; }
+  .lnd-sf-head-right { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; white-space: nowrap; }
+  .lnd-sf-kicker { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .lnd-sf-hint-phone { display: none; }
   .lnd-sf-track { display: flex; gap: 24px; padding: 4px 48px 6px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; scroll-padding-left: 48px; scroll-behavior: auto; outline: none; -webkit-overflow-scrolling: touch; }
   .lnd-sf-track:focus-visible { outline: 2px dashed var(--k-ink); outline-offset: 2px; }
