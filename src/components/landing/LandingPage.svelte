@@ -210,9 +210,6 @@
   function catStyle(cat: string | null) {
     return CATEGORIES[((cat ?? 'kiez') in CATEGORIES ? (cat ?? 'kiez') : 'kiez') as EventCategory];
   }
-  function priceFmt(n: number): string {
-    return new Intl.NumberFormat($locale === 'de' ? 'de-DE' : 'en-GB', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
-  }
   function catLabel(cat: string | null): string {
     return (cat && ($t as Record<string, string>)[`cal.cat.${cat}.label`]) || '';
   }
@@ -251,11 +248,11 @@
   <div class="px-4 pt-5 pb-8">
     <section class="mb-3 pb-4 border-b border-dashed border-rule">
       <p class="font-dmmono text-[11px] uppercase tracking-[0.18em] text-wine mb-2">FORUM · {k.dow} {k.dm} · {k.hhmm}</p>
-      <h1 class="font-bricolage font-extrabold text-4xl tracking-tight leading-[0.95] text-ink">
+      <div class="font-bricolage font-extrabold text-4xl tracking-tight leading-[0.95] text-ink">
         {$t['forum.title.prefix']}
         <em class="font-instrument italic font-normal text-wine">{$t['forum.title.accent']}</em>
         {$t['forum.title.suffix']}
-      </h1>
+      </div>
       {#if l.stats}
         <div class="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 mt-3 font-dmmono text-[10px] text-ink-mute">
           <span class="whitespace-nowrap"><span class="font-bold text-ink">{l.stats.total}</span> {$t['forum.stats.topics']}</span>
@@ -292,7 +289,7 @@
             <div class="pointer-events-none absolute inset-0" style="background: repeating-linear-gradient(0deg, transparent 0 4px, rgba(0,0,0,0.04) 4px 5px);"></div>
           </div>
         {/if}
-        <h3 class="font-bricolage font-extrabold tracking-tight leading-[1.18] mb-2 text-balance text-ink text-[16.5px] lnd-clamp3">{l.title}</h3>
+        <div class="font-bricolage font-extrabold tracking-tight leading-[1.18] mb-2 text-balance text-ink text-[16.5px] lnd-clamp3">{l.title}</div>
         {#if l.tags.length}
           <div class="flex gap-2 flex-wrap font-dmmono text-[10px] mb-2.5 text-ink-mute">{#each l.tags as tg (tg)}<span>#{tg}</span>{/each}</div>
         {/if}
@@ -315,11 +312,11 @@
   {@const views = ['month', 'agenda', 'day']}
   <section class="px-4 pt-5 pb-3 border-b border-dashed border-rule">
     <div class="font-dmmono text-[11px] uppercase tracking-[0.18em] text-teal mb-2">{$t['cal.title.kicker']} · {k.dow} {k.dm} · {k.hhmm}</div>
-    <h1 class="font-bricolage font-extrabold text-ink leading-[0.95] tracking-tight text-4xl">
+    <div class="font-bricolage font-extrabold text-ink leading-[0.95] tracking-tight text-4xl">
       {$t['cal.title.q1']}
       <span class="font-instrument italic font-normal text-teal">{$t['cal.title.q2']}</span>
       {$t['cal.title.q3']}
-    </h1>
+    </div>
     <div class="flex items-center justify-end gap-2 mt-4">
       <div class="inline-flex items-center border-[1.5px] border-ink rounded-full font-dmmono text-[11px] font-semibold leading-none">
         <span class="px-2.5 py-1">‹</span>
@@ -374,11 +371,11 @@
   {@const lab = 'font-dmmono uppercase shrink-0 text-[10px] text-ink-mute tracking-[0.12em]'}
   <section class="px-4 py-5" style="border-bottom: 1px dashed var(--k-rule);">
     <div class="font-dmmono text-[11px] uppercase tracking-[0.12em] text-wine">MARKT · {k.dow} {k.dm}</div>
-    <h1 class="font-bricolage font-extrabold text-ink leading-[0.95] tracking-tight mt-1.5 text-[32px]">
+    <div class="font-bricolage font-extrabold text-ink leading-[0.95] tracking-tight mt-1.5 text-[32px]">
       {$t['market.title.q1']}
       <em class="font-instrument font-normal not-italic" style="font-style: italic; color: var(--k-ochre);">{$t['market.title.q1.italic']}</em>
       {$t['market.title.q1.suffix']}
-    </h1>
+    </div>
     {#if l.stats}
       <div class="font-dmmono text-[11px] text-ink-mute mt-3 flex flex-wrap gap-x-4 gap-y-1">
         <span><b class="text-ink font-semibold">{l.stats.available}</b> {$t['market.titlemeta.listings']}</span>
@@ -428,10 +425,10 @@
       {/if}
     </div>
     <div class="px-3.5 pt-3.5 pb-4 flex flex-col gap-2.5 min-w-0">
-      <span class="cat-chip cat-chip--active self-start" style="--cat-color: var(--k-ochre); --cat-fg: var(--k-ink);">{$t[`market.filter.kind.${kindKey}`]}</span>
-      <h2 class="font-extrabold text-ink tracking-[-0.022em] leading-[1.1] m-0 text-[22px] lnd-clamp3" style="word-break: break-word;">
+      <span class="cat-chip cat-chip--active lnd-sf-nodot self-start" style="--cat-color: var(--k-ochre); --cat-fg: var(--k-ink);">{$t[`market.filter.kind.${kindKey}`]}</span>
+      <div class="font-extrabold text-ink tracking-[-0.022em] leading-[1.1] m-0 text-[22px] lnd-clamp3" style="word-break: break-word;">
         <span style="font-family: var(--k-font-serif); font-style: italic; font-weight: 400; color: var(--k-ochre);">{l.title}</span>
-      </h2>
+      </div>
     </div>
   </article>
 {/snippet}
@@ -442,10 +439,10 @@
   {@const pillOff = 'shrink-0 font-bricolage font-semibold rounded-full text-[12.5px] border-[1.5px] border-rule text-ink'}
   <section class="px-4" style="padding-top:20px; padding-bottom:14px; border-bottom:1px dashed var(--k-rule);">
     <div class="font-dmmono uppercase text-ink" style="font-size:11px; letter-spacing:0.16em;">{$t['news.titleblock.kicker']}</div>
-    <h2 class="font-bricolage break-words text-[36px]" style="font-weight:800; letter-spacing:-0.03em; line-height:1; margin:6px 0 0;">{@html $t['news.titleblock.heading']}</h2>
+    <div class="font-bricolage break-words text-[36px]" style="font-weight:800; letter-spacing:-0.03em; line-height:1; margin:6px 0 0;">{@html $t['news.titleblock.heading']}</div>
   </section>
   <section class="relative px-4 py-3" style="border-bottom:2px solid var(--k-ink);">
-    <h1 class="font-instrument italic text-center text-[28px] leading-none mb-1.5" style="font-weight:400; letter-spacing:-0.025em; color:var(--k-ink);">Schillerkiez Kurier</h1>
+    <div class="font-instrument italic text-center text-[28px] leading-none mb-1.5" style="font-weight:400; letter-spacing:-0.025em; color:var(--k-ink);">Schillerkiez Kurier</div>
     {#if l.stats}
       <div class="flex flex-wrap justify-center items-center font-dmmono uppercase" style="gap:0 6px; font-size:9.5px; color:var(--k-ink-soft); letter-spacing:0.08em;">
         <span>{$t['news.masthead.edition']}</span><span aria-hidden="true">·</span>
@@ -483,7 +480,7 @@
         <div class="flex items-center flex-wrap" style="gap:6px; margin-bottom:8px;">
           <span class="inline-flex items-center font-dmmono uppercase whitespace-nowrap" style="font-size:9px; font-weight:600; letter-spacing:0.12em; padding:1px 6px; background:var({SEKTION_TOKEN[sk]}); color:var({SEKTION_TOKEN[sk]}-text); border:1px solid var(--k-ink); border-radius:var(--k-radius-sm);">{$t[`news.sektion.${sk}`]}</span>
         </div>
-        <h3 class="font-bricolage break-words text-[22px] lnd-clamp3" style="font-weight:700; line-height:1.15; letter-spacing:-0.02em; margin:0 0 6px; color:var(--k-ink);">{l.lead.title}</h3>
+        <div class="font-bricolage break-words text-[22px] lnd-clamp3" style="font-weight:700; line-height:1.15; letter-spacing:-0.02em; margin:0 0 6px; color:var(--k-ink);">{l.lead.title}</div>
         <div class="font-dmmono uppercase" style="font-size:10px; color:var(--k-ink-mute); letter-spacing:0.08em;">{l.lead.sourceName}</div>
       </div>
     </article>
@@ -545,9 +542,9 @@
   </div>
   <section class="px-4 py-5 border-b border-dashed border-rule">
     <div class="font-dmmono text-[11px] uppercase tracking-[0.14em]" style="color: var(--k-moss);">{kicker}</div>
-    <h1 class="font-bricolage font-extrabold text-ink leading-[0.95] mt-1.5 text-[36px]" style="letter-spacing: -0.035em;">
+    <div class="font-bricolage font-extrabold text-ink leading-[0.95] mt-1.5 text-[36px]" style="letter-spacing: -0.035em;">
       {$t['kiez.title.pre']}<span class="font-instrument italic font-normal" style="color: var(--k-moss);">{$t['kiez.title.italic']}</span>
-    </h1>
+    </div>
     {#if popLabel}
       <p class="font-instrument italic text-[15px] text-ink-soft mt-2">{tStr($t['kiez.dek'], { pop: popLabel })}</p>
     {/if}
@@ -576,9 +573,9 @@
   {@const chip = 'font-dmmono rounded-full whitespace-nowrap inline-block shrink-0 border-[1.5px]'}
   <div class="text-center" style="padding: 26px 24px 0;">
     <div class="font-dmmono inline-block" style="font-size: 10px; letter-spacing: 0.22em; color: var(--k-ink-mute); border-top: 1px solid var(--k-ink); padding-top: 8px;">{$t['blog.mast.strap']}</div>
-    <h1 class="font-bricolage text-[34px]" style="font-weight: 800; letter-spacing: -0.035em; line-height: 0.95; margin: 10px 0 6px;">
+    <div class="font-bricolage text-[34px]" style="font-weight: 800; letter-spacing: -0.035em; line-height: 0.95; margin: 10px 0 6px;">
       Die <span class="font-instrument italic font-normal" style="color: var(--k-rust);">Beilage</span>
-    </h1>
+    </div>
     {#if M}
       <div class="font-dmmono flex justify-center items-center flex-wrap" style="gap: 18px; font-size: 10.5px; color: var(--k-ink-mute); margin: 4px 0 12px;">
         <span>{$t['blog.mast.from']}</span><span>·</span>
@@ -604,7 +601,7 @@
   </div>
   <div class="px-6 pt-5">
     <span class="font-dmmono inline-block" style="font-size: 10px; letter-spacing: 0.14em; background: var(--k-rust); color: var(--k-paper); padding: 3px 10px; border-radius: 4px; border: 1px solid var(--k-ink);">{$t['blog.lead.strap']}</span>
-    <h2 class="font-bricolage text-[21px] lnd-clamp3" style="font-weight: 800; letter-spacing: -0.025em; line-height: 1.04; margin: 12px 0 8px;">{l.title}</h2>
+    <div class="font-bricolage text-[21px] lnd-clamp3" style="font-weight: 800; letter-spacing: -0.025em; line-height: 1.04; margin: 12px 0 8px;">{l.title}</div>
     <div class="font-instrument italic lnd-clamp3" style="font-size: 16.5px; line-height: 1.45; color: var(--k-ink-soft); margin-bottom: 10px;">{l.description}</div>
     <div class="font-dmmono flex items-center flex-wrap" style="gap: 8px; font-size: 10.5px; color: var(--k-ink-mute);">
       <span>{fmtDate(l.pubDateISO, $locale)}</span>
@@ -741,6 +738,7 @@
 </div>
 
 <style>
+  .lnd-sf-nodot::before { display: none; }
   /* ── root + §02 background (VOLLBILD GESPIEGELT, non-negotiable) ── */
   .lnd-root { min-height: 100vh; display: flex; flex-direction: column; background: var(--k-paper); position: relative; overflow-x: clip; }
   .lnd-root > :global(*) { position: relative; z-index: 1; }

@@ -349,9 +349,13 @@ async function compute(now: Date): Promise<LandingData> {
     ]);
     const recent = await db.collection('comments').aggregate([
       { $match: { createdAt: { $gte: sinceYesterday }, moderationStatus: { $nin: ['pending', 'rejected'] } } },
-      { $group: { _id: '$relevantPostId' } }, { $count: 'n' },
+      { $group: { _id: '$relevantPostId' } },
     ]).toArray();
-    forumStats = { total: totals.reduce((a, b) => a + b, 0), newSinceYesterday: news.reduce((a, b) => a + b, 0), discussedToday: recent[0]?.n ?? 0 };
+    const ids = recent.map((r) => r._id);
+    const discussed = ids.length
+      ? (await Promise.all(cols.map((c) => db.collection(c).countDocuments({ _id: { $in: ids }, ...PUBLIC_MOD, ...NO_WARN })))).reduce((a, b) => a + b, 0)
+      : 0;
+    forumStats = { total: totals.reduce((a, b) => a + b, 0), newSinceYesterday: news.reduce((a, b) => a + b, 0), discussedToday: discussed };
   } catch (err) { failures.push(['schaufenster.forumStats', err]); }
 
   // calendar — current Berlin month: count + one entry per day with a public event (first category)

@@ -1,6 +1,6 @@
 # Schaufenster delta: the frames are faithful miniatures of the real screens
 
-**Date:** 2026-09-28 · **Status:** draft for the owner's review · **Amends:** `2026-09-28-landing-schaufenster-design.md` (everything not named here stays as built on `feat/landing-schaufenster` @ a1c927e5)
+**Date:** 2026-09-28 · **Status:** implemented on branch feat/landing-schaufenster (2026-09-29), owner's copy pending · **Amends:** `2026-09-28-landing-schaufenster-design.md` (everything not named here stays as built on `feat/landing-schaufenster` @ a1c927e5)
 
 ## 1. What changes and why
 
