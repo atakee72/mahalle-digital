@@ -135,12 +135,14 @@
   /* A quiet shade toward both ends (user, 01:41) — echoes the Profil bar's
      ink edges; the middle, where the tabs sit, stays the true tint. */
   --k-bar-shade: linear-gradient(90deg, rgb(27 26 23 / 0.38) 0%, transparent 34% 66%, rgb(27 26 23 / 0.38) 100%); /* 01:43: up from 0.28 / 28–72% */
+  /* The same 4% paper wash the Profil fade wears, on every bar (user, 02:09). */
+  --k-bar-wash: linear-gradient(rgb(243 234 216 / 0.04), rgb(243 234 216 / 0.04));
 }
 /* Pages set the TINT; the painted --k-bar is composed here on <body> (the
    element that carries data-page) — a var() inside a custom property resolves
    where it is declared, so composing on :root would freeze :root's tint. */
 body {
-  --k-bar: var(--k-bar-lines), var(--k-bar-shade), linear-gradient(var(--k-bar-tint), var(--k-bar-tint));
+  --k-bar: var(--k-bar-lines), var(--k-bar-wash), var(--k-bar-shade), linear-gradient(var(--k-bar-tint), var(--k-bar-tint));
 }
 [data-page="forum"]        { --k-bar-tint: var(--k-wine-deep); }
 [data-page="calendar"]     { --k-bar-tint: #3f7e8a; } /* one tick calmer than --k-teal (user, 2026-09-22 15:00); bars only */
@@ -153,7 +155,7 @@ body {
    `background`, so a gradient rides in the same variable. Paper text like the
    coloured bars (ink would vanish over the wine + ink segments). */
 [data-page="profile"] {
-  --k-bar: var(--k-bar-lines), linear-gradient(rgb(243 234 216 / 0.04), rgb(243 234 216 / 0.04)), linear-gradient(90deg, var(--k-ink) 0%, var(--k-wine-deep) 18%, #3f7e8a 34%, #d68a1a 50%, var(--k-moss) 66%, var(--k-rust) 82%, var(--k-ink) 100%); /* the fade under the line texture (01:16); ink moved from the middle to both edges (01:18); paper wash at 4% over the fade (01:21; 22%, 14%, 8% each held a minute); full-width hard stripes held minutes */
+  --k-bar: var(--k-bar-lines), var(--k-bar-wash), linear-gradient(90deg, var(--k-ink) 0%, var(--k-wine-deep) 18%, #3f7e8a 34%, #d68a1a 50%, var(--k-moss) 66%, var(--k-rust) 82%, var(--k-ink) 100%); /* the fade under the line texture (01:16); ink moved from the middle to both edges (01:18); paper wash at 4% over the fade (01:21; 22%, 14%, 8% each held a minute); full-width hard stripes held minutes */
 }
 /* The ink segment sits under the tab row — ink tab frames vanish there. */
 [data-page="profile"] header nav a:not([aria-current="page"]) { border-color: var(--k-paper); }

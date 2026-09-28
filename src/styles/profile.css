@@ -104,7 +104,13 @@
    bottom edge, so a hairline closes the box only while it scrolls. */
 .prof-ledger-scroll {
   max-height: 520px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
+  overflow: hidden; /* phones: clipped, opened by „alle anzeigen" — a 520 px inner scroller trapped the page (user, 02:12) */
+}
+.prof-ledger-scroll.is-open { max-height: none !important; overflow: visible; }
+@media (min-width: 1024px) {
+  .prof-ledger-scroll {
+    overflow-y: auto; /* desktop: a wheel over a box is no trap */
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
 }

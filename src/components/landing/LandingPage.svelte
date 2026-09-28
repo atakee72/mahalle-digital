@@ -198,7 +198,8 @@
     position: absolute; inset: 0; z-index: 0; pointer-events: none;
     background-image: url('/assets/background_landing_page.webp');
     background-size: cover; background-repeat: no-repeat; background-position: center top;
-    mix-blend-mode: multiply; opacity: 0.16; transform: rotate(180deg);
+    /* opacity 0.16 → 0.3 + a little saturation (user, 2026-09-28 01:56: „too pale") */
+    mix-blend-mode: multiply; opacity: 0.3; filter: saturate(1.3); transform: rotate(180deg);
   }
 
   /* ── date line ── */

@@ -19,6 +19,7 @@
 
   import { t } from '../../../lib/kiosk-i18n';
   import { scrollFade } from '../../../lib/scrollFade';
+  import { halfRowCutHeight } from '../../../lib/profile/halfRowCut';
   import { ACTIVITY_PAGE_SIZE } from '../../../lib/profile/profileShared';
   import type { ActivityFilter, ActivityItem, ActivityPage } from '../../../lib/profile/profileShared';
   import PCard from './atoms/PCard.svelte';
@@ -99,6 +100,7 @@
   function selectFilter(f: ActivityFilter) {
     if (f === filter) return;
     filter = f;
+    ledgerOpen = false; // a new list starts clipped again
   }
 
   function loadOlder() {
@@ -128,6 +130,41 @@
   // so this is a no-op there.
   const headingDesktop = $derived($t['profile.archiv.title']);
   const headingMobile = $derived($t[(headingKey ?? 'profile.archiv.title') as keyof typeof $t]);
+
+  // Svelte action for the bounded list: when the rows overflow the CSS cap
+  // (`.prof-ledger-scroll` max-height, 520 px), trim the visible height so
+  // the edge cuts a row in half — the cut row is the „there is more" hint
+  // (user, 2026-09-28 02:01). Idempotent (same value → no resize churn);
+  // re-measured on child changes (filter switch, „older") and on resize.
+  // Phones get NO inner scroller (a 520 px scroll box under the thumb trapped
+  // the page, user 02:12): the box is clipped and „alle anzeigen" opens it to
+  // full height; desktop keeps the inner scroll (`profile.css`). `onOverflow`
+  // tells the component whether the button is needed at all.
+  const LEDGER_CAP = 520;
+  let ledgerOpen = $state(false);
+  let ledgerOverflows = $state(false);
+  type CutOpts = { open: boolean; onOverflow: (v: boolean) => void };
+  function halfRowCut(node: HTMLElement, opts: CutOpts) {
+    let cur = opts;
+    const apply = () => {
+      const boxTop = node.getBoundingClientRect().top - node.scrollTop;
+      const rows = Array.from(node.children)
+        .filter((c): c is HTMLElement => c instanceof HTMLElement && c.offsetHeight > 0 && !c.hasAttribute('data-ledger-tail'))
+        .map((c) => { const r = c.getBoundingClientRect(); return { top: r.top - boxTop, height: r.height }; });
+      const h = halfRowCutHeight(rows, LEDGER_CAP);
+      cur.onOverflow(h !== null);
+      node.style.maxHeight = h === null || cur.open ? '' : `${h}px`;
+    };
+    apply();
+    const mo = new MutationObserver(apply);
+    mo.observe(node, { childList: true, subtree: true });
+    const ro = new ResizeObserver(apply);
+    ro.observe(node);
+    return {
+      update(next: CutOpts) { cur = next; apply(); },
+      destroy() { mo.disconnect(); ro.disconnect(); },
+    };
+  }
 </script>
 
 <PCard pad={24}>
@@ -191,15 +228,20 @@
     <!-- Bounded list: the card stopped growing with the member's history
          (user, 2026-09-28 01:51) — rows scroll inside the box, the „older"
          button sits at the end of the scroll. -->
-    <div class="prof-ledger-scroll">
+    <div class="prof-ledger-scroll" class:is-open={ledgerOpen} use:halfRowCut={{ open: ledgerOpen, onOverflow: (v) => { ledgerOverflows = v; } }}>
       {#each items as item (item.id)}
         <PActivityRow {item} saved={showSaved} />
       {/each}
       {#if nextBefore}
-        <div style="margin-top: 14px; text-align: center;">
+        <div data-ledger-tail style="margin-top: 14px; text-align: center;">
           <PBtn small disabled={loadingMore} onclick={loadOlder}>{$t['profile.archiv.older']}</PBtn>
         </div>
       {/if}
     </div>
+    {#if ledgerOverflows && !ledgerOpen}
+      <div class="lg:hidden" style="margin-top: 10px; text-align: center;">
+        <PBtn small onclick={() => { ledgerOpen = true; }}>{$t['profile.archiv.expand']}</PBtn>
+      </div>
+    {/if}
   {/if}
 </PCard>
