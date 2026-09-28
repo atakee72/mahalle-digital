@@ -11,6 +11,7 @@
   import { CATEGORIES, CATEGORY_ORDER } from '../../lib/calendar/categories';
   import type { EventCategory } from '../../types';
   import { cloudinaryFit, optimizeCloudinary } from '../../utils/cloudinary';
+  import { fmtDate, fmtDateKicker } from '../../lib/blog/beilage';
   import { relTime } from '../../lib/relTime';
   import { SEKTION_TOKEN, type SektionKey as NewsSektion } from '../../lib/newsboard/newsTaxonomy';
 
@@ -65,12 +66,6 @@
       pts.push(`${x.toFixed(1)},${Math.min(h - 1, Math.max(1, y)).toFixed(1)}`);
     });
     return pts.join(' ');
-  }
-
-  function fmtBlogDate(iso: string): string {
-    return new Intl.DateTimeFormat($locale === 'de' ? 'de-DE' : 'en-GB', {
-      day: '2-digit', month: 'long', year: 'numeric',
-    }).format(new Date(iso)).toUpperCase();
   }
 
   // ── Das Schaufenster (2026-09-28): six live frames, per-frame zero rule ──
@@ -496,32 +491,131 @@
 {/snippet}
 
 {#snippet kiezRep(l: Extract<Live, { key: 'schillerkiez' }>)}
-  <div class="lnd-sf-body">
-    <div class="lnd-sf-kicker font-dmmono">{$t['lnd.sf.bar.schillerkiez']}</div>
-    <div class="lnd-sf-title font-bricolage">{@html $t['lnd.sf.title.schillerkiez']}</div>
-                    <div class="lnd-sf-card lnd-sf-card-ink">
-                      <div class="lnd-sf-mute font-dmmono">{l.airGrade != null ? $t['lnd.sf.air'] : $t['lnd.sf.airMute']}</div>
-                      {#if l.airGrade != null}<div class="lnd-sf-big font-dmmono">{l.airGrade} · {($t as Record<string, string>)[`lnd.daten.grade.${l.airGrade}`] ?? ''}</div>{/if}
-                      {#if l.airSpark.some((v: number | null) => v != null)}
-                        <div class="lnd-sf-bars" aria-hidden="true">
-                          {#each l.airSpark as v}<span class="lnd-sf-barv" style="height:{v == null ? 4 : Math.round(6 + (5 - Math.min(5, Math.max(1, v))) * 6)}px; opacity:{v == null ? 0.3 : 1}"></span>{/each}
-                        </div>
-                      {/if}
-                      {#if l.population != null}<div class="lnd-sf-pop font-bricolage">{new Intl.NumberFormat($locale === 'de' ? 'de-DE' : 'en-GB').format(l.population)}</div><div class="lnd-sf-mute font-dmmono">{$t['lnd.sf.pop']}</div>{/if}
-                    </div>
+  {@const K = l.kiez}
+  {@const loc = $locale === 'de' ? 'de-DE' : 'en-GB'}
+  {@const kickFull = tStr($t['kiez.kicker'], { stand: K?.stand ?? '' })}
+  {@const kicker = K?.stand ? kickFull : kickFull.split(' · ').slice(0, -1).join(' · ')}
+  {@const popLabel = l.population != null ? new Intl.NumberFormat(loc).format(l.population) : null}
+  {@const gc = (g: number | null) => g == null ? 'var(--k-paper)' : g <= 2 ? 'var(--kz-grade-good-on-ink, #9fd08a)' : g === 3 ? 'var(--kz-grade-mid-on-ink, #ecc76e)' : 'var(--kz-grade-bad-on-ink, #e08a8a)'}
+  {@const gw = (g: number | null) => g == null || g < 1 || g > 5 ? $t['kiez.air.grade.none'] : ($t as Record<string, string>)[`kiez.air.grade.${g}`]}
+  {@const readTs = K?.readingAt ? (() => { const d = new Date(K.readingAt); const df = new Intl.DateTimeFormat(loc, { day: '2-digit', month: $locale === 'de' ? '2-digit' : 'short', timeZone: 'Europe/Berlin' }).format(d); const tf = new Intl.DateTimeFormat(loc, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Berlin' }).format(d); return `${df} · ${tf}`; })() : null}
+  {@const comps = [['PM10', K?.components?.pm10 ?? null], ['NO₂', K?.components?.no2 ?? null], ['O₃', K?.components?.o3 ?? null], ['CO', K?.components?.co ?? null]] as [string, number | null][]}
+  {@const spark = l.airSpark as (number | null)[]}
+  {@const hasGap = spark.some((v: number | null) => v == null)}
+  {@const wk = (i: number) => i === spark.length - 1 ? $t['kiez.strip.today'] : new Intl.DateTimeFormat(loc, { weekday: 'short', timeZone: 'Europe/Berlin' }).format(new Date(new Date(data.computedAt).getTime() - (spark.length - 1 - i) * 86400000))}
+  {@const lqi = K?.lqiWeekMean != null ? (K.lqiWeekMean).toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : null}
+  <div class="bg-[var(--k-ink)] text-[var(--k-paper)] px-4 py-3">
+    <div class="flex items-center gap-[7px] font-dmmono text-[10px] uppercase tracking-[0.18em] text-[var(--k-ochre)]">
+      <span class="inline-block h-[7px] w-[7px] rounded-full {l.airGrade != null ? 'bg-[var(--k-success)]' : 'bg-[var(--k-ink-mute)]'}"></span>
+      {$t['kiez.strip.station']} · {l.airGrade != null ? $t['kiez.strip.live'] : $t['kiez.strip.noSignal']}
+    </div>
+    {#if l.airGrade != null}
+      <div class="mt-0.5 text-[18px] font-extrabold">
+        {$t['kiez.strip.airQuality']}: <span style="color:{gc(l.airGrade)}">{l.airGrade} · {gw(l.airGrade)}</span>
+        {#if readTs}<span class="ml-3 font-dmmono text-[10px] font-normal opacity-60">{readTs}</span>{/if}
+      </div>
+    {:else}
+      <div class="mt-0.5 text-[17px] font-extrabold opacity-75">{$t['kiez.strip.offTitle']}</div>
+    {/if}
+    <div class="flex gap-2 mt-3.5">
+      {#each comps as [nm, g] (nm)}
+        <div class="min-w-[58px] rounded-[var(--k-radius-md)] px-[9px] py-[5px] text-center border-[1.5px] border-[rgba(243,234,216,0.3)] {g == null ? 'opacity-55' : ''}">
+          <div class="font-dmmono text-[9.5px] opacity-65">{nm}</div>
+          <div class="font-dmmono text-[16px] font-medium" style="color:{gc(g)}">{g ?? '–'}</div>
+        </div>
+      {/each}
+    </div>
+    {#if spark.length}
+      <div class="mt-3.5 text-right">
+        <svg viewBox="0 0 170 52" class="h-10 w-[130px] inline-block" aria-hidden="true">
+          {#each spark as v, i (i)}
+            {#if v != null}
+              {@const h = (Math.min(5, Math.max(1, v)) / 5) * 40}
+              <rect x={i * 24} y={40 - h} width="16" height={h} rx="2" fill={gc(Math.round(v))} opacity={i === spark.length - 1 ? 1 : 0.55} />
+            {:else}
+              <rect x={i * 24} y="18" width="16" height="22" rx="3" fill="none" stroke="rgba(243,234,216,0.35)" stroke-width="1.2" stroke-dasharray="3 3" />
+            {/if}
+            <text x={i * 24 + 8} y="50" text-anchor="middle" font-family="var(--k-font-mono)" font-size="7" fill="var(--k-paper)" opacity="0.6">{wk(i)}</text>
+          {/each}
+        </svg>
+        <div class="font-dmmono text-[9px] tracking-[0.1em] opacity-60">{$t['kiez.strip.week']}</div>
+        {#if hasGap}<div class="font-dmmono text-[9px] leading-snug opacity-60">{$t['kiez.strip.gap']}</div>{/if}
+      </div>
+    {/if}
   </div>
+  <section class="px-4 py-5 border-b border-dashed border-rule">
+    <div class="font-dmmono text-[11px] uppercase tracking-[0.14em]" style="color: var(--k-moss);">{kicker}</div>
+    <h1 class="font-bricolage font-extrabold text-ink leading-[0.95] mt-1.5 text-[36px]" style="letter-spacing: -0.035em;">
+      {$t['kiez.title.pre']}<span class="font-instrument italic font-normal" style="color: var(--k-moss);">{$t['kiez.title.italic']}</span>
+    </h1>
+    {#if popLabel}
+      <p class="font-instrument italic text-[15px] text-ink-soft mt-2">{tStr($t['kiez.dek'], { pop: popLabel })}</p>
+    {/if}
+    {#if popLabel || K?.areas != null}
+      <div class="flex flex-wrap gap-4 mt-3 font-dmmono text-[11px] text-ink-mute">
+        {#if popLabel}<span><b class="text-ink">{popLabel}</b> {$t['kiez.fact.residents']}</span>{/if}
+        {#if K?.areas != null}<span><b class="text-ink">{K.areas}</b> {$t['kiez.fact.areas']}</span>{/if}
+        <span><b class="text-ink">{$t['kiez.fact.syncRate']}</b> {$t['kiez.fact.sync']}</span>
+      </div>
+    {/if}
+    {#if K && lqi != null}
+      <div class="mt-5 border-2 border-ink rounded-2xl bg-paper-warm shadow-[3px_3px_0_var(--k-ink)] px-5 py-4">
+        <div class="flex items-center justify-between font-dmmono text-[9.5px] uppercase tracking-[0.14em] text-ink-mute">
+          <span class="font-semibold" style="color: var(--k-moss);">{$t['kiez.zdw.label']}</span>
+          <span>{tStr($t['kiez.zdw.kw'], { kw: String(K.kw) })}</span>
+        </div>
+        <div class="font-dmmono font-medium text-[40px] leading-none tracking-tight mt-2 mb-0.5 text-ink">LQI Ø {lqi}</div>
+        <p class="text-[13.5px] leading-snug text-ink-soft">{$t['kiez.zdw.read.airWeekMean']}</p>
+      </div>
+    {/if}
+  </section>
 {/snippet}
 
 {#snippet blogRep(l: Extract<Live, { key: 'blog' }>)}
-  <div class="lnd-sf-body">
-    <div class="lnd-sf-kicker font-dmmono">{$t['lnd.sf.bar.blog']}</div>
-    <div class="lnd-sf-title font-bricolage">{@html $t['lnd.sf.title.blog']}</div>
-                    <div class="lnd-sf-card lnd-sf-card-photo">
-                      {#if l.coverSrc}<img class="lnd-sf-photo" src={l.coverSrc} alt="" width="480" height="240" loading="lazy" decoding="async" onerror={hideOnError}>{/if}
-                      <div class="lnd-sf-h2 lnd-clamp3">{l.title}</div>
-                      <div class="lnd-sf-desc lnd-clamp2 font-instrument">{l.description}</div>
-                      <div class="lnd-sf-mute font-dmmono">{fmtBlogDate(l.pubDateISO)}</div>
-                    </div>
+  {@const M = l.meta}
+  {@const chip = 'font-dmmono rounded-full whitespace-nowrap inline-block shrink-0 border-[1.5px]'}
+  <div class="text-center" style="padding: 26px 24px 0;">
+    <div class="font-dmmono inline-block" style="font-size: 10px; letter-spacing: 0.22em; color: var(--k-ink-mute); border-top: 1px solid var(--k-ink); padding-top: 8px;">{$t['blog.mast.strap']}</div>
+    <h1 class="font-bricolage text-[34px]" style="font-weight: 800; letter-spacing: -0.035em; line-height: 0.95; margin: 10px 0 6px;">
+      Die <span class="font-instrument italic font-normal" style="color: var(--k-rust);">Beilage</span>
+    </h1>
+    {#if M}
+      <div class="font-dmmono flex justify-center items-center flex-wrap" style="gap: 18px; font-size: 10.5px; color: var(--k-ink-mute); margin: 4px 0 12px;">
+        <span>{$t['blog.mast.from']}</span><span>·</span>
+        <span>{M.total} {$t['blog.mast.posts']}</span>
+        {#if M.latestISO}<span>·</span><span style="color: var(--k-rust);">{$t['blog.mast.latest']}: {fmtDateKicker(M.latestISO, $locale)}</span>{/if}
+      </div>
+    {/if}
+    <div style="border-top: 2.5px solid var(--k-ink); height: 2px; border-bottom: 1px solid var(--k-ink);"></div>
+  </div>
+  <div class="px-6 py-3 border-b border-dashed" style="border-color: var(--k-rule);">
+    <div class="flex overflow-hidden" style="gap: 8px; padding-bottom: 2px;">
+      <span class="{chip}" style="font-size: 10.5px; padding: 3px 10px; border-color: var(--k-rust); background: var(--k-rust); color: var(--k-paper);">#{$t['blog.rubric.all']}</span>
+      {#if M}{#each M.tags as tg (tg.tag)}
+        <span class="{chip}" style="font-size: 10.5px; padding: 3px 10px; border-color: var(--k-ink); color: var(--k-ink);">#{tg.tag}<span style="opacity: 0.55;">{' '}{tg.n}</span></span>
+      {/each}{/if}
+    </div>
+    <div style="margin-top: 8px;">
+      <div class="flex items-center min-h-[44px]" style="gap: 8px; background: var(--k-paper-soft); border: 1px solid var(--k-rule); border-radius: var(--k-radius-md); padding: 9px 14px;">
+        <span style="font-size: 14px; opacity: 0.5;">⌕</span>
+        <span class="font-bricolage flex-1 min-w-0 truncate" style="font-size: 13px; color: var(--k-ink-mute);">{$t['blog.search.placeholder']}</span>
+      </div>
+    </div>
+  </div>
+  <div class="px-6 pt-5">
+    <span class="font-dmmono inline-block" style="font-size: 10px; letter-spacing: 0.14em; background: var(--k-rust); color: var(--k-paper); padding: 3px 10px; border-radius: 4px; border: 1px solid var(--k-ink);">{$t['blog.lead.strap']}</span>
+    <h2 class="font-bricolage text-[21px] lnd-clamp3" style="font-weight: 800; letter-spacing: -0.025em; line-height: 1.04; margin: 12px 0 8px;">{l.title}</h2>
+    <div class="font-instrument italic lnd-clamp3" style="font-size: 16.5px; line-height: 1.45; color: var(--k-ink-soft); margin-bottom: 10px;">{l.description}</div>
+    <div class="font-dmmono flex items-center flex-wrap" style="gap: 8px; font-size: 10.5px; color: var(--k-ink-mute);">
+      <span>{fmtDate(l.pubDateISO, $locale)}</span>
+      {#if l.author}<span>·</span><span>{l.author === 'Mahalle Team' ? $t['blog.meta.team'] : l.author}</span>{/if}
+      {#if l.minutes != null}<span>·</span><span>{l.minutes} {$t['blog.meta.min']}</span>{/if}
+    </div>
+    {#if l.coverSrc}
+      <div style="margin-top: 14px; border: 1.5px solid var(--k-ink); border-radius: var(--k-radius-lg); overflow: hidden; box-shadow: 2px 2px 0 var(--k-ink);">
+        <img src={l.coverSrc} alt="" class="w-full object-cover" style="height: 220px;" width="480" height="220" loading="lazy" decoding="async" onerror={hideOnError}>
+      </div>
+    {/if}
   </div>
 {/snippet}
 
@@ -706,34 +800,6 @@
   .lnd-sf-repbox { width: 100%; aspect-ratio: 390 / 650; overflow: hidden; position: relative; background: var(--k-paper); }
   .lnd-sf-rep { position: absolute; top: 0; left: 0; width: 390px; height: 650px; transform-origin: top left; transform: scale(var(--sf-scale)); overflow: hidden; background: var(--k-paper); color: var(--k-ink); font-size: 14px; line-height: 1.5; }
   .lnd-sf-repbar { height: 54px; }
-  /* transitional: the four not-yet-rebuilt sections keep their old 200px-frame bodies, enlarged to the 390px canvas (Tasks 4-5 replace them) */
-  .lnd-sf-rep .lnd-sf-body { zoom: 1.95; height: calc(596px / 1.95); }
-  .lnd-sf-body { flex: 1; min-height: 0; padding: 10px 10px 8px; display: flex; flex-direction: column; gap: 6px; }
-  .lnd-sf-kicker { font-size: 8.5px; letter-spacing: 0.16em; color: var(--sf-tint); }
-  .lnd-sf-title { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
-  .lnd-sf-title :global(em) { font-family: var(--k-font-serif); font-style: italic; font-weight: 400; color: var(--sf-tint); }
-  .lnd-sf-card { flex-shrink: 0; margin-top: 4px; background: var(--k-paper-warm); border: 1.5px solid var(--k-ink); border-radius: 8px; padding: 8px 9px; display: flex; flex-direction: column; gap: 5px; box-shadow: 2px 2px 0 var(--k-ink); overflow: hidden; }
-  .lnd-sf-card > * { flex-shrink: 0; }
-  .lnd-sf-card-photo { padding: 0; }
-  .lnd-sf-card-photo > :not(img) { margin: 0 9px; }
-  .lnd-sf-card-photo > :last-child { margin-bottom: 8px; }
-  .lnd-sf-card-photo > .lnd-sf-h2:first-child { margin-top: 8px; }
-  .lnd-sf-card-ink { background: var(--k-ink); color: var(--k-paper); border-color: var(--k-ink); box-shadow: 2px 2px 0 var(--sf-tint); }
-  .lnd-sf-card-ink .lnd-sf-mute { color: #9db97c; }
-  .lnd-sf-photo { display: block; width: 100%; height: 96px; object-fit: cover; }
-  .lnd-sf-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.1em; }
-  .lnd-sf-chip { color: var(--k-paper); padding: 2px 6px 3px; font-size: 8.5px; letter-spacing: 0.14em; }
-  .lnd-sf-h2 { font-size: 13.5px; font-weight: 700; line-height: 1.22; letter-spacing: -0.01em; }
-  .lnd-sf-h3 { font-size: 11.5px; font-weight: 600; line-height: 1.25; margin-top: 3px; }
-  .lnd-sf-desc { font-style: italic; font-size: 11.5px; line-height: 1.3; color: var(--k-ink-soft); }
-  .lnd-sf-tags { font-size: 8.5px; letter-spacing: 0.06em; color: var(--k-ink-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lnd-sf-mute { font-size: 8.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); }
-  .lnd-sf-count { margin-top: auto; font-size: 8.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); padding-top: 6px; border-top: 1px dashed var(--k-rule); }
-  .lnd-sf-more { margin-top: 2px; flex: 1 1 auto; min-height: 0; overflow: hidden; }
-  .lnd-sf-big { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
-  .lnd-sf-bars { display: flex; align-items: flex-end; gap: 3px; height: 32px; }
-  .lnd-sf-barv { flex: 1; background: #9db97c; border-radius: 1px; }
-  .lnd-sf-pop { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-top: 4px; }
   .lnd-sf-shot { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
   .lnd-sf-cap { min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 0 2px; }
   .lnd-sf-cap-label { font-size: 9px; letter-spacing: 0.16em; font-weight: 500; }
@@ -778,9 +844,6 @@
     .lnd-sf-track { gap: 14px; padding: 4px 16px 6px; scroll-padding-left: 16px; }
     .lnd-sf-item { flex-basis: 236px; }
     .lnd-sf-frame { width: 236px; --sf-scale: calc(230 / 390); }
-    .lnd-sf-title { font-size: 19px; }
-    .lnd-sf-h2 { font-size: 14.5px; }
-    .lnd-sf-photo { height: 112px; }
     .lnd-sf-pausebtn { min-height: 44px; }
     .lnd-cta { padding: 26px 18px; }
     .lnd-cta h2 { font-size: 26px; }
