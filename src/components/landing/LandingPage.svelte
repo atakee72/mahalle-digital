@@ -2,6 +2,8 @@
   // Das Schaufenster — public landing (design/handoffs/design_handoff_landing).
   // Data is SSR-provided via props (lib-direct, 1h cache); the ONLY runtime
   // JS behaviors are the locale toggle and the date line. Pulse is pure CSS.
+  import { onMount } from 'svelte';
+  import { advance, activeIndex } from '../../lib/landing/loop';
   import { t, tStr, locale, setLocale } from '../../lib/kiosk-i18n';
   import type { LandingData, HeartbeatRow } from '../../lib/landing';
   import { buildFrames, type Frame, type SectionKey, type BlogPeek } from '../../lib/landing/frames';
@@ -66,12 +68,6 @@
     }).format(new Date(iso)).toUpperCase();
   }
 
-  const popFmt = $derived(
-    data.population != null
-      ? new Intl.NumberFormat($locale === 'de' ? 'de-DE' : 'en-GB').format(data.population)
-      : null,
-  );
-
   // ── Das Schaufenster (2026-09-28): six live frames, per-frame zero rule ──
   const FALLBACKS: Record<SectionKey, string> = {
     forum: '/assets/schaufenster/forum.webp',
@@ -91,8 +87,105 @@
     blog: { tint: 'var(--k-rust)', lines: 'var(--k-bar-lines)' },
   };
   const frames: Frame[] = $derived(buildFrames({ ...data, blog: blog[0] ?? null }, FALLBACKS));
-  // Motion (next task) renders the list twice for the loop; until then once.
-  const renderFrames = $derived(frames);
+  // ── motion: one native scroll container, rAF-driven scrollLeft, frames
+  //    rendered twice for a seamless wrap (loop.ts). Reduced motion: one copy,
+  //    no drive. Pause on any interaction, resume 4 s after the last one. ──
+  const SPEED_PX_S = 40;
+  const RESUME_MS = 4000;
+  let trackEl = $state<HTMLDivElement | null>(null);
+  let reduced = $state(false);
+  let looping = $derived(!reduced && frames.length >= 2);
+  let copies = $state(2); // 3 when one copy is narrower than the viewport plus a frame (wide screens), else the wrap point is unreachable
+  let renderFrames = $derived(looping ? Array.from({ length: copies }, () => frames).flat() : frames);
+  let paused = $state(false);       // user-held pause (toggle button)
+  let interacting = $state(false);  // pointer/touch/wheel/focus/hover hold
+  let inView = $state(true);     // IntersectionObserver
+  let docVisible = $state(true); // document.visibilityState
+  const visible = $derived(inView && docVisible);
+  let active = $state(0);
+  let raf = 0;
+  let last = 0;
+  let resumeTimer: ReturnType<typeof setTimeout> | undefined;
+  let hovering = false;
+
+  const running = $derived(looping && !paused && !interacting && visible);
+
+  function step(): number {
+    const first = trackEl?.querySelector<HTMLElement>('.lnd-sf-item');
+    if (!trackEl || !first) return 0;
+    const gap = parseFloat(getComputedStyle(trackEl).columnGap || getComputedStyle(trackEl).gap || '0') || 0;
+    return first.offsetWidth + gap;
+  }
+
+  function tick(t: number) {
+    if (!trackEl || !running) { raf = 0; return; }
+    const dt = last ? Math.min(64, t - last) : 16;
+    last = t;
+    trackEl.scrollLeft = advance(trackEl.scrollLeft, step() * frames.length, (SPEED_PX_S * dt) / 1000);
+    raf = requestAnimationFrame(tick);
+  }
+
+  function start() {
+    if (!trackEl || raf || !running) return;
+    trackEl.style.scrollSnapType = 'none'; // a snap container re-snaps on every programmatic scroll
+    last = 0;
+    raf = requestAnimationFrame(tick);
+  }
+  function stop() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    if (trackEl) trackEl.style.scrollSnapType = '';
+  }
+  function hold() {
+    interacting = true;
+    clearTimeout(resumeTimer);
+  }
+  function release() {
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(() => { if (!hovering) interacting = false; }, RESUME_MS);
+  }
+  function onScroll() {
+    if (!trackEl) return;
+    const s = step();
+    if (s > 0) active = activeIndex(trackEl.scrollLeft, s, frames.length);
+  }
+  function onKey(e: KeyboardEvent) {
+    if (!trackEl || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+    e.preventDefault();
+    hold();
+    trackEl.scrollBy({ left: e.key === 'ArrowRight' ? step() : -step(), behavior: 'auto' });
+    release();
+  }
+
+  $effect(() => { if (running) start(); else stop(); });
+
+  function fitCopies() {
+    if (!trackEl || !looping) return;
+    const period = step() * frames.length;
+    if (period > 0) copies = period + trackEl.clientWidth + 100 > 2 * period ? 3 : 2;
+  }
+
+  onMount(() => {
+    fitCopies();
+    const ro = trackEl ? new ResizeObserver(fitCopies) : null;
+    if (trackEl && ro) ro.observe(trackEl);
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reduced = mq.matches;
+    const onMq = () => { reduced = mq.matches; };
+    mq.addEventListener('change', onMq);
+    const io = trackEl ? new IntersectionObserver((es) => { inView = es.some((e) => e.isIntersecting); }, { threshold: 0.1 }) : null;
+    if (trackEl && io) io.observe(trackEl);
+    const onVis = () => { docVisible = document.visibilityState === 'visible'; };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      mq.removeEventListener('change', onMq);
+      io?.disconnect();
+      ro?.disconnect();
+      document.removeEventListener('visibilitychange', onVis);
+      clearTimeout(resumeTimer);
+      stop();
+    };
+  });
 
   function berlinDayDisc(iso: string): { wd: string; day: string; time: string } {
     const d = new Date(iso);
@@ -152,10 +245,20 @@
         <span class="lnd-sf-head-right">
           <span class="lnd-sf-hint-phone">{$t['lnd.sf.hint.phone']}</span>
           <span class="lnd-sf-hint-desktop">{$t['lnd.sf.hint.desktop']}</span>
+          {#if looping}
+            <button type="button" class="lnd-sf-pausebtn font-dmmono" aria-pressed={paused} onclick={() => { paused = !paused; }}>{paused ? $t['lnd.sf.play'] : $t['lnd.sf.pause']}</button>
+          {/if}
         </span>
       </div>
-      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-      <div class="lnd-sf-track no-scrollbar" role="region" aria-label={$t['lnd.sf.region']} tabindex="0">
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+      <div class="lnd-sf-track no-scrollbar" role="region" aria-label={$t['lnd.sf.region']} tabindex="0"
+        bind:this={trackEl}
+        onscroll={onScroll}
+        onpointerdown={hold} onpointerup={release} onpointercancel={release}
+        ontouchstart={hold} ontouchend={release} ontouchcancel={release}
+        onwheel={() => { hold(); release(); }} onmouseenter={() => { hovering = true; hold(); }} onmouseleave={() => { hovering = false; release(); }}
+        onfocusin={hold} onfocusout={release}
+        onkeydown={onKey}>
         {#each renderFrames as f, i (`${f.key}-${i}`)}
           {@const dup = i >= frames.length}
           {@const S = SECTION[f.key]}
@@ -236,7 +339,7 @@
         {/each}
       </div>
       <div class="lnd-sf-dots" aria-hidden="true">
-        {#each frames as f, i (f.key)}<span class="lnd-sf-dot" class:lnd-sf-dot--on={i === 0} style="background:{SECTION[f.key].tint}"></span>{/each}
+        {#each frames as f, i (f.key)}<span class="lnd-sf-dot" class:lnd-sf-dot--on={i === active} style="background:{SECTION[f.key].tint}"></span>{/each}
       </div>
     </section>
   {/if}
@@ -327,7 +430,6 @@
   .lnd-strip-right { display: flex; align-items: center; padding: 13px 0 13px 18px; border-left: 1px solid rgba(243, 234, 216, 0.22); margin-left: auto; font-size: 9.5px; letter-spacing: 0.12em; color: rgba(243, 234, 216, 0.5); white-space: nowrap; }
   @keyframes lndPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
-  :global(.lnd-plain) { text-decoration: none; color: inherit; }
   .lnd-meta { font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); }
 
   /* ── Das Schaufenster (2026-09-28) ── */
@@ -380,7 +482,7 @@
   .lnd-sf-dots { display: flex; justify-content: center; gap: 6px; padding: 10px 0 16px; }
   .lnd-sf-dot { width: 6px; height: 6px; border-radius: 3px; transition: width 240ms ease; }
   .lnd-sf-dot--on { width: 18px; }
-  :global(.lnd-sf-pausebtn) { background: none; border: 1px solid var(--k-rule); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 9.5px; letter-spacing: 0.12em; color: var(--k-ink-soft); cursor: pointer; min-height: 28px; }
+  .lnd-sf-pausebtn { background: none; border: 1px solid var(--k-rule); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 9.5px; letter-spacing: 0.12em; color: var(--k-ink-soft); cursor: pointer; min-height: 28px; }
   .lnd-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .lnd-clamp3 { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .lnd-sf-track::-webkit-scrollbar { display: none; } .lnd-sf-track { scrollbar-width: none; }
