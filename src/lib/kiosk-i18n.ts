@@ -271,7 +271,9 @@ const de = {
   'detail.empty.replies': 'Noch keine Antworten — sei die erste.',
 
   // footer
-  'footer.copyright': '© {year} Ercan Atak — Mahalle.',
+  'footer.copyright.before': '© {year} ',
+  'footer.author': 'Ercan Atak', // linked to his site (2026-09-28)
+  'footer.copyright.after': ' — Mahalle.',
   'footer.licensedUnder': 'Lizenziert unter',
   'footer.license': 'PolyForm Noncommercial 1.0.0',
 
@@ -2301,7 +2303,9 @@ const en: Dict = {
   'detail.composeLogin': 'Sign in to join the conversation.',
   'detail.empty.replies': 'No replies yet — be the first.',
 
-  'footer.copyright': '© {year} Ercan Atak — Mahalle.',
+  'footer.copyright.before': '© {year} ',
+  'footer.author': 'Ercan Atak', // linked to his site (2026-09-28)
+  'footer.copyright.after': ' — Mahalle.',
   'footer.licensedUnder': 'Licensed under',
   'footer.license': 'PolyForm Noncommercial 1.0.0',
 
@@ -4065,7 +4069,7 @@ export const t = derived(locale, ($locale) => dictionaries[$locale]);
 
 /**
  * Variable interpolation. Replaces `{key}` placeholders with values.
- *   tStr($t['footer.copyright'], { year: 2026 })  →  "© 2026 Ercan Atak — Mahalle."
+ *   tStr($t['footer.copyright.before'], { year: 2026 })  →  "© 2026 "
  */
 export function tStr(template: string, vars: Record<string, string | number> = {}): string {
   return template.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? `{${k}}`));
