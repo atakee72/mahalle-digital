@@ -533,6 +533,37 @@ rows gone; a second cron call returned `processed: 0` (idempotent).
 
 ## Archiv feed (pointer)
 
+**Bounded box (2026-09-28, user):** the card no longer grows with the
+member's history. `.prof-ledger-scroll` (`profile.css`) caps the row list at
+520 px; the pure `halfRowCutHeight()` (`src/lib/profile/halfRowCut.ts`,
+4 tests) + a Svelte action in `PActivityLedger.svelte` trim the visible
+height so the edge cuts a row IN HALF — the cut row is the „more below"
+hint (user: „cutting the last one on the list halfway"). Desktop: inner
+scroll (`overflow-y: auto`, `overscroll-behavior: contain`) from `lg`.
+Phones: NO inner scroller (a 520 px scroll box under the thumb trapped the
+page — user 02:12, three options offered, he chose this one): the box is
+`overflow: hidden`, „alle anzeigen ↓" (`profile.archiv.expand`, DRAFT copy)
+opens it to full height (`.is-open`), „weniger anzeigen ↑"
+(`profile.archiv.collapse`, DRAFT) at the end clips it again and scrolls
+the card head back under the masthead (`--k-mast-offset`; plain
+`window.scrollTo`, never `scrollIntoView`). The opener only renders when
+the list overflows (`onOverflow` callback from the action); a filter change
+clips again. The action is idempotent (same max-height → no resize churn)
+and re-measures on child changes + resize. Probe: `scratchpad/ledger-cut.cjs`
+(clones rows, since no dev member overflows; phone before/after/closed +
+desktop).
+
+**Chronik strip on phones (2026-09-28):** the stops row inside
+`PChronikStrip.svelte` overflowed the 390 px card; it now scrolls sideways
+(`use:scrollFade`, `kiosk-scroll-fade no-scrollbar`) and the dashed
+connectors keep `flex: 1 0 24px` instead of collapsing.
+
+**Active-avatar ring dropped (2026-09-28):** `.prof-nav-avatar-active` is
+gone from `profile.css` and `KioskNav`; with paper frames on every bar its
+outer ink ring read as a stray black ring (user). Only `aria-current` marks
+the avatar on `/profile`.
+
+
 Full field-by-field notes (per-kind hrefs, `zusage` dated by event
 `startDate` not creation date, `savedBy`-view's no-exact-timestamp
 approximation, `gespeichert` filter excluded from `alle`) live inline in
