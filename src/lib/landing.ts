@@ -104,6 +104,7 @@ export function weekendRange(now: Date): { from: Date; to: Date } {
 // Visible-to-the-public moderation filter (matches buildModerationFilter's
 // public branch: approved or legacy-absent status).
 const PUBLIC_MOD = { moderationStatus: { $nin: ['pending', 'rejected'] } };
+const NO_WARN = { hasWarningLabel: { $ne: true } }; // peeks, calendar dots, Kurier items — never labelled content on the public page (counts mirror the pages and keep it)
 
 /** Per-area residents of the latest period, named and ordered like the Kiez-Daten page (code order, `KZ_PLR_SHORT`). */
 function buildPop(g: { _id?: unknown; pop?: { code?: unknown; total?: unknown }[] } | undefined): KiezPop | null {
@@ -343,7 +344,6 @@ async function compute(now: Date): Promise<LandingData> {
   const dayMs = 86_400_000;
   const sinceYesterday = new Date(now.getTime() - dayMs); // the pages use rolling 24 h
   const since3h = new Date(now.getTime() - 3 * 3_600_000);
-  const NO_WARN = { hasWarningLabel: { $ne: true } };
 
   // forum stats — „Themen" = the full public feed; „diskutiert heute" = posts whose newest visible comment is < 24 h old
   let forumStats: ForumStats | null = null;
