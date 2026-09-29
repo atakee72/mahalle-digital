@@ -807,7 +807,7 @@
   }
 
   /* ── first screen ── */
-  .lnd-fold { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+  .lnd-fold { min-height: min(100vh, 880px); min-height: min(100dvh, 880px); display: flex; flex-direction: column; } /* capped: on tall screens the title floated in too much air (user, 14:32) */
   .lnd-fold > :global(.lnd-masthead) { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
 
   /* ── date line ── */
@@ -876,6 +876,7 @@
 
   /* ── mobile (§10): stacked, strip as row-stack, Schaufenster frames a little wider ── */
   @media (max-width: 1023px) {
+    .lnd-fold { min-height: min(100vh, 780px); min-height: min(100dvh, 780px); } /* phone layout: shorter frames, so a lower cap (user 14:35: a tall window still floated the title) */
     .lnd-dateline { padding: 3px 18px; font-size: 9px; }
     .lnd-date-full { display: none; }
     .lnd-date-short { display: inline; white-space: nowrap; }
