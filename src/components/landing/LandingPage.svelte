@@ -873,7 +873,7 @@
     .lnd-date-full { display: none; }
     .lnd-date-short { display: inline; white-space: nowrap; }
     .lnd-loc { display: none; }
-    .lnd-masthead { padding: 8px 18px 2px; }
+    .lnd-masthead { padding: 12px 18px 8px; }
     .lnd-masthead h1 { font-size: 60px; }
     .lnd-manifest { font-size: 17.5px; line-height: 1.35; margin-top: 4px; }
     .lnd-rule { padding: 0 18px; }
@@ -885,7 +885,7 @@
     .lnd-sf-item { flex-basis: 260px; }
     .lnd-sf-frame { width: 260px; --sf-scale: calc(254 / 390); }
     .lnd-sf-pausebtn { min-height: 44px; margin: -10px 0; }
-    .lnd-promises { min-height: 48px; padding: 0 6px; font-size: 16px; letter-spacing: 0.38em; text-indent: 0.38em; }
+    .lnd-promises { min-height: 40px; padding: 0 6px; font-size: 16px; letter-spacing: 0.38em; text-indent: 0.38em; }
     .lnd-cta { padding: 26px 18px; }
     .lnd-cta h2 { font-size: 26px; }
     .lnd-cta-btn { font-size: 15px; padding: 13px 26px; }
