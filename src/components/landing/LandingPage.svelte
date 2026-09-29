@@ -774,7 +774,7 @@
   .lnd-sf-cap { min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 0 2px; }
   .lnd-sf-cap-label { font-size: 9px; letter-spacing: 0.16em; font-weight: 500; }
   .lnd-sf-cap-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; font-size: 14px; color: var(--k-ink-soft); }
-  .lnd-scrollhint { display: flex; width: 44px; height: 44px; margin: 12px auto 18px; align-items: center; justify-content: center; border-radius: 999px; color: var(--k-ink); background: var(--k-paper); border: 1.5px solid var(--k-ink); box-shadow: 2px 2px 0 var(--k-ink); animation: lndNudge 2.2s ease-in-out infinite; }
+  .lnd-scrollhint { display: flex; width: 44px; height: 44px; margin: 12px auto 18px; align-items: center; justify-content: center; border-radius: 999px; color: var(--k-ink); background: var(--k-paper); border: 1.5px solid var(--k-ink); box-shadow: 2px 2px 0 var(--k-wine); animation: lndNudge 2.2s ease-in-out infinite; }
   .lnd-scrollhint:hover, .lnd-scrollhint:focus-visible { background: var(--k-ink); color: var(--k-paper); }
   @keyframes lndNudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
   .lnd-sf-pausebtn { background: none; border: 1px solid var(--k-rule); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 9.5px; letter-spacing: 0.12em; color: var(--k-ink-soft); cursor: pointer; min-height: 28px; }
@@ -801,17 +801,17 @@
     .lnd-date-short { display: inline; white-space: nowrap; }
     .lnd-loc { display: none; }
     .lnd-masthead { padding: 8px 18px 2px; }
-    .lnd-masthead h1 { font-size: 54px; }
-    .lnd-manifest { font-size: 16.5px; line-height: 1.35; margin-top: 2px; }
+    .lnd-masthead h1 { font-size: 60px; }
+    .lnd-manifest { font-size: 17.5px; line-height: 1.35; margin-top: 4px; }
     .lnd-rule { padding: 0 18px; }
-    .lnd-sf-head { padding: 0 16px 4px; font-size: 10px; }
+    .lnd-sf-head { padding: 0 16px 2px; font-size: 10px; align-items: center; }
     .lnd-sf-hint-phone { display: inline; }
     .lnd-sf-hint-desktop { display: none; }
     .lnd-sf-track { gap: 14px; padding: 4px 16px 2px; scroll-padding-left: 16px; }
     .lnd-scrollhint { margin: 4px auto 14px; }
     .lnd-sf-item { flex-basis: 260px; }
     .lnd-sf-frame { width: 260px; --sf-scale: calc(254 / 390); }
-    .lnd-sf-pausebtn { min-height: 44px; }
+    .lnd-sf-pausebtn { min-height: 44px; margin: -10px 0; }
     .lnd-promises { min-height: 48px; padding: 0 6px; font-size: 16px; letter-spacing: 0.38em; text-indent: 0.38em; }
     .lnd-cta { padding: 26px 18px; }
     .lnd-cta h2 { font-size: 26px; }
