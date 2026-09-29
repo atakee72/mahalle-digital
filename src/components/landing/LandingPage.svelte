@@ -392,7 +392,7 @@
       {/if}
     </div>
     <div class="px-3.5 pt-2.5 pb-3" style="border-bottom: 1px dashed var(--k-rule);">
-      <div class="relative overflow-hidden border-2 border-ink rounded-md h-[64px]" style="background: repeating-linear-gradient(30deg, color-mix(in srgb, var(--k-ochre) 20%, transparent) 0 14px, var(--k-paper-warm) 14px 28px);">
+      <div class="relative overflow-hidden border-2 border-ink rounded-md h-[96px]" style="background: repeating-linear-gradient(30deg, color-mix(in srgb, var(--k-ochre) 20%, transparent) 0 14px, var(--k-paper-warm) 14px 28px);">
         {#if p.image}<img src={cloudinaryFit(optimizeCloudinary(p.image), 480)} alt="" class="absolute inset-0 w-full h-full object-cover" width="480" height="300" loading="lazy" decoding="async" onerror={hideOnError}>{/if}
       </div>
       {#if p.photos}
@@ -648,7 +648,7 @@
     </div>
     {#if l.coverSrc}
       <div style="margin-top: 14px; border: 1.5px solid var(--k-ink); border-radius: var(--k-radius-lg); overflow: hidden; box-shadow: 2px 2px 0 var(--k-ink);">
-        <img src={l.coverSrc} alt="" class="w-full object-cover" style="height: 46px;" width="480" height="220" loading="lazy" decoding="async" onerror={hideOnError}>
+        <img src={l.coverSrc} alt="" class="w-full object-cover" style="height: 220px;" width="480" height="220" loading="lazy" decoding="async" onerror={hideOnError}>
       </div>
     {/if}
     {#each l.more as m (m.slug)}
