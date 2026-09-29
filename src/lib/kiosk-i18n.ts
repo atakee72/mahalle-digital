@@ -180,6 +180,7 @@ const de = {
   'lnd.cta.btn': 'Mitmachen — kostenlos',
   'lnd.cta.sub': 'FÜR NACHBAR:INNEN IM SCHILLERKIEZ · ANMELDUNG IN ZWEI MINUTEN',
   'lnd.cta.slogan': '„Das hier wird, was wir draus machen.“',
+  'lnd.ticker': 'KEINE WERBUNG|KEIN ALGORITHMUS|KEIN DATENVERKAUF|SERVER IN DEUTSCHLAND|SPRICHT 30+ SPRACHEN', // DRAFT — pipe-separated ticker items
   // DRAFT copy (2026-09-28) — the owner words UI copy himself · landing Schaufenster
   'lnd.sf.kicker': 'DAS SCHAUFENSTER · SECHS RÄUME',
   'lnd.sf.hint.phone': 'WISCHEN →',
@@ -2244,6 +2245,7 @@ const en: Dict = {
   'lnd.cta.btn': 'Join — it’s free',
   'lnd.cta.sub': 'FOR NEIGHBORS IN SCHILLERKIEZ · SIGN-UP TAKES TWO MINUTES',
   'lnd.cta.slogan': '“This becomes what we make of it.”',
+  'lnd.ticker': 'NO ADS|NO ALGORITHM|NO DATA SALES|SERVERS IN GERMANY|SPEAKS 30+ LANGUAGES', // DRAFT — pipe-separated ticker items
   // DRAFT copy (2026-09-28) — the owner words UI copy himself · landing Schaufenster
   'lnd.sf.kicker': 'THE SHOP WINDOW · SIX ROOMS',
   'lnd.sf.hint.phone': 'SWIPE →',

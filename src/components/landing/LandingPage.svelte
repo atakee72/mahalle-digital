@@ -6,7 +6,7 @@
   import { onMount } from 'svelte';
   import { advance, activeIndex } from '../../lib/landing/loop';
   import { t, tStr, locale, setLocale } from '../../lib/kiosk-i18n';
-  import type { LandingData, HeartbeatRow } from '../../lib/landing';
+  import type { LandingData } from '../../lib/landing';
   import { buildFrames, monthCells, berlinYearMonth, type Frame, type Live, type SectionKey, type BlogPeek, type BlogMeta } from '../../lib/landing/frames';
   import { CATEGORIES, CATEGORY_ORDER } from '../../lib/calendar/categories';
   import type { EventCategory } from '../../types';
@@ -24,6 +24,14 @@
   const GITHUB_URL = 'https://github.com/atakee72/mahalle-digital';
   const year = new Date().getFullYear();
 
+  const dateLineShort = $derived(
+    new Intl.DateTimeFormat($locale === 'de' ? 'de-DE' : 'en-GB', {
+      weekday: 'short', day: '2-digit', month: 'long', timeZone: 'Europe/Berlin',
+    })
+      .format(new Date())
+      .toUpperCase()
+      .replace(', ', ' · '),
+  );
   const dateLine = $derived(
     new Intl.DateTimeFormat($locale === 'de' ? 'de-DE' : 'en-GB', {
       weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin',
@@ -33,39 +41,16 @@
       .replace(', ', ' · '),
   );
 
-  function rowLabel(r: HeartbeatRow): string {
-    switch (r.kind) {
-      case 'air':
-        return r.mute
-          ? $t['lnd.strip.airMute']
-          : tStr($t['lnd.strip.air'], { grade: $t[`lnd.air.grade.${r.value}`] ?? '' });
-      case 'forum':
-        return r.value === 1 ? $t['lnd.strip.forum1'] : tStr($t['lnd.strip.forum'], { n: String(r.value) });
-      case 'events':
-        return r.value === 1 ? $t['lnd.strip.events1'] : tStr($t['lnd.strip.events'], { n: String(r.value) });
-      case 'kurier':
-        return $t['lnd.strip.kurier'];
-      default:
-        return '';
-    }
-  }
+  const promises = $derived(($t['lnd.ticker'] ?? '').split('|').filter(Boolean));
+  let promiseIdx = $state(0);
+  // one section colour per promise (wine, teal, ochre, moss, rust — the Kurier's ink is skipped, it reads as plain text)
+  const PROMISE_TINT = ['var(--k-wine)', '#3f7e8a', '#c88219', 'var(--k-moss)', 'var(--k-rust)'];
 
-  const DOT: Record<string, string> = {
-    air: '#9db97c', forum: '#d16a87', events: '#6fb5c4', kurier: 'var(--k-paper)',
-  };
-
-  // Sparkline points from lqiMean values (nulls = gaps, simply skipped —
-  // never interpolated). Y inverted: grade 1 (best) at top.
-  function sparkPoints(vals: (number | null)[], w: number, h: number): string {
-    const pts: string[] = [];
-    const n = vals.length;
-    vals.forEach((v, i) => {
-      if (v == null) return;
-      const x = n === 1 ? w / 2 : (i / (n - 1)) * (w - 2) + 1;
-      const y = 1 + ((v - 1) / 4) * (h - 2);
-      pts.push(`${x.toFixed(1)},${Math.min(h - 1, Math.max(1, y)).toFixed(1)}`);
-    });
-    return pts.join(' ');
+  function scrollToCta(e: MouseEvent) {
+    const el = document.getElementById('mitmachen');
+    if (!el) return;
+    e.preventDefault();
+    el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
   }
 
   // ── Das Schaufenster (2026-09-28): six live frames, per-frame zero rule ──
@@ -184,11 +169,13 @@
     reduced = mq.matches;
     const onMq = () => { reduced = mq.matches; };
     mq.addEventListener('change', onMq);
+    const promiseTimer = setInterval(() => { if (!document.hidden) promiseIdx = (promiseIdx + 1) % Math.max(1, promises.length); }, 3200);
     const io = trackEl ? new IntersectionObserver((es) => { inView = es.some((e) => e.isIntersecting); }, { threshold: 0.1 }) : null;
     if (trackEl && io) io.observe(trackEl);
     const onVis = () => { docVisible = document.visibilityState === 'visible'; };
     document.addEventListener('visibilitychange', onVis);
     return () => {
+      clearInterval(promiseTimer);
       mq.removeEventListener('change', onMq);
       io?.disconnect();
       ro?.disconnect();
@@ -617,7 +604,8 @@
 
   <!-- date line -->
   <div class="lnd-dateline font-dmmono">
-    <span>{dateLine}</span>
+    <span class="lnd-date-full">{dateLine}</span>
+    <span class="lnd-date-short">{dateLineShort}</span>
     <span class="lnd-loc">{$t['lnd.loc']}</span>
     <span class="lnd-dateline-right">
       <a href="/login" class="lnd-signin">{$t['lnd.signin']}</a>
@@ -684,34 +672,28 @@
           </div>
         {/each}
       </div>
-      <div class="lnd-sf-dots" aria-hidden="true">
-        {#each frames as f, i (f.key)}<span class="lnd-sf-dot" class:lnd-sf-dot--on={i === active} style="background:{SECTION[f.key].tint}"></span>{/each}
-      </div>
+      <!-- scroll-down hint (2026-09-29): the CTA sits below the fold on most screens -->
+      <a href="#mitmachen" class="lnd-scrollhint" aria-label={$t['lnd.cta.btn']} onclick={scrollToCta}>
+        <svg width="22" height="22" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 6.5 9 12.5 15 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
     </section>
   {/if}
 
+  <!-- Grundsatz-Band (2026-09-29, user: „those phrases appear one after the other"): the promises from the design canvas, one at a time, DRAFT copy -->
+  <div class="lnd-promises font-dmmono" aria-label={promises.join(' · ')}>
+    {#if reduced}
+      <span class="lnd-promises-all">{#each promises as p, i}{#if i > 0}<span class="lnd-promises-sep" aria-hidden="true">·</span>{/if}<span style="color:{PROMISE_TINT[i % PROMISE_TINT.length]}">{p}</span>{/each}</span>
+    {:else}
+      {#key promiseIdx}<span class="lnd-promise" aria-hidden="true" style="color:{PROMISE_TINT[promiseIdx % PROMISE_TINT.length]}">{promises[promiseIdx]}</span>{/key}
+    {/if}
+  </div>
+
   <!-- BANNER SLOT (Sept launch banner, Gebietsfonds events) — stays EMPTY, do not build here -->
 
-  <!-- §03 heartbeat strip — collapses entirely at 0 rows -->
-  {#if data.rows.length > 0}
-    <div class="lnd-strip" role="status">
-      {#each data.rows as r (r.kind)}
-        <div class="lnd-cell" class:lnd-cell-spark={!!r.spark}>
-          <span class="lnd-dot" class:lnd-dot--mute={r.mute} style="background:{DOT[r.kind]}"></span>
-          <span class="lnd-cell-label font-dmmono" class:lnd-mutetext={r.mute}>{rowLabel(r)}</span>
-          {#if r.spark && r.spark.some((v) => v != null)}
-            <svg class="lnd-cell-sparkline" width="62" height="16" viewBox="0 0 62 16" aria-hidden="true">
-              <polyline points={sparkPoints(r.spark, 62, 16)} fill="none" stroke="#9db97c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          {/if}
-        </div>
-      {/each}
-      <div class="lnd-strip-right font-dmmono">{$t['lnd.strip.right']}</div>
-    </div>
-  {/if}
+  <!-- §03 heartbeat strip dropped 2026-09-29 (user: it divided the page); data.rows + /api/kiez-heartbeat stay computed -->
 
   <!-- CTA (§08) — the page's ONE call to action -->
-  <div class="lnd-cta">
+  <div class="lnd-cta" id="mitmachen">
     <h2 class="font-bricolage">{$t['lnd.cta.h']}</h2>
     <a href="/register" class="lnd-cta-btn font-bricolage">{$t['lnd.cta.btn']}</a>
     <div class="lnd-meta font-dmmono lnd-cta-sub">{$t['lnd.cta.sub']}</div>
@@ -740,7 +722,7 @@
   .lnd-root > .lnd-bg {
     position: absolute; inset: 0; z-index: 0; pointer-events: none;
     background-image: url('/assets/background_landing_page.webp');
-    background-size: cover; background-repeat: no-repeat; background-position: center top;
+    background-size: cover; background-repeat: no-repeat; background-position: right bottom; /* rotated 180°: image bottom-right = screen top-left, so the ribbon tail meets the corner (user, 2026-09-29) */
     /* opacity 0.16 → 0.42 (user, 2026-09-28: „too pale", then „remove that
        paleness"). NO `filter` here: a saturate() on this page-tall layer made
        Chrome rasterise it in tiles and the ribbons appeared cut while
@@ -749,47 +731,42 @@
   }
 
   /* ── date line ── */
-  .lnd-dateline { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 48px; border-bottom: 1px solid var(--k-rule); font-size: 10px; letter-spacing: 0.12em; color: var(--k-ink-mute); }
+  .lnd-dateline { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 1px 48px; border-bottom: 1px solid var(--k-rule); font-size: 10px; letter-spacing: 0.12em; color: var(--k-ink-mute); }
   .lnd-dateline-right { display: flex; gap: 18px; align-items: baseline; }
+  .lnd-date-short { display: none; }
   .lnd-signin { color: var(--k-ink); text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 3px; }
   .lnd-lang button { background: none; border: none; padding: 0 2px; font: inherit; color: var(--k-ink-mute); cursor: pointer; min-width: 24px; min-height: 24px; }
   .lnd-lang button.active { color: var(--k-ink); font-weight: 700; }
 
   /* ── masthead + double rule ── */
-  .lnd-masthead { text-align: center; padding: 30px 48px 20px; }
+  .lnd-masthead { text-align: center; padding: 10px 48px 6px; }
   .lnd-masthead h1 { font-size: 96px; font-weight: 800; letter-spacing: -0.045em; line-height: 0.95; margin: 0; color: var(--k-ink); }
   .lnd-a { font-style: italic; font-weight: 400; letter-spacing: 0; }
-  .lnd-manifest { font-style: italic; font-size: 23px; color: var(--k-ink-soft); margin: 13px 0 0; }
-  .lnd-rule { padding: 0 48px; margin-bottom: 10px; }
+  .lnd-manifest { font-style: italic; font-size: 23px; color: var(--k-ink-soft); margin: 5px 0 0; }
+  .lnd-rule { padding: 0 48px; margin-bottom: 2px; }
   .lnd-rule-thick { height: 3px; background: var(--k-ink); }
   .lnd-rule-thin { height: 1px; background: var(--k-ink); margin-top: 3px; }
 
-  /* ── heartbeat strip ── */
-  .lnd-strip { background: var(--k-ink); color: var(--k-paper); display: flex; align-items: stretch; padding: 0 48px; }
-  .lnd-cell { display: flex; align-items: center; gap: 9px; padding: 13px 18px; flex: 1; min-width: 0; }
-  .lnd-cell + .lnd-cell { border-left: 1px solid rgba(243, 234, 216, 0.22); }
-  .lnd-cell-spark { flex: 1.2; }
-  .lnd-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; animation: lndPulse 2.4s ease-in-out infinite; }
-  .lnd-dot--mute { animation: none; opacity: 0.45; }
-  .lnd-cell-label { font-size: 10.5px; letter-spacing: 0.1em; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lnd-mutetext { color: rgba(243, 234, 216, 0.55); }
-  .lnd-cell-sparkline { flex-shrink: 0; }
-  .lnd-strip-right { display: flex; align-items: center; padding: 13px 0 13px 18px; border-left: 1px solid rgba(243, 234, 216, 0.22); margin-left: auto; font-size: 9.5px; letter-spacing: 0.12em; color: rgba(243, 234, 216, 0.5); white-space: nowrap; }
-  @keyframes lndPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-
   .lnd-meta { font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); }
 
+  /* ── Grundsatz-Band (2026-09-29): one promise at a time, crossfade ── */
+  .lnd-promises { display: grid; place-items: center; min-height: 50px; border-top: 1px solid var(--k-rule); padding: 0 16px; font-size: 17px; font-weight: 600; letter-spacing: 0.8em; text-indent: 0.8em; color: var(--k-ink-soft); text-align: center; }
+  .lnd-promise { grid-area: 1 / 1; white-space: nowrap; animation: lndPromiseIn 600ms ease-out both; }
+  .lnd-promises-all { display: inline-flex; flex-wrap: wrap; justify-content: center; row-gap: 4px; padding: 6px 0; }
+  .lnd-promises-sep { padding: 0 12px; color: var(--k-ink-mute); }
+  @keyframes lndPromiseIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
   /* ── Das Schaufenster (2026-09-28) ── */
-  .lnd-sf { padding: 12px 0 0; }
-  .lnd-sf-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 48px 10px; font-size: 10.5px; letter-spacing: 0.14em; color: var(--k-ink-mute); }
+  .lnd-sf { padding: 2px 0 0; }
+  .lnd-sf-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 48px 8px; font-size: 10.5px; letter-spacing: 0.14em; color: var(--k-ink-mute); }
   .lnd-sf-head-right { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; white-space: nowrap; }
   .lnd-sf-head-kicker { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .lnd-sf-hint-phone { display: none; }
   .lnd-sf-track { display: flex; gap: 24px; padding: 4px 48px 6px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; scroll-padding-left: 48px; scroll-behavior: auto; outline: none; -webkit-overflow-scrolling: touch; }
   .lnd-sf-track:focus-visible { outline: 2px dashed var(--k-ink); outline-offset: 2px; }
-  .lnd-sf-item { flex: 0 0 200px; min-width: 0; scroll-snap-align: start; display: flex; flex-direction: column; gap: 8px; }
-  .lnd-sf-frame { display: flex; flex-direction: column; width: 200px; aspect-ratio: 3 / 5; box-sizing: border-box; border: 3px solid var(--sf-tint); border-radius: 16px; overflow: hidden; background: var(--k-paper); box-shadow: 3px 3px 0 var(--k-ink); text-decoration: none; color: var(--k-ink); }
-  .lnd-sf-frame { --sf-scale: calc(194 / 390); }
+  .lnd-sf-item { flex: 0 0 240px; min-width: 0; scroll-snap-align: start; display: flex; flex-direction: column; gap: 8px; }
+  .lnd-sf-frame { display: flex; flex-direction: column; width: 240px; aspect-ratio: 3 / 5; box-sizing: border-box; border: 3px solid var(--sf-tint); border-radius: 16px; overflow: hidden; background: var(--k-paper); box-shadow: 3px 3px 0 var(--k-ink); text-decoration: none; color: var(--k-ink); }
+  .lnd-sf-frame { --sf-scale: calc(234 / 390); }
   .lnd-sf-repbox { width: 100%; aspect-ratio: 390 / 650; overflow: hidden; position: relative; background: var(--k-paper); }
   .lnd-sf-rep { position: absolute; top: 0; left: 0; width: 390px; height: 650px; transform-origin: top left; transform: scale(var(--sf-scale)); overflow: hidden; background: var(--k-paper); color: var(--k-ink); font-size: 14px; line-height: 1.5; }
   .lnd-sf-repbar { height: 54px; }
@@ -797,9 +774,9 @@
   .lnd-sf-cap { min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 0 2px; }
   .lnd-sf-cap-label { font-size: 9px; letter-spacing: 0.16em; font-weight: 500; }
   .lnd-sf-cap-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; font-size: 14px; color: var(--k-ink-soft); }
-  .lnd-sf-dots { display: flex; justify-content: center; gap: 6px; padding: 10px 0 16px; }
-  .lnd-sf-dot { width: 6px; height: 6px; border-radius: 3px; transition: width 240ms ease; }
-  .lnd-sf-dot--on { width: 18px; }
+  .lnd-scrollhint { display: flex; width: 44px; height: 44px; margin: 12px auto 10px; align-items: center; justify-content: center; border-radius: 999px; color: var(--k-ink); background: var(--k-paper); border: 1.5px solid var(--k-ink); box-shadow: 2px 2px 0 var(--k-ink); animation: lndNudge 2.2s ease-in-out infinite; }
+  .lnd-scrollhint:hover, .lnd-scrollhint:focus-visible { background: var(--k-ink); color: var(--k-paper); }
+  @keyframes lndNudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
   .lnd-sf-pausebtn { background: none; border: 1px solid var(--k-rule); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 9.5px; letter-spacing: 0.12em; color: var(--k-ink-soft); cursor: pointer; min-height: 28px; }
   .lnd-clamp3 { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .lnd-sf-track::-webkit-scrollbar { display: none; } .lnd-sf-track { scrollbar-width: none; }
@@ -819,24 +796,23 @@
 
   /* ── mobile (§10): stacked, strip as row-stack, Schaufenster frames a little wider ── */
   @media (max-width: 1023px) {
-    .lnd-dateline { padding: 10px 18px; font-size: 9px; }
+    .lnd-dateline { padding: 3px 18px; font-size: 9px; }
+    .lnd-date-full { display: none; }
+    .lnd-date-short { display: inline; white-space: nowrap; }
     .lnd-loc { display: none; }
-    .lnd-masthead { padding: 22px 18px 16px; }
+    .lnd-masthead { padding: 8px 18px 2px; }
     .lnd-masthead h1 { font-size: 54px; }
-    .lnd-manifest { font-size: 16.5px; line-height: 1.35; margin-top: 10px; }
+    .lnd-manifest { font-size: 16.5px; line-height: 1.35; margin-top: 2px; }
     .lnd-rule { padding: 0 18px; }
-    .lnd-strip { flex-direction: column; padding: 0; }
-    .lnd-cell { padding: 11px 18px; }
-    .lnd-cell + .lnd-cell { border-left: none; border-top: 1px solid rgba(243, 234, 216, 0.18); }
-    .lnd-cell-sparkline { margin-left: auto; }
-    .lnd-strip-right { display: none; }
-    .lnd-sf-head { padding: 0 16px 10px; font-size: 10px; }
+    .lnd-sf-head { padding: 0 16px 4px; font-size: 10px; }
     .lnd-sf-hint-phone { display: inline; }
     .lnd-sf-hint-desktop { display: none; }
-    .lnd-sf-track { gap: 14px; padding: 4px 16px 6px; scroll-padding-left: 16px; }
-    .lnd-sf-item { flex-basis: 236px; }
-    .lnd-sf-frame { width: 236px; --sf-scale: calc(230 / 390); }
+    .lnd-sf-track { gap: 14px; padding: 4px 16px 2px; scroll-padding-left: 16px; }
+    .lnd-scrollhint { margin: 4px auto 6px; }
+    .lnd-sf-item { flex-basis: 260px; }
+    .lnd-sf-frame { width: 260px; --sf-scale: calc(254 / 390); }
     .lnd-sf-pausebtn { min-height: 44px; }
+    .lnd-promises { min-height: 48px; padding: 0 6px; font-size: 16px; letter-spacing: 0.38em; text-indent: 0.38em; }
     .lnd-cta { padding: 26px 18px; }
     .lnd-cta h2 { font-size: 26px; }
     .lnd-cta-btn { font-size: 15px; padding: 13px 26px; }
@@ -858,16 +834,14 @@
        rounding overflows (silently clipped by the project's global
        `overflow-x: clip` on html/body) rather than re-wrapping. */
     .lnd-dateline-right { align-items: center; gap: 10px; }
-    .lnd-signin { display: inline-flex; align-items: center; min-height: 44px; white-space: nowrap; }
+    .lnd-signin { display: inline-flex; align-items: center; min-height: 44px; margin: -8px 0; white-space: nowrap; }
     .lnd-lang { white-space: nowrap; }
-    .lnd-lang button { min-width: 44px; min-height: 44px; }
+    .lnd-lang button { min-width: 44px; min-height: 44px; margin: -8px 0; }
   }
 
-  /* §12: reduced motion — dots static at FULL opacity, mute stays dimmed.
-     MUST remain the last lnd-dot rules in this block (source order beats
-     equal specificity — same guard as the .am-* block in global.css). */
+  /* §12: reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    .lnd-dot { animation: none; opacity: 1; }
-    .lnd-dot--mute { opacity: 0.45; }
+    .lnd-scrollhint { animation: none; }
+    .lnd-promise { animation: none; }
   }
 </style>
