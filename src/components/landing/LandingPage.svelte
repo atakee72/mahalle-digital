@@ -675,6 +675,8 @@
   <!-- §02 VOLLBILD GESPIEGELT — z0 layer; every sibling is z1 via CSS below -->
   <div class="lnd-bg" aria-hidden="true"></div>
 
+  <!-- first screen (2026-09-29, user): date line → masthead → Schaufenster → chevron fill exactly one viewport; the masthead absorbs the slack -->
+  <div class="lnd-fold">
   <!-- date line -->
   <div class="lnd-dateline font-dmmono">
     <span class="lnd-date-full">{dateLine}</span>
@@ -751,6 +753,7 @@
       </a>
     </section>
   {/if}
+  </div>
 
   <!-- Grundsatz-Band (2026-09-29, user: „those phrases appear one after the other"): the promises from the design canvas, one at a time, DRAFT copy -->
   <div class="lnd-promises font-dmmono" aria-label={promises.join(' · ')}>
@@ -802,6 +805,10 @@
        scrolling (user report 02:40). */
     mix-blend-mode: multiply; opacity: 0.42; transform: rotate(180deg);
   }
+
+  /* ── first screen ── */
+  .lnd-fold { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+  .lnd-fold > :global(.lnd-masthead) { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
 
   /* ── date line ── */
   .lnd-dateline { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 1px 48px; border-bottom: 1px solid var(--k-rule); font-size: 10px; letter-spacing: 0.12em; color: var(--k-ink-mute); }
