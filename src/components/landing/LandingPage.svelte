@@ -7,7 +7,8 @@
   import { advance, activeIndex } from '../../lib/landing/loop';
   import { t, tStr, locale, setLocale } from '../../lib/kiosk-i18n';
   import type { LandingData } from '../../lib/landing';
-  import { buildFrames, monthCells, berlinYearMonth, type Frame, type Live, type SectionKey, type BlogPeek, type BlogMeta } from '../../lib/landing/frames';
+  import { buildFrames, monthCells, berlinYearMonth, type Frame, type Live, type SectionKey, type BlogPeek, type BlogMeta, type ForumPeek, type ListingPeek } from '../../lib/landing/frames';
+  import { KZ_SERIES_COLORS } from '../../lib/kiez/kiezViewModel';
   import { CATEGORIES, CATEGORY_ORDER } from '../../lib/calendar/categories';
   import type { EventCategory } from '../../types';
   import { cloudinaryFit, optimizeCloudinary } from '../../utils/cloudinary';
@@ -71,7 +72,7 @@
     schillerkiez: { tint: 'var(--k-moss)', lines: 'var(--k-bar-lines)' },
     blog: { tint: 'var(--k-rust)', lines: 'var(--k-bar-lines)' },
   };
-  const frames: Frame[] = $derived(buildFrames({ ...data, blog: blog[0] ?? null, blogMeta, computedAt: data.computedAt }, FALLBACKS));
+  const frames: Frame[] = $derived(buildFrames({ ...data, blog: blog[0] ?? null, blogs: blog, blogMeta, computedAt: data.computedAt }, FALLBACKS));
   // ── motion: one native scroll container, rAF-driven scrollLeft, frames
   //    rendered twice for a seamless wrap (loop.ts). Reduced motion: one copy,
   //    no drive. Pause on any interaction, resume 4 s after the last one. ──
@@ -227,10 +228,46 @@
   </div>
 {/snippet}
 
+{#snippet forumCard(p: ForumPeek)}
+  {@const isAnn = p.kind === 'announcement'}
+  {@const isRec = p.kind === 'recommendation'}
+  <article class="bg-paper-warm {isAnn ? 'border-[1.5px] border-teal shadow-[2px_2px_0_var(--k-teal)]' : isRec ? 'border-[1.5px] border-moss shadow-[2px_2px_0_var(--k-moss)]' : 'border border-wine'} flex flex-col overflow-hidden rounded-lg">
+    {#if isAnn || isRec}
+      <div class="{isAnn ? 'bg-teal' : 'bg-moss'} text-paper border-b border-ink flex items-center justify-between gap-3 px-3.5 py-1">
+        <span class="font-dmmono text-[9.5px] uppercase font-semibold tracking-[0.12em]">{isAnn ? $t['card.strap.announcement'] : $t['card.strap.recommendation']}</span>
+      </div>
+    {/if}
+    <div class="px-5 py-4">
+      <div class="flex items-start justify-between gap-3 mb-2.5">
+        <div class="font-dmmono text-[10px] tracking-[0.05em] text-ink-mute pt-1">{relTime(p.createdAt, $locale, Date.parse(data.computedAt))}</div>
+        {#if !isAnn && !isRec}
+          <span class="inline-flex items-center font-dmmono font-medium text-[10px] tracking-[0.08em] text-paper border border-ink rounded-lg px-[9px] py-[3px] bg-wine">{$t[`chip.${p.kind}`].toUpperCase()}</span>
+        {/if}
+      </div>
+      {#if p.image}
+        <div class="relative mb-3 rounded-md border-[1.5px] border-ink overflow-hidden h-[100px]">
+          <img src={cloudinaryFit(optimizeCloudinary(p.image), 480)} alt="" class="w-full h-full object-cover" width="480" height="200" loading="lazy" decoding="async" onerror={hideOnError}>
+          <div class="pointer-events-none absolute inset-0" style="background: repeating-linear-gradient(0deg, transparent 0 4px, rgba(0,0,0,0.04) 4px 5px);"></div>
+        </div>
+      {/if}
+      <div class="font-bricolage font-extrabold tracking-tight leading-[1.18] mb-2 text-balance text-ink text-[16.5px] lnd-clamp3">{p.title}</div>
+      {#if p.tags.length}
+        <div class="flex gap-2 flex-wrap font-dmmono text-[10px] mb-2.5 text-ink-mute">{#each p.tags as tg (tg)}<span>#{tg}</span>{/each}</div>
+      {/if}
+      <div class="flex items-center justify-between font-dmmono text-[11px] pt-2.5 border-t border-dashed border-rule text-ink-mute">
+        <span class="flex items-center gap-3">
+          <span class="flex items-center gap-1"><span aria-hidden="true">♥</span> {p.likes ?? 0}</span>
+          <span class="flex items-center gap-1"><span aria-hidden="true">💬</span> {p.comments ?? 0}</span>
+          <span class="flex items-center gap-1"><span aria-hidden="true">🔖</span> {p.saves ?? 0}</span>
+        </span>
+        <span class="flex items-center gap-1">→ {$t['card.cta.read']}</span>
+      </div>
+    </div>
+  </article>
+{/snippet}
+
 {#snippet forumRep(l: Extract<Live, { key: 'forum' }>)}
   {@const k = kickerDate(data.computedAt)}
-  {@const isAnn = l.kind === 'announcement'}
-  {@const isRec = l.kind === 'recommendation'}
   {@const pill = 'shrink-0 px-4 py-1 rounded-full font-bricolage font-medium text-sm border-2'}
   <div class="px-4 pt-5 pb-8">
     <section class="mb-3 pb-4 border-b border-dashed border-rule">
@@ -257,39 +294,10 @@
       </div>
       <span class="shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full font-bricolage font-medium text-sm bg-transparent text-ink border-2 border-ink/30"><span>{$t['filter.tagsChip']}</span><span aria-hidden="true" class="text-[10px]">▾</span></span>
     </div>
-    <article class="bg-paper-warm {isAnn ? 'border-[1.5px] border-teal shadow-[2px_2px_0_var(--k-teal)]' : isRec ? 'border-[1.5px] border-moss shadow-[2px_2px_0_var(--k-moss)]' : 'border border-wine'} flex flex-col overflow-hidden rounded-lg">
-      {#if isAnn || isRec}
-        <div class="{isAnn ? 'bg-teal' : 'bg-moss'} text-paper border-b border-ink flex items-center justify-between gap-3 px-3.5 py-1">
-          <span class="font-dmmono text-[9.5px] uppercase font-semibold tracking-[0.12em]">{isAnn ? $t['card.strap.announcement'] : $t['card.strap.recommendation']}</span>
-        </div>
-      {/if}
-      <div class="px-5 py-4">
-        <div class="flex items-start justify-between gap-3 mb-2.5">
-          <div class="font-dmmono text-[10px] tracking-[0.05em] text-ink-mute pt-1">{relTime(l.createdAt, $locale, Date.parse(data.computedAt))}</div>
-          {#if !isAnn && !isRec}
-            <span class="inline-flex items-center font-dmmono font-medium text-[10px] tracking-[0.08em] text-paper border border-ink rounded-lg px-[9px] py-[3px] bg-wine">{$t[`chip.${l.kind}`].toUpperCase()}</span>
-          {/if}
-        </div>
-        {#if l.image}
-          <div class="relative mb-3 rounded-md border-[1.5px] border-ink overflow-hidden h-[100px]">
-            <img src={cloudinaryFit(optimizeCloudinary(l.image), 480)} alt="" class="w-full h-full object-cover" width="480" height="200" loading="lazy" decoding="async" onerror={hideOnError}>
-            <div class="pointer-events-none absolute inset-0" style="background: repeating-linear-gradient(0deg, transparent 0 4px, rgba(0,0,0,0.04) 4px 5px);"></div>
-          </div>
-        {/if}
-        <div class="font-bricolage font-extrabold tracking-tight leading-[1.18] mb-2 text-balance text-ink text-[16.5px] lnd-clamp3">{l.title}</div>
-        {#if l.tags.length}
-          <div class="flex gap-2 flex-wrap font-dmmono text-[10px] mb-2.5 text-ink-mute">{#each l.tags as tg (tg)}<span>#{tg}</span>{/each}</div>
-        {/if}
-        <div class="flex items-center justify-between font-dmmono text-[11px] pt-2.5 border-t border-dashed border-rule text-ink-mute">
-          <span class="flex items-center gap-3">
-            <span class="flex items-center gap-1"><span aria-hidden="true">♥</span> {l.likes ?? 0}</span>
-            <span class="flex items-center gap-1"><span aria-hidden="true">💬</span> {l.comments ?? 0}</span>
-            <span class="flex items-center gap-1"><span aria-hidden="true">🔖</span> {l.saves ?? 0}</span>
-          </span>
-          <span class="flex items-center gap-1">→ {$t['card.cta.read']}</span>
-        </div>
-      </div>
-    </article>
+    {@render forumCard(l)}
+    {#each l.more as m (m.createdAt + m.title)}
+      <div class="mt-3">{@render forumCard(m)}</div>
+    {/each}
   </div>
 {/snippet}
 
@@ -344,15 +352,64 @@
         </div>
       {/each}
     </div>
-    <div class="mt-4 bg-paper-warm border border-dashed border-rule rounded-sm px-3 py-2.5 font-instrument italic text-[13px] text-ink-soft leading-[1.5]">{$t['cal.agenda.quote']}</div>
+    {#if l.upcoming.length}
+      <div class="mt-4 border-t border-dashed border-rule">
+        {#each l.upcoming as u (u.startISO + u.title)}
+          {@const st = catStyle(u.category)}
+          {@const uf = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat($locale === 'de' ? 'de-DE' : 'en-GB', { timeZone: 'Europe/Berlin', ...o }).format(new Date(u.startISO))}
+          <div class="grid grid-cols-[56px_1fr] gap-3 items-start py-2.5 border-b border-dashed border-rule">
+            <div class="font-dmmono uppercase leading-tight">
+              <div class="text-[10px] tracking-[0.1em] text-ink-mute">{uf({ weekday: 'short' })}</div>
+              <div class="font-instrument italic font-normal text-[24px] tracking-[-0.01em] leading-none text-ink">{uf({ day: 'numeric' })}.</div>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded font-dmmono font-semibold uppercase tracking-[0.1em] text-[10px] {st.bgClass} {st.textOnFill}">{catLabel(u.category)}</span>
+                <span class="font-dmmono text-[10px] text-ink-mute">{u.allDay ? $t['cal.allDay'] : uf({ hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+              </div>
+              <div class="font-bricolage font-bold text-[16.5px] tracking-[-0.018em] leading-[1.2] text-ink lnd-clamp3">{u.title}</div>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <div class="mt-4 bg-paper-warm border border-dashed border-rule rounded-sm px-3 py-2.5 font-instrument italic text-[13px] text-ink-soft leading-[1.5]">{$t['cal.agenda.quote']}</div>
+    {/if}
   </div>
+{/snippet}
+
+{#snippet marketCard(p: { title: string; image: string | null; kind: ListingPeek['kind']; photos?: number | null; createdAt?: string | null })}
+  {@const kindKey = p.kind === 'sell' ? 'verkaufen' : p.kind === 'exchange' ? 'tausch' : 'verschenken'}
+  {@const today = p.createdAt != null && (() => { const a = berlinYearMonth(p.createdAt); const b = berlinYearMonth(data.computedAt); return a.year === b.year && a.month === b.month && a.day === b.day; })()}
+  {@const dm = p.createdAt ? new Intl.DateTimeFormat($locale === 'de' ? 'de-DE' : 'en-GB', { timeZone: 'Europe/Berlin', day: 'numeric', month: 'short' }).format(new Date(p.createdAt)).toUpperCase() : ''}
+  <article class="relative overflow-hidden mx-4 mt-3.5 mb-2.5" style="background: var(--k-paper-warm); border: var(--k-border-ink); border-radius: var(--k-radius-lg); box-shadow: 4px 4px 0 var(--k-ochre);">
+    <div class="flex items-center justify-between gap-2 px-3 py-1.5 bg-ink text-paper font-dmmono font-semibold uppercase tracking-[0.14em] text-[9.5px]">
+      {#if today}
+        <span class="whitespace-nowrap overflow-hidden text-ellipsis">★ {$t['market.lead.banner']}</span>
+        <span class="shrink-0 whitespace-nowrap" style="color: var(--k-ochre);">● {dm}</span>
+      {:else}
+        <span class="shrink-0 whitespace-nowrap" style="color: var(--k-ochre);">● {relTime(p.createdAt, $locale, Date.parse(data.computedAt))}</span>
+      {/if}
+    </div>
+    <div class="px-3.5 pt-2.5 pb-3" style="border-bottom: 1px dashed var(--k-rule);">
+      <div class="relative overflow-hidden border-2 border-ink rounded-md h-[64px]" style="background: repeating-linear-gradient(30deg, color-mix(in srgb, var(--k-ochre) 20%, transparent) 0 14px, var(--k-paper-warm) 14px 28px);">
+        {#if p.image}<img src={cloudinaryFit(optimizeCloudinary(p.image), 480)} alt="" class="absolute inset-0 w-full h-full object-cover" width="480" height="300" loading="lazy" decoding="async" onerror={hideOnError}>{/if}
+      </div>
+      {#if p.photos}
+        <div class="mt-2"><span class="font-dmmono text-[10px] text-ink-mute">{p.photos} {$locale === 'de' ? 'Fotos' : 'photos'}</span></div>
+      {/if}
+    </div>
+    <div class="px-3.5 pt-3.5 pb-4 flex flex-col gap-2.5 min-w-0">
+      <span class="cat-chip cat-chip--active lnd-sf-nodot self-start" style="--cat-color: var(--k-ochre); --cat-fg: var(--k-ink);">{$t[`market.filter.kind.${kindKey}`]}</span>
+      <div class="font-extrabold text-ink tracking-[-0.022em] leading-[1.1] m-0 text-[22px] lnd-clamp3" style="word-break: break-word;">
+        <span style="font-family: var(--k-font-serif); font-style: italic; font-weight: 400; color: var(--k-ochre);">{p.title}</span>
+      </div>
+    </div>
+  </article>
 {/snippet}
 
 {#snippet marketRep(l: Extract<Live, { key: 'marketplace' }>)}
   {@const k = kickerDate(data.computedAt)}
-  {@const kindKey = l.kind === 'sell' ? 'verkaufen' : l.kind === 'exchange' ? 'tausch' : 'verschenken'}
-  {@const today = l.createdAt != null && (() => { const a = berlinYearMonth(l.createdAt); const b = berlinYearMonth(data.computedAt); return a.year === b.year && a.month === b.month && a.day === b.day; })()}
-  {@const dm = l.createdAt ? new Intl.DateTimeFormat($locale === 'de' ? 'de-DE' : 'en-GB', { timeZone: 'Europe/Berlin', day: 'numeric', month: 'short' }).format(new Date(l.createdAt)).toUpperCase() : ''}
   {@const pillOn = 'shrink-0 font-bricolage font-semibold border-2 border-ink bg-ink text-paper rounded-full px-[13px] py-[5px] text-[12.5px]'}
   {@const pillOff = 'shrink-0 font-bricolage font-semibold border-2 border-ink text-ink rounded-full px-[13px] py-[5px] text-[12.5px]'}
   {@const lab = 'font-dmmono uppercase shrink-0 text-[10px] text-ink-mute tracking-[0.12em]'}
@@ -389,30 +446,10 @@
       <span class="cat-chip shrink-0" style="--cat-color: var(--cat-garten);">{$t['market.cat.garten']}</span>
     </div>
   </div>
-  <article class="relative overflow-hidden mx-4 my-3.5" style="background: var(--k-paper-warm); border: var(--k-border-ink); border-radius: var(--k-radius-lg); box-shadow: 4px 4px 0 var(--k-ochre);">
-    <div class="flex items-center justify-between gap-2 px-3 py-1.5 bg-ink text-paper font-dmmono font-semibold uppercase tracking-[0.14em] text-[9.5px]">
-      {#if today}
-        <span class="whitespace-nowrap overflow-hidden text-ellipsis">★ {$t['market.lead.banner']}</span>
-        <span class="shrink-0 whitespace-nowrap" style="color: var(--k-ochre);">● {dm}</span>
-      {:else}
-        <span class="shrink-0 whitespace-nowrap" style="color: var(--k-ochre);">● {relTime(l.createdAt, $locale, Date.parse(data.computedAt))}</span>
-      {/if}
-    </div>
-    <div class="px-3.5 pt-2.5 pb-3" style="border-bottom: 1px dashed var(--k-rule);">
-      <div class="relative overflow-hidden border-2 border-ink rounded-md h-[96px]" style="background: repeating-linear-gradient(30deg, color-mix(in srgb, var(--k-ochre) 20%, transparent) 0 14px, var(--k-paper-warm) 14px 28px);">
-        {#if l.image}<img src={cloudinaryFit(optimizeCloudinary(l.image), 480)} alt="" class="absolute inset-0 w-full h-full object-cover" width="480" height="300" loading="lazy" decoding="async" onerror={hideOnError}>{/if}
-      </div>
-      {#if l.photos}
-        <div class="mt-2"><span class="font-dmmono text-[10px] text-ink-mute">{l.photos} {$locale === 'de' ? 'Fotos' : 'photos'}</span></div>
-      {/if}
-    </div>
-    <div class="px-3.5 pt-3.5 pb-4 flex flex-col gap-2.5 min-w-0">
-      <span class="cat-chip cat-chip--active lnd-sf-nodot self-start" style="--cat-color: var(--k-ochre); --cat-fg: var(--k-ink);">{$t[`market.filter.kind.${kindKey}`]}</span>
-      <div class="font-extrabold text-ink tracking-[-0.022em] leading-[1.1] m-0 text-[22px] lnd-clamp3" style="word-break: break-word;">
-        <span style="font-family: var(--k-font-serif); font-style: italic; font-weight: 400; color: var(--k-ochre);">{l.title}</span>
-      </div>
-    </div>
-  </article>
+  {@render marketCard(l)}
+  {#each l.more as m (m.createdAt + m.title)}
+    {@render marketCard(m)}
+  {/each}
 {/snippet}
 
 {#snippet kurierRep(l: Extract<Live, { key: 'newsboard' }>)}
@@ -466,6 +503,16 @@
         <div class="font-dmmono uppercase" style="font-size:10px; color:var(--k-ink-mute); letter-spacing:0.08em;">{l.lead.sourceName}</div>
       </div>
     </article>
+    {#each l.more as m (m.title)}
+      {@const msk = (m.sektion && m.sektion in SEKTION_TOKEN ? m.sektion : 'lokales') as NewsSektion}
+      <article class="flex flex-col" style="background:var(--k-paper); border:var(--k-border-hair); border-radius:var(--k-radius-md); padding:12px 14px; margin-top:10px;">
+        <div class="flex items-center" style="margin-bottom:6px;">
+          <span class="inline-flex items-center font-dmmono uppercase whitespace-nowrap" style="font-size:9px; font-weight:600; letter-spacing:0.12em; padding:1px 6px; background:var({SEKTION_TOKEN[msk]}); color:var({SEKTION_TOKEN[msk]}-text); border:1px solid var(--k-ink); border-radius:var(--k-radius-sm);">{$t[`news.sektion.${msk}`]}</span>
+        </div>
+        <div class="font-bricolage break-words text-[17px] lnd-clamp3" style="font-weight:700; line-height:1.18; letter-spacing:-0.02em; margin:0 0 5px; color:var(--k-ink);">{m.title}</div>
+        <div class="font-dmmono uppercase" style="font-size:10px; color:var(--k-ink-mute); letter-spacing:0.08em;">{m.sourceName}</div>
+      </article>
+    {/each}
   </div>
 {/snippet}
 
@@ -482,7 +529,6 @@
   {@const spark = l.airSpark as (number | null)[]}
   {@const hasGap = spark.some((v: number | null) => v == null)}
   {@const wk = (i: number) => i === spark.length - 1 ? $t['kiez.strip.today'] : new Intl.DateTimeFormat(loc, { weekday: 'short', timeZone: 'Europe/Berlin' }).format(new Date(new Date(data.computedAt).getTime() - (spark.length - 1 - i) * 86400000))}
-  {@const lqi = K?.lqiWeekMean != null ? (K.lqiWeekMean).toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : null}
   <div class="bg-[var(--k-ink)] text-[var(--k-paper)] px-4 py-3">
     <div class="flex items-center gap-[7px] font-dmmono text-[10px] uppercase tracking-[0.18em] text-[var(--k-ochre)]">
       <span class="inline-block h-[7px] w-[7px] rounded-full {l.airGrade != null ? 'bg-[var(--k-success)]' : 'bg-[var(--k-ink-mute)]'}"></span>
@@ -537,17 +583,27 @@
         <span><b class="text-ink">{$t['kiez.fact.syncRate']}</b> {$t['kiez.fact.sync']}</span>
       </div>
     {/if}
-    {#if K && lqi != null}
-      <div class="mt-5 border-2 border-ink rounded-2xl bg-paper-warm shadow-[3px_3px_0_var(--k-ink)] px-5 py-4">
-        <div class="flex items-center justify-between font-dmmono text-[9.5px] uppercase tracking-[0.14em] text-ink-mute">
-          <span class="font-semibold" style="color: var(--k-moss);">{$t['kiez.zdw.label']}</span>
-          <span>{tStr($t['kiez.zdw.kw'], { kw: String(K.kw) })}</span>
-        </div>
-        <div class="font-dmmono font-medium text-[40px] leading-none tracking-tight mt-2 mb-0.5 text-ink">LQI Ø {lqi}</div>
-        <p class="text-[13.5px] leading-snug text-ink-soft">{$t['kiez.zdw.read.airWeekMean']}</p>
-      </div>
-    {/if}
   </section>
+  {#if K?.pop}
+    {@const P = K.pop}
+    {@const maxRes = Math.max(...P.rows.map((r) => r.residents))}
+    <section class="px-4 py-5 border-b border-dashed border-rule">
+      <div class="mb-3.5">
+        <div class="font-dmmono text-[10px] uppercase tracking-[0.16em] text-ink-mute">{$t['kiez.kanal.label']} 01 · Gesamt · Schillerkiez</div>
+        <div class="mt-0.5 text-2xl font-extrabold tracking-tight text-ink">{$t['kiez.k01.title']}</div>
+      </div>
+      <div class="rounded-2xl border-[1.5px] border-ink bg-paper-warm px-[18px] py-3">
+        <div class="mb-2 font-dmmono text-[9.5px] uppercase tracking-[0.14em] text-ink-mute">{$t['kiez.k01.byArea']}</div>
+        {#each P.rows as r (r.code ?? r.name)}
+          <div class="grid grid-cols-[84px_1fr_52px] items-center gap-2.5 py-1">
+            <span class="font-dmmono text-[10px] text-ink-soft">{r.name}</span>
+            <span class="block h-[6px] rounded-full" style="width: {Math.max(4, Math.round((r.residents / maxRes) * 100))}%; background: {KZ_SERIES_COLORS[r.code ?? ''] ?? KZ_SERIES_COLORS.all};"></span>
+            <span class="text-right font-dmmono text-[10.5px] text-ink">{new Intl.NumberFormat(loc).format(r.residents)}</span>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
 {/snippet}
 
 {#snippet blogRep(l: Extract<Live, { key: 'blog' }>)}
@@ -592,9 +648,26 @@
     </div>
     {#if l.coverSrc}
       <div style="margin-top: 14px; border: 1.5px solid var(--k-ink); border-radius: var(--k-radius-lg); overflow: hidden; box-shadow: 2px 2px 0 var(--k-ink);">
-        <img src={l.coverSrc} alt="" class="w-full object-cover" style="height: 220px;" width="480" height="220" loading="lazy" decoding="async" onerror={hideOnError}>
+        <img src={l.coverSrc} alt="" class="w-full object-cover" style="height: 46px;" width="480" height="220" loading="lazy" decoding="async" onerror={hideOnError}>
       </div>
     {/if}
+    {#each l.more as m (m.slug)}
+      <div style="margin-top: 18px; border-top: 1px dashed var(--k-rule); padding-top: 16px;">
+        {#if m.coverSrc}
+          <div style="border: 1.5px solid var(--k-ink); border-radius: var(--k-radius-md); overflow: hidden; margin-bottom: 10px;">
+            <img src={m.coverSrc} alt="" class="w-full object-cover" style="height: 110px;" width="480" height="110" loading="lazy" decoding="async" onerror={hideOnError}>
+          </div>
+        {/if}
+        <span class="font-dmmono" style="font-size: 9.5px; letter-spacing: 0.12em; color: var(--k-rust);">{fmtDateKicker(m.pubDateISO, $locale)}</span>
+        <div class="font-bricolage lnd-clamp3" style="font-size: 18px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; margin: 5px 0 6px;">{m.title}</div>
+        <div class="lnd-clamp3" style="font-size: 12.5px; line-height: 1.45; color: var(--k-ink-soft); margin-bottom: 8px;">{m.description}</div>
+        <div class="font-dmmono flex items-center flex-wrap" style="gap: 8px; font-size: 10.5px; color: var(--k-ink-mute);">
+          <span>{fmtDate(m.pubDateISO, $locale)}</span>
+          {#if m.author}<span>·</span><span>{m.author === 'Mahalle Team' ? $t['blog.meta.team'] : m.author}</span>{/if}
+          {#if m.minutes != null}<span>·</span><span>{m.minutes} {$t['blog.meta.min']}</span>{/if}
+        </div>
+      </div>
+    {/each}
   </div>
 {/snippet}
 

@@ -21,17 +21,19 @@ export const SECTION_HREF: Record<SectionKey, string> = {
 
 export interface ForumStats { total: number; newSinceYesterday: number; discussedToday: number }
 export interface ForumPeek { kind: 'discussion' | 'announcement' | 'recommendation'; title: string; tags: string[]; createdAt: string; image?: string; likes?: number; comments?: number; saves?: number }
-export interface CalendarPeek { monthCount: number; days: { day: number; category: string }[] }
+export interface CalendarUpcoming { dateISO: string; title: string; category: string; allDay: boolean; startISO: string }
+export interface CalendarPeek { monthCount: number; days: { day: number; category: string }[]; upcoming?: CalendarUpcoming[] }
 export interface MarketStats { available: number; newSinceYesterday: number; fresh: number }
 export interface ListingPeek { title: string; image: string | null; kind: 'sell' | 'exchange' | 'gift'; price: number | null; photos?: number; createdAt?: string }
 export interface KurierStats { issue: number; articles: number; sources: number; today: boolean }
 export interface KurierPeek { title: string; sourceName: string; sourceUrl: string; imageUrl?: string; sektion?: string }
 export interface AirComponents { pm10: number | null; no2: number | null; o3: number | null; co: number | null }
-export interface KiezPeek { stand: string | null; areas: number | null; kw: number; lqiWeekMean: number | null; components: AirComponents | null; readingAt: string | null }
+export interface KiezPop { period: string | null; rows: { code?: string; name: string; residents: number }[]; total: number }
+export interface KiezPeek { stand: string | null; areas: number | null; kw: number; lqiWeekMean: number | null; components: AirComponents | null; readingAt: string | null; pop?: KiezPop | null }
 export interface SchaufensterData {
-  forum: ForumPeek | null; forumStats?: ForumStats | null;
+  forum: ForumPeek | null; forumPeeks?: ForumPeek[]; forumStats?: ForumStats | null;
   calendar?: CalendarPeek | null;
-  listing: ListingPeek | null; marketStats?: MarketStats | null;
+  listing: ListingPeek | null; listings?: ListingPeek[]; marketStats?: MarketStats | null;
   kurierStats?: KurierStats | null;
   kiez?: KiezPeek | null;
 }
@@ -47,17 +49,19 @@ export interface FrameInput {
   /** Absent on payloads cached before this field existed — treated as empty. */
   schaufenster?: Partial<SchaufensterData> | null;
   blog: BlogPeek | null;
+  /** Newest posts, first = `blog`; absent = only `blog`. */
+  blogs?: BlogPeek[];
   blogMeta?: BlogMeta | null;
   computedAt?: string;
 }
 
 export type Live =
-  | { key: 'forum'; kind: ForumPeek['kind']; title: string; tags: string[]; createdAt: string; image?: string; likes?: number; comments?: number; saves?: number; stats: ForumStats | null }
-  | { key: 'calendar'; monthCount: number | null; days: { day: number; category: string }[] }
-  | { key: 'marketplace'; title: string; image: string | null; kind: ListingPeek['kind']; price: number | null; photos: number | null; createdAt: string | null; stats: MarketStats | null }
+  | { key: 'forum'; kind: ForumPeek['kind']; title: string; tags: string[]; createdAt: string; image?: string; likes?: number; comments?: number; saves?: number; stats: ForumStats | null; more: ForumPeek[] }
+  | { key: 'calendar'; monthCount: number | null; days: { day: number; category: string }[]; upcoming: CalendarUpcoming[] }
+  | { key: 'marketplace'; title: string; image: string | null; kind: ListingPeek['kind']; price: number | null; photos: number | null; createdAt: string | null; stats: MarketStats | null; more: ListingPeek[] }
   | { key: 'newsboard'; lead: KurierPeek; more: KurierPeek[]; stats: KurierStats | null }
   | { key: 'schillerkiez'; airGrade: number | null; airSpark: (number | null)[]; population: number | null; kiez: KiezPeek | null }
-  | { key: 'blog'; slug: string; title: string; description: string; pubDateISO: string; coverSrc?: string; author?: string; minutes?: number; meta: BlogMeta | null };
+  | { key: 'blog'; slug: string; title: string; description: string; pubDateISO: string; coverSrc?: string; author?: string; minutes?: number; meta: BlogMeta | null; more: BlogPeek[] };
 
 export interface Frame { key: SectionKey; href: string; live: Live | null; fallback: string | null }
 
@@ -71,17 +75,19 @@ function liveFor(key: SectionKey, input: FrameInput): Live | null {
     case 'forum': {
       const f = sf.forum; if (!f || !hasText(f.title)) return null;
       return { key, kind: f.kind, title: f.title.trim(), tags: (f.tags ?? []).filter(hasText).slice(0, 3), createdAt: f.createdAt,
-        image: hasText(f.image) ? f.image : undefined, likes: num(f.likes), comments: num(f.comments), saves: num(f.saves), stats: sf.forumStats ?? null };
+        image: hasText(f.image) ? f.image : undefined, likes: num(f.likes), comments: num(f.comments), saves: num(f.saves), stats: sf.forumStats ?? null,
+        more: (sf.forumPeeks ?? []).slice(1, 3).filter((p) => hasText(p.title)).map((p) => ({ ...p, title: p.title.trim(), tags: (p.tags ?? []).filter(hasText).slice(0, 3) })) };
     }
     case 'calendar': {
       const cal = sf.calendar ?? null;
       if (!cal) return null;
-      return { key, monthCount: cal.monthCount, days: cal.days ?? [] };
+      return { key, monthCount: cal.monthCount, days: cal.days ?? [], upcoming: (cal.upcoming ?? []).filter((u) => hasText(u.title) && hasText(u.startISO)).slice(0, 4) };
     }
     case 'marketplace': {
       const l = sf.listing; if (!l || !hasText(l.title)) return null;
       return { key, title: l.title.trim(), image: hasText(l.image) ? l.image : null, kind: l.kind, price: l.kind === 'sell' && typeof l.price === 'number' ? l.price : null,
-        photos: typeof l.photos === 'number' ? l.photos : null, createdAt: hasText(l.createdAt) ? l.createdAt : null, stats: sf.marketStats ?? null };
+        photos: typeof l.photos === 'number' ? l.photos : null, createdAt: hasText(l.createdAt) ? l.createdAt : null, stats: sf.marketStats ?? null,
+        more: (sf.listings ?? []).slice(1, 3).filter((p) => hasText(p.title)) };
     }
     case 'newsboard': {
       const items = (input.kurier ?? []).filter((k) => hasText(k.title));
@@ -95,7 +101,8 @@ function liveFor(key: SectionKey, input: FrameInput): Live | null {
     }
     case 'blog': {
       const b = input.blog; if (!b || !hasText(b.title)) return null;
-      return { key, slug: b.slug, title: b.title.trim(), description: b.description ?? '', pubDateISO: b.pubDateISO, coverSrc: b.coverSrc, author: b.author, minutes: b.minutes, meta: input.blogMeta ?? null };
+      return { key, slug: b.slug, title: b.title.trim(), description: b.description ?? '', pubDateISO: b.pubDateISO, coverSrc: b.coverSrc, author: b.author, minutes: b.minutes, meta: input.blogMeta ?? null,
+        more: (input.blogs ?? []).slice(1, 3).filter((p) => hasText(p.title)) };
     }
   }
 }

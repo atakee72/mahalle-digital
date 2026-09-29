@@ -118,3 +118,44 @@ test('kiez components all null stay null (muted strip), never zeroed', () => {
   const frames = buildFrames({ ...EMPTY, airSpark: [2], schaufenster: { forum: null, listing: null, kiez: { stand: null, areas: null, kw: 40, lqiWeekMean: null, components: { pm10: null, no2: null, o3: null, co: null }, readingAt: null } } }, {});
   const k = frames[0].live!; if (k.key === 'schillerkiez') assert.equal(k.kiez?.components?.pm10, null);
 });
+
+const P = (title: string) => ({ kind: 'discussion' as const, title, tags: ['a'], createdAt: '2026-09-23T10:00:00.000Z' });
+
+test('forum frame: more = peeks 2-3, empty without forumPeeks, and no first peek stays fallback', () => {
+  const three = buildFrames({ ...FULL, schaufenster: { ...FULL.schaufenster, forumPeeks: [P('One'), P('Two'), P('Three'), P('Four')] } }, FALLBACKS);
+  const f = three[0].live!; if (f.key !== 'forum') assert.fail('forum');
+  else assert.deepEqual(f.more.map((m) => m.title), ['Two', 'Three']);
+  const one = buildFrames(FULL, FALLBACKS)[0].live!; if (one.key === 'forum') assert.deepEqual(one.more, []);
+  const blank = buildFrames({ ...FULL, schaufenster: { ...FULL.schaufenster, forumPeeks: [P('One'), P('  ')] } }, FALLBACKS)[0].live!;
+  if (blank.key === 'forum') assert.deepEqual(blank.more, []);
+  const none = buildFrames({ ...EMPTY, schaufenster: { forum: null, forumPeeks: [P('X'), P('Y')], listing: null } }, FALLBACKS);
+  assert.equal(none[0].live, null); assert.equal(none[0].fallback, FALLBACKS.forum);
+});
+
+test('calendar frame: upcoming capped at four, blank titles dropped, empty when absent', () => {
+  const up = (n: number) => ({ dateISO: '2026-09-30', title: `E${n}`, category: 'kiez', allDay: n % 2 === 0, startISO: '2026-09-30T08:00:00.000Z' });
+  const cal = (upcoming?: ReturnType<typeof up>[]) => buildFrames({ ...FULL, schaufenster: { ...FULL.schaufenster, calendar: { monthCount: 6, days: [], upcoming } } }, FALLBACKS)[1].live!;
+  const c = cal([up(1), up(2), up(3), up(4), up(5), { ...up(6), title: ' ' }]); if (c.key === 'calendar') assert.deepEqual(c.upcoming.map((u) => u.title), ['E1', 'E2', 'E3', 'E4']);
+  const b = cal([{ ...up(1), title: ' ' }, up(2)]); if (b.key === 'calendar') assert.deepEqual(b.upcoming.map((u) => u.title), ['E2']);
+  const n = cal(undefined); if (n.key === 'calendar') assert.deepEqual(n.upcoming, []);
+});
+
+test('market frame: more = listings 2-3; empty on a payload without `listings`', () => {
+  const L = (title: string) => ({ title, image: null, kind: 'sell' as const, price: 5 });
+  const m = buildFrames({ ...FULL, schaufenster: { ...FULL.schaufenster, listings: [L('A'), L('B'), L('C'), L('D')] } }, FALLBACKS)[2].live!;
+  if (m.key === 'marketplace') assert.deepEqual(m.more.map((x) => x.title), ['B', 'C']);
+  const o = buildFrames(FULL, FALLBACKS)[2].live!; if (o.key === 'marketplace') assert.deepEqual(o.more, []);
+});
+
+test('blog frame: more = posts 2-3 of `blogs`; empty when only `blog` is given', () => {
+  const B = (slug: string) => ({ slug, title: slug, description: '', pubDateISO: '2026-09-18T00:00:00.000Z' });
+  const m = buildFrames({ ...FULL, blog: B('a'), blogs: [B('a'), B('b'), B('c'), B('d')] }, FALLBACKS)[5].live!;
+  if (m.key === 'blog') assert.deepEqual(m.more.map((x) => x.slug), ['b', 'c']);
+  const o = buildFrames(FULL, FALLBACKS)[5].live!; if (o.key === 'blog') assert.deepEqual(o.more, []);
+});
+
+test('kiez pop rides on kiez untouched and is absent on an old payload', () => {
+  const pop = { period: '2026h1', rows: [{ name: 'Schiller. N', residents: 100 }], total: 100 };
+  const k = buildFrames({ ...EMPTY, airSpark: [2], schaufenster: { forum: null, listing: null, kiez: { stand: null, areas: 4, kw: 40, lqiWeekMean: null, components: null, readingAt: null, pop } } }, {})[0].live!;
+  if (k.key === 'schillerkiez') assert.deepEqual(k.kiez?.pop, pop);
+});

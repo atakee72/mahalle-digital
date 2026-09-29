@@ -16,11 +16,11 @@ import { fetchMc042 } from './kiez/blume';
 import * as Sentry from '@sentry/astro';
 import { getISOWeek } from 'date-fns';
 import { berlinYearMonth } from './landing/frames';
-import type { SchaufensterData, ForumPeek, ListingPeek, KurierPeek, ForumStats, CalendarPeek, MarketStats, KurierStats, KiezPeek } from './landing/frames';
+import type { SchaufensterData, ForumPeek, ListingPeek, KurierPeek, ForumStats, CalendarPeek, CalendarUpcoming, MarketStats, KurierStats, KiezPeek, KiezPop } from './landing/frames';
 import type { AirHistoryResponse } from '../types/kiezStats';
 import { resolveSektion } from './newsboard/newsTaxonomy';
 import { computeIssueNumber } from './newsboard/newsFormat';
-import { formatStand } from './kiez/kiezViewModel';
+import { formatStand, KZ_PLR_SHORT } from './kiez/kiezViewModel';
 export type { SchaufensterData, ForumPeek, ListingPeek, KurierPeek } from './landing/frames';
 
 export interface HeartbeatRow {
@@ -104,6 +104,17 @@ export function weekendRange(now: Date): { from: Date; to: Date } {
 // Visible-to-the-public moderation filter (matches buildModerationFilter's
 // public branch: approved or legacy-absent status).
 const PUBLIC_MOD = { moderationStatus: { $nin: ['pending', 'rejected'] } };
+
+/** Per-area residents of the latest period, named and ordered like the Kiez-Daten page (code order, `KZ_PLR_SHORT`). */
+function buildPop(g: { _id?: unknown; pop?: { code?: unknown; total?: unknown }[] } | undefined): KiezPop | null {
+  if (!g || !Array.isArray(g.pop)) return null;
+  const rows = g.pop
+    .filter((r): r is { code: string; total: number } => typeof r.code === 'string' && typeof r.total === 'number' && r.total > 0)
+    .sort((a, b) => a.code.localeCompare(b.code))
+    .map((r) => ({ code: r.code, name: KZ_PLR_SHORT[r.code] ?? r.code, residents: r.total }));
+  if (!rows.length) return null;
+  return { period: typeof g._id === 'string' ? g._id : null, rows, total: rows.reduce((a, r) => a + r.residents, 0) };
+}
 
 async function compute(now: Date): Promise<LandingData> {
   const db = await connectDB();
@@ -252,46 +263,50 @@ async function compute(now: Date): Promise<LandingData> {
   //    event, newest fresh listing. Titles only — never an author. Each
   //    source is fail-soft like the rows above. ──
   let sfForum: ForumPeek | null = null;
+  let sfForumPeeks: ForumPeek[] = [];
   try {
-    const pick = async (col: string, kind: ForumPeek['kind']): Promise<ForumPeek | null> => {
-      const d = await db
+    // Newest 3 per collection, merged, first 3 overall enriched with counts.
+    const pick = async (col: string, kind: ForumPeek['kind']) => {
+      const docs = await db
         .collection(col)
         .find({ ...PUBLIC_MOD, hasWarningLabel: { $ne: true } }, { projection: { title: 1, tags: 1, createdAt: 1, images: 1, likes: 1 } })
         .sort({ createdAt: -1 })
-        .limit(1)
+        .limit(3)
         .toArray();
-      const doc = d[0];
-      if (!doc || typeof doc.title !== 'string' || !doc.title.trim()) return null;
-      const firstImg = Array.isArray(doc.images) ? doc.images[0] : null;
-      const imgUrl = firstImg && typeof firstImg.url === 'string' && firstImg.url.startsWith('https://') ? firstImg.url : null;
-      const [comments, saves] = await Promise.all([
-        db.collection('comments').countDocuments({ relevantPostId: doc._id, moderationStatus: { $nin: ['pending', 'rejected'] } }),
-        db.collection('savedPosts').countDocuments({ postId: String(doc._id) }),
-      ]);
-      return {
-        kind,
-        title: doc.title,
-        tags: Array.isArray(doc.tags) ? doc.tags.filter((t: unknown) => typeof t === 'string').slice(0, 3) : [],
-        createdAt: new Date(doc.createdAt ?? now).toISOString(),
-        ...(imgUrl ? { image: imgUrl } : {}),
-        likes: typeof doc.likes === 'number' ? doc.likes : 0,
-        comments,
-        saves,
-      };
+      return docs.filter((d) => typeof d.title === 'string' && d.title.trim()).map((doc) => ({ kind, doc }));
     };
-    const cands = (
-      await Promise.all([pick('topics', 'discussion'), pick('announcements', 'announcement'), pick('recommendations', 'recommendation')])
-    ).filter((c): c is ForumPeek => c !== null);
-    cands.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    sfForum = cands[0] ?? null;
+    const merged = (await Promise.all([pick('topics', 'discussion'), pick('announcements', 'announcement'), pick('recommendations', 'recommendation')])).flat();
+    merged.sort((a, b) => +new Date(b.doc.createdAt ?? now) - +new Date(a.doc.createdAt ?? now));
+    sfForumPeeks = await Promise.all(
+      merged.slice(0, 3).map(async ({ kind, doc }): Promise<ForumPeek> => {
+        const firstImg = Array.isArray(doc.images) ? doc.images[0] : null;
+        const imgUrl = firstImg && typeof firstImg.url === 'string' && firstImg.url.startsWith('https://') ? firstImg.url : null;
+        const [comments, saves] = await Promise.all([
+          db.collection('comments').countDocuments({ relevantPostId: doc._id, moderationStatus: { $nin: ['pending', 'rejected'] } }),
+          db.collection('savedPosts').countDocuments({ postId: String(doc._id) }),
+        ]);
+        return {
+          kind,
+          title: doc.title,
+          tags: Array.isArray(doc.tags) ? doc.tags.filter((t: unknown) => typeof t === 'string').slice(0, 3) : [],
+          createdAt: new Date(doc.createdAt ?? now).toISOString(),
+          ...(imgUrl ? { image: imgUrl } : {}),
+          likes: typeof doc.likes === 'number' ? doc.likes : 0,
+          comments,
+          saves,
+        };
+      }),
+    );
+    sfForum = sfForumPeeks[0] ?? null;
   } catch (err) {
     failures.push(['schaufenster.forum', err]);
   }
 
   let sfListing: ListingPeek | null = null;
+  let sfListings: ListingPeek[] = [];
   try {
     const freshSince = new Date(now.getTime() - 21 * 86_400_000); // same 21-day clock as the browse page
-    const d = await db
+    const docs = await db
       .collection('listings')
       .find(
         {
@@ -303,23 +318,24 @@ async function compute(now: Date): Promise<LandingData> {
         { projection: { title: 1, images: 1, listingType: 1, listingKind: 1, price: 1, createdAt: 1 } },
       )
       .sort({ createdAt: -1 })
-      .limit(1)
+      .limit(3)
       .toArray();
-    const doc = d[0];
-    if (doc && typeof doc.title === 'string' && doc.title.trim()) {
+    for (const doc of docs) {
+      if (typeof doc.title !== 'string' || !doc.title.trim()) continue;
       // The create route writes `listingType`; older/seeded docs carry `listingKind`.
       const raw = doc.listingType ?? doc.listingKind;
       const kind: ListingPeek['kind'] = raw === 'exchange' || raw === 'gift' ? raw : 'sell';
       const first = Array.isArray(doc.images) ? doc.images[0] : null;
-      sfListing = {
+      sfListings.push({
         title: doc.title,
         image: typeof first === 'string' && first.startsWith('http') ? first : null,
         kind,
         price: kind === 'sell' && typeof doc.price === 'number' ? doc.price : null,
         photos: Array.isArray(doc.images) ? doc.images.length : 0,
         createdAt: new Date(doc.createdAt ?? now).toISOString(),
-      };
+      });
     }
+    sfListing = sfListings[0] ?? null;
   } catch (err) {
     failures.push(['schaufenster.listing', err]);
   }
@@ -359,7 +375,21 @@ async function compute(now: Date): Promise<LandingData> {
       { projection: { startDate: 1, category: 1 } }).sort({ startDate: 1 }).toArray();
     const seen = new Map<number, string>();
     for (const d of docs) { const day = berlinYearMonth(new Date(d.startDate).toISOString()).day; if (!seen.has(day)) seen.set(day, typeof d.category === 'string' ? d.category : 'kiez'); }
-    calendar = { monthCount: docs.length, days: [...seen].map(([day, category]) => ({ day, category })) };
+    // next four events from today (Berlin day): title/category/time only — no author, place or attendees
+    let upcoming: CalendarUpcoming[] = [];
+    try {
+      const bp = berlinParts(now);
+      const todayStart = berlinMidnightUTC(bp.y, bp.m, bp.d);
+      const up = await db.collection('events').find(
+        { ...PUBLIC_MOD, ...NO_WARN, visibility: { $ne: 'private' }, startDate: { $gte: todayStart } },
+        { projection: { title: 1, category: 1, allDay: 1, startDate: 1 } }).sort({ startDate: 1 }).limit(4).toArray();
+      upcoming = up.filter((e) => typeof e.title === 'string' && e.title.trim()).map((e) => {
+        const startISO = new Date(e.startDate).toISOString();
+        const b = berlinYearMonth(startISO);
+        return { dateISO: `${b.year}-${String(b.month).padStart(2, '0')}-${String(b.day).padStart(2, '0')}`, title: e.title, category: typeof e.category === 'string' ? e.category : 'kiez', allDay: e.allDay === true, startISO };
+      });
+    } catch (err) { failures.push(['schaufenster.calendar.upcoming', err]); }
+    calendar = { monthCount: docs.length, days: [...seen].map(([day, category]) => ({ day, category })), upcoming };
   } catch (err) { failures.push(['schaufenster.calendar', err]); }
 
   // market stats — the browse page's list (available, fresh ≤ 21 d) and its two windows
@@ -377,7 +407,7 @@ async function compute(now: Date): Promise<LandingData> {
   let kiez: KiezPeek | null = null;
   try {
     const latest = await db.collection('schillerkiez_demographics').aggregate([
-      { $sort: { period: -1 } }, { $group: { _id: '$period', areas: { $addToSet: '$plr_code' }, date: { $first: '$date' } } }, { $sort: { _id: -1 } }, { $limit: 1 },
+      { $sort: { period: -1 } }, { $group: { _id: '$period', areas: { $addToSet: '$plr_code' }, date: { $first: '$date' }, pop: { $push: { code: '$plr_code', total: '$population.total' } } } }, { $sort: { _id: -1 } }, { $limit: 1 },
     ]).toArray();
     const valid = airSpark.filter((v): v is number => typeof v === 'number');
     const lr = freshReading;
@@ -388,10 +418,11 @@ async function compute(now: Date): Promise<LandingData> {
       lqiWeekMean: valid.length ? Math.round((valid.reduce((a, b) => a + b, 0) / valid.length) * 10) / 10 : null,
       components: lr ? { pm10: lr.pm10 ?? null, no2: lr.no2 ?? null, o3: lr.o3 ?? null, co: lr.co ?? null } : null,
       readingAt: lastTs,
+      pop: buildPop(latest[0]),
     };
   } catch (err) { failures.push(['schaufenster.kiez', err]); }
 
-  const schaufenster: SchaufensterData = { forum: sfForum, forumStats, calendar, listing: sfListing, marketStats, kurierStats, kiez };
+  const schaufenster: SchaufensterData = { forum: sfForum, forumPeeks: sfForumPeeks, forumStats, calendar, listing: sfListing, listings: sfListings, marketStats, kurierStats, kiez };
 
   // ── zero rule, SERVER-SIDE (§03): a row without life is omitted; the
   //    mute air row is life ("measurement paused" is information). ──

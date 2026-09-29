@@ -24,14 +24,13 @@ try {
   const entries = (await getCollection('blog', ({ data: d }) => !d.draft))
     .map((e) => ({ e, id: e.id, pubDateISO: e.data.pubDate.toISOString(), sortISO: e.data.sortDate?.toISOString() }))
     .sort(compareNewest);
-  const first = entries[0]?.e;
   const counts = new Map<string, number>();
   for (const { e } of entries) for (const t of e.data.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
   blogMeta = { total: entries.length, latestISO: entries[0]?.pubDateISO ?? null, tags: [...counts].map(([tag, n]) => ({ tag, n })).sort((a, b) => b.n - a.n).slice(0, 4) };
-  if (first) {
+  for (const { e: post } of entries.slice(0, 3)) {
     let coverSrc: string | undefined;
-    if (first.data.cover) { try { coverSrc = (await getImage({ src: first.data.cover, width: 480, format: 'webp' })).src; } catch (err) { console.error('[landing] blog cover failed:', err); } }
-    blog = [{ slug: first.id, title: first.data.title, description: first.data.description ?? '', pubDateISO: first.data.pubDate.toISOString(), coverSrc, author: first.data.author, minutes: readingMinutes(first.body ?? '') }];
+    if (post.data.cover) { try { coverSrc = (await getImage({ src: post.data.cover, width: 480, format: 'webp' })).src; } catch (err) { console.error('[landing] blog cover failed:', err); } }
+    blog.push({ slug: post.id, title: post.data.title, description: post.data.description ?? '', pubDateISO: post.data.pubDate.toISOString(), coverSrc, author: post.data.author, minutes: readingMinutes(post.body ?? '') });
   }
 } catch (err) { console.error('[landing] blog teaser failed:', err); }
 
