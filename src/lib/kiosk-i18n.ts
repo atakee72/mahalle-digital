@@ -1100,7 +1100,7 @@ const de = {
   'news.masthead.curated': 'kuratiert',
   'news.masthead.degraded': 'RSS-only · einige Quellen heute nicht erreichbar',
   'news.titleblock.kicker': 'NEWS · AUS DEM KIEZ',
-  'news.titleblock.heading': 'Was <span class="font-instrument italic font-normal">passiert</span> heute im Kiez?',
+  'news.titleblock.heading': 'Was <span class="font-instrument italic font-normal">passiert</span> um uns herum?', // 2026-09-29 user: the calendar already asks „Was passiert im Kiez?"; the Kurier covers all of Berlin
   'news.titleblock.submit': '+ news einreichen',
   'news.mobile.cta.aria': 'News einreichen',
   'news.readmore': 'weiterlesen →',
@@ -3086,7 +3086,7 @@ const en: Dict = {
   'news.masthead.curated': 'AI-curated',
   'news.masthead.degraded': 'RSS-only · some sources unreachable today',
   'news.titleblock.kicker': 'NEWS · FROM THE KIEZ',
-  'news.titleblock.heading': "What’s <span class=\"font-instrument italic font-normal\">happening</span> in the Kiez today?",
+  'news.titleblock.heading': "What’s <span class=\"font-instrument italic font-normal\">happening</span> around us?",
   'news.titleblock.submit': '+ submit news',
   'news.mobile.cta.aria': 'Submit news',
   'news.readmore': 'read more →',

@@ -221,7 +221,7 @@
         <span class="inline-flex items-center h-[25px] rounded-full border-2 border-paper font-dmmono text-[11px] uppercase tracking-[0.12em] bg-ink"><span class="inline-flex items-center justify-center h-[21px] px-2.5 leading-none rounded-l-full {de ? 'bg-paper text-ink' : 'bg-ink text-paper'}">DE</span><span class="inline-flex items-center justify-center h-[21px] px-2.5 leading-none rounded-r-full {de ? 'bg-ink text-paper' : 'bg-paper text-ink'}">EN</span></span>
         <span class="w-9 h-9 rounded-full border-2 border-paper bg-paper text-ink flex items-center justify-center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg></span>
         <span class="w-9 h-9 rounded-full border-2 border-paper bg-paper text-ink flex items-center justify-center"><svg width="19" height="19" viewBox="0 0 24 24"><path d="M12 4.4c-3.3 0-4.9 2.5-4.9 5.9v3.5L5.3 16.1h13.4l-1.8-2.3v-3.5c0-3.4-1.6-5.9-4.9-5.9z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" /><path d="M9.7 18.6a2.3 2.3 0 004.6 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /></svg></span>
-        <span class="w-9 h-9 rounded-full border-2 border-paper bg-paper"></span>
+        <span class="w-9 h-9 rounded-full border-2 border-paper bg-paper text-ink-mute flex items-center justify-center overflow-hidden"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8.2" r="4.2" /><path d="M3.5 22c.6-4.6 4.1-7.2 8.5-7.2s7.9 2.6 8.5 7.2z" /></svg></span>
       </span>
     </div>
   </div>
@@ -750,7 +750,7 @@
   .lnd-meta { font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); }
 
   /* ── Grundsatz-Band (2026-09-29): one promise at a time, crossfade ── */
-  .lnd-promises { display: grid; place-items: center; min-height: 50px; border-top: 1px solid var(--k-rule); padding: 0 16px; font-size: 17px; font-weight: 400; letter-spacing: 0.8em; text-indent: 0.8em; color: var(--k-ink-soft); text-align: center; }
+  .lnd-promises { display: grid; place-items: center; min-height: 50px; border-top: 1px solid var(--k-rule); padding: 0 16px; font-size: 15px; font-weight: 400; letter-spacing: 0.8em; text-indent: 0.8em; color: var(--k-ink-soft); text-align: center; }
   .lnd-promise { grid-area: 1 / 1; white-space: nowrap; animation: lndPromiseIn 600ms ease-out both; }
   .lnd-promises-all { display: inline-flex; flex-wrap: wrap; justify-content: center; row-gap: 4px; padding: 6px 0; }
   .lnd-promises-sep { padding: 0 12px; color: var(--k-ink-mute); }
@@ -804,7 +804,7 @@
     .lnd-masthead h1 { font-size: 60px; }
     .lnd-manifest { font-size: 17.5px; line-height: 1.35; margin-top: 4px; }
     .lnd-rule { padding: 0 18px; }
-    .lnd-sf-head { padding: 0 16px 2px; font-size: 10px; align-items: center; }
+    .lnd-sf-head { padding: 0 16px 2px; font-size: 9px; align-items: center; }
     .lnd-sf-hint-phone { display: inline; }
     .lnd-sf-hint-desktop { display: none; }
     .lnd-sf-track { gap: 14px; padding: 4px 16px 2px; scroll-padding-left: 16px; }
