@@ -208,7 +208,7 @@ async function compute(now: Date): Promise<LandingData> {
       const docs = await db
         .collection('news')
         .find(
-          { fetchDate: issueDay, moderationStatus: 'approved' },
+          { fetchDate: issueDay, moderationStatus: 'approved', ...NO_WARN }, // review 2026-09-29: labelled news never on the public page
           { projection: { title: 1, sourceName: 1, sourceUrl: 1, aiRelevanceScore: 1, imageUrl: 1, aiCategory: 1 } },
         )
         .sort({ aiRelevanceScore: -1 })
@@ -381,7 +381,7 @@ async function compute(now: Date): Promise<LandingData> {
       const bp = berlinParts(now);
       const todayStart = berlinMidnightUTC(bp.y, bp.m, bp.d);
       const up = await db.collection('events').find(
-        { ...PUBLIC_MOD, ...NO_WARN, visibility: { $ne: 'private' }, startDate: { $gte: todayStart } },
+        { ...PUBLIC_MOD, ...NO_WARN, visibility: { $ne: 'private' }, $or: [{ startDate: { $gte: todayStart } }, { endDate: { $gte: todayStart } }] },
         { projection: { title: 1, category: 1, allDay: 1, startDate: 1 } }).sort({ startDate: 1 }).limit(4).toArray();
       upcoming = up.filter((e) => typeof e.title === 'string' && e.title.trim()).map((e) => {
         const startISO = new Date(e.startDate).toISOString();

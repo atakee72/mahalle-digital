@@ -158,4 +158,7 @@ test('kiez pop rides on kiez untouched and is absent on an old payload', () => {
   const pop = { period: '2026h1', rows: [{ name: 'Schiller. N', residents: 100 }], total: 100 };
   const k = buildFrames({ ...EMPTY, airSpark: [2], schaufenster: { forum: null, listing: null, kiez: { stand: null, areas: 4, kw: 40, lqiWeekMean: null, components: null, readingAt: null, pop } } }, {})[0].live!;
   if (k.key === 'schillerkiez') assert.deepEqual(k.kiez?.pop, pop);
+  // a payload cached before 2026-09-29 has no pop, no forumPeeks, no listings, no calendar.upcoming — every frame must still resolve
+  const old = buildFrames({ ...EMPTY, airSpark: [2], schaufenster: { forum: null, listing: null, kiez: { stand: null, areas: 4, kw: 40, lqiWeekMean: null, components: null, readingAt: null } } }, {})[0].live!;
+  if (old.key === 'schillerkiez') assert.equal(old.kiez?.pop, undefined);
 });

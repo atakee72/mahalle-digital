@@ -295,7 +295,7 @@
       <span class="shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full font-bricolage font-medium text-sm bg-transparent text-ink border-2 border-ink/30"><span>{$t['filter.tagsChip']}</span><span aria-hidden="true" class="text-[10px]">▾</span></span>
     </div>
     {@render forumCard(l)}
-    {#each l.more as m (m.createdAt + m.title)}
+    {#each l.more as m, i (i)}
       <div class="mt-3">{@render forumCard(m)}</div>
     {/each}
   </div>
@@ -354,7 +354,7 @@
     </div>
     {#if l.upcoming.length}
       <div class="mt-4 border-t border-dashed border-rule">
-        {#each l.upcoming as u (u.startISO + u.title)}
+        {#each l.upcoming as u, i (i)}
           {@const st = catStyle(u.category)}
           {@const uf = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat($locale === 'de' ? 'de-DE' : 'en-GB', { timeZone: 'Europe/Berlin', ...o }).format(new Date(u.startISO))}
           <div class="grid grid-cols-[56px_1fr] gap-3 items-start py-2.5 border-b border-dashed border-rule">
@@ -447,7 +447,7 @@
     </div>
   </div>
   {@render marketCard(l)}
-  {#each l.more as m (m.createdAt + m.title)}
+  {#each l.more as m, i (i)}
     {@render marketCard(m)}
   {/each}
 {/snippet}
@@ -503,7 +503,7 @@
         <div class="font-dmmono uppercase" style="font-size:10px; color:var(--k-ink-mute); letter-spacing:0.08em;">{l.lead.sourceName}</div>
       </div>
     </article>
-    {#each l.more as m (m.title)}
+    {#each l.more as m, i (i)}
       {@const msk = (m.sektion && m.sektion in SEKTION_TOKEN ? m.sektion : 'lokales') as NewsSektion}
       <article class="flex flex-col" style="background:var(--k-paper); border:var(--k-border-hair); border-radius:var(--k-radius-md); padding:12px 14px; margin-top:10px;">
         <div class="flex items-center" style="margin-bottom:6px;">
