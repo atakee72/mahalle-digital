@@ -750,7 +750,7 @@
   .lnd-meta { font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); }
 
   /* ── Grundsatz-Band (2026-09-29): one promise at a time, crossfade ── */
-  .lnd-promises { display: grid; place-items: center; min-height: 50px; border-top: 1px solid var(--k-rule); padding: 0 16px; font-size: 17px; font-weight: 600; letter-spacing: 0.8em; text-indent: 0.8em; color: var(--k-ink-soft); text-align: center; }
+  .lnd-promises { display: grid; place-items: center; min-height: 50px; border-top: 1px solid var(--k-rule); padding: 0 16px; font-size: 17px; font-weight: 400; letter-spacing: 0.8em; text-indent: 0.8em; color: var(--k-ink-soft); text-align: center; }
   .lnd-promise { grid-area: 1 / 1; white-space: nowrap; animation: lndPromiseIn 600ms ease-out both; }
   .lnd-promises-all { display: inline-flex; flex-wrap: wrap; justify-content: center; row-gap: 4px; padding: 6px 0; }
   .lnd-promises-sep { padding: 0 12px; color: var(--k-ink-mute); }
@@ -774,7 +774,7 @@
   .lnd-sf-cap { min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 0 2px; }
   .lnd-sf-cap-label { font-size: 9px; letter-spacing: 0.16em; font-weight: 500; }
   .lnd-sf-cap-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; font-size: 14px; color: var(--k-ink-soft); }
-  .lnd-scrollhint { display: flex; width: 44px; height: 44px; margin: 12px auto 10px; align-items: center; justify-content: center; border-radius: 999px; color: var(--k-ink); background: var(--k-paper); border: 1.5px solid var(--k-ink); box-shadow: 2px 2px 0 var(--k-ink); animation: lndNudge 2.2s ease-in-out infinite; }
+  .lnd-scrollhint { display: flex; width: 44px; height: 44px; margin: 12px auto 18px; align-items: center; justify-content: center; border-radius: 999px; color: var(--k-ink); background: var(--k-paper); border: 1.5px solid var(--k-ink); box-shadow: 2px 2px 0 var(--k-ink); animation: lndNudge 2.2s ease-in-out infinite; }
   .lnd-scrollhint:hover, .lnd-scrollhint:focus-visible { background: var(--k-ink); color: var(--k-paper); }
   @keyframes lndNudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
   .lnd-sf-pausebtn { background: none; border: 1px solid var(--k-rule); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 9.5px; letter-spacing: 0.12em; color: var(--k-ink-soft); cursor: pointer; min-height: 28px; }
@@ -808,7 +808,7 @@
     .lnd-sf-hint-phone { display: inline; }
     .lnd-sf-hint-desktop { display: none; }
     .lnd-sf-track { gap: 14px; padding: 4px 16px 2px; scroll-padding-left: 16px; }
-    .lnd-scrollhint { margin: 4px auto 6px; }
+    .lnd-scrollhint { margin: 4px auto 14px; }
     .lnd-sf-item { flex-basis: 260px; }
     .lnd-sf-frame { width: 260px; --sf-scale: calc(254 / 390); }
     .lnd-sf-pausebtn { min-height: 44px; }
@@ -817,9 +817,13 @@
     .lnd-cta h2 { font-size: 26px; }
     .lnd-cta-btn { font-size: 15px; padding: 13px 26px; }
     .lnd-slogan { font-size: 18px; }
-    .lnd-footer { padding: 16px 18px 20px; gap: 8px 14px; }
-    .lnd-footlinks { gap: 8px 14px; }
-    .lnd-footlinks a { min-height: 44px; display: inline-flex; align-items: center; }
+    /* footer squeezed 2026-09-29: the 44 px hit boxes overhang the 24 px rows (margin -10) instead of stacking as 44 px rows */
+    .lnd-footer { padding: 10px 18px 12px; gap: 6px 14px; }
+    .lnd-footlinks { gap: 0 14px; }
+    .lnd-footlinks a { min-height: 44px; margin: -10px 0; display: inline-flex; align-items: center; }
+    .lnd-copy { display: inline-block; padding-top: 4px; }
+    /* pause control without the pill on phones (user 2026-09-29): a dashed-underlined word like „Anmelden" */
+    .lnd-sf-pausebtn { border: none; background: none; padding: 4px 0; text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 3px; color: var(--k-ink); }
 
     /* §10 tap-target fix: hit boxes only, visual design unchanged (CD spec
        §10, alle Tap-Targets ≥ 44px). The extra 40px of button min-width

@@ -11,7 +11,8 @@
  * row/field and the page renders without it — no throw reaches the route.
  */
 import { connectDB } from './mongodb';
-import { getAirHistory } from './kiez/airLog';
+import { getAirHistory, readingFromBlume } from './kiez/airLog';
+import { fetchMc042 } from './kiez/blume';
 import * as Sentry from '@sentry/astro';
 import { getISOWeek } from 'date-fns';
 import { berlinYearMonth } from './landing/frames';
@@ -117,12 +118,21 @@ async function compute(now: Date): Promise<LandingData> {
   try {
     const hist = await getAirHistory(db, now);
     airSpark = hist.days.map((d) => d.lqiMean);
-    lastTs = hist.lastReading?.ts ?? null;
-    const fresh =
-      hist.lastReading && now.getTime() - Date.parse(hist.lastReading.ts) <= AIR_FRESH_MS;
-    if (fresh && hist.lastReading) {
-      airGrade = hist.lastReading.lqi;
-      freshReading = hist.lastReading;
+    // Live BLUME first (mc042 only, never the substitute station), the log as
+    // fallback: the logger's ~5 rows a day left the log "stale" for most of
+    // the day (2026-09-29). A silent station yields no valid LQI → null → log.
+    let reading = hist.lastReading;
+    try {
+      const live = readingFromBlume(await fetchMc042());
+      if (live && (!reading || Date.parse(live.ts) >= Date.parse(reading.ts))) reading = live;
+    } catch (err) {
+      failures.push(['air.live', err]);
+    }
+    lastTs = reading?.ts ?? null;
+    const fresh = reading && now.getTime() - Date.parse(reading.ts) <= AIR_FRESH_MS;
+    if (fresh && reading) {
+      airGrade = reading.lqi;
+      freshReading = reading;
       airRow = { kind: 'air', value: airGrade, spark: airSpark };
     } else {
       // §03 Luft-Absent-State: row STAYS, mute dash — never a stale value.

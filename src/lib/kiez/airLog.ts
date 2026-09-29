@@ -4,6 +4,7 @@
 import type { Db } from 'mongodb';
 import type { AirDailyDoc, AirLogDoc, AirHistoryDay, AirHistoryResponse } from '../../types/kiezStats';
 import { fetchMc042, isValidGrade } from './blume';
+import type { BlumeComponent } from './blume';
 
 export const AIR_LOG_COLLECTION = 'schillerkiez_air_log';
 export const AIR_DAILY_COLLECTION = 'schillerkiez_air_daily';
@@ -50,6 +51,26 @@ export function buildDailyRollup(
   const lqiMax = Math.max(...valid);
   const lqiMean = Math.round((valid.reduce((a, b) => a + b, 0) / valid.length) * 10) / 10;
   return { day, lqiMax, lqiMean, readings: valid.length };
+}
+
+/**
+ * One reading in the shape of `AirHistoryResponse['lastReading']` from a live
+ * (normalised) mc042 component list — what the landing page uses at compute
+ * time (2026-09-29): the logger runs on GitHub Actions and manages ~5 rows a
+ * day, so a "fresh within 90 min" test against the LOG muted the air state
+ * most of the day although the station was reporting. Null when there is no
+ * valid LQI or no parsable datetime — the caller then falls back to the log.
+ */
+export function readingFromBlume(data: BlumeComponent[]): AirHistoryResponse['lastReading'] {
+  const lqi = data.find((d) => d.component === 'lqi');
+  if (!lqi || !isValidGrade(lqi.grade)) return null;
+  const ts = new Date(lqi.datetime);
+  if (isNaN(ts.getTime())) return null;
+  const grade = (name: string): number | null => {
+    const g = data.find((d) => d.component === name)?.grade;
+    return isValidGrade(g) ? g : null;
+  };
+  return { ts: ts.toISOString(), lqi: lqi.grade, pm10: grade('pm10'), no2: grade('no2'), o3: grade('o3'), co: grade('co') };
 }
 
 export async function ensureAirIndexes(db: Db): Promise<void> {
