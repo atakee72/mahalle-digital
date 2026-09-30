@@ -198,13 +198,17 @@ truncated to 32 chars (same salt as the contact relay).
   APIs — since 2026-09-30 the 22 member create/edit/upload/draft/submit/report/move
   routes reach it through `requireMemberSession()` (`src/lib/auth.ts`, root
   CLAUDE.md „API Routes"); the profile routes, likes, bump/status and drafts
-  still call it by hand. NOT ban-gated (user-noted 09-30, policy open): the
-  self-delete routes, `listings/[id]/save`, `my-listings` — a banned member
-  can still delete their own content. It guards (content create/edit, comments, likes, RSVP, uploads, listings
+  still call it by hand. Since 2026-10-01 the six self-delete routes
+  (topics/announcements/recommendations/events/comments/listings) go through
+  the same helper — a ban is read-only, deletes included (user decision
+  09-30, reversing the launch rule below). Still NOT ban-gated on purpose:
+  `listings/[id]/save` (a bookmark), `my-listings` (a GET), `posts/drafts/[id]`
+  DELETE (private draft cleanup) — a banned member's LISTING draft, deleted
+  through `listings/delete/[id]`, is the one asymmetry. It guards (content create/edit, comments, likes, RSVP, uploads, listings
   lifecycle, news submit, reports, profile update) with
   403 `{ error: 'account_banned' }`. LIVE DB read every time — the JWT
   snapshots at login and bans happen mid-session. Deliberately NOT
-  guarded: deletes (own-content removal), bookmarks/saves, view counters,
+  guarded: bookmarks/saves, view counters,
   and the anonymous listing contact relay (no session identity to check;
   IP-hash rate limits bound abuse).
 - **Session UX**: `SuspendedBanner.svelte` (KioskLayout, above

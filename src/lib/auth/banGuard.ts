@@ -19,7 +19,7 @@ export async function isUserBanned(userId: string): Promise<boolean> {
 }
 
 /**
- * Write-endpoint guard. Call AFTER the session check. Most routes get it
+ * Write- and delete-endpoint guard. Call AFTER the session check. Most routes get it
  * through requireMemberSession() (src/lib/auth.ts); the hand-written form is
  *
  *   const bannedRes = await rejectIfBanned(session.user.id);
