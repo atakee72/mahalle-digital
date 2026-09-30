@@ -198,7 +198,7 @@ truncated to 32 chars (same salt as the contact relay).
   APIs — since 2026-09-30 the 22 member create/edit/upload/draft/submit/report/move
   routes reach it through `requireMemberSession()` (`src/lib/auth.ts`, root
   CLAUDE.md „API Routes"); the profile routes, likes, bump/status and drafts
-  still call it by hand. Since 2026-10-01 the six self-delete routes
+  still call it by hand. Since 2026-09-30 the six self-delete routes
   (topics/announcements/recommendations/events/comments/listings) go through
   the same helper — a ban is read-only, deletes included (user decision
   09-30, reversing the launch rule below). Still NOT ban-gated on purpose:
