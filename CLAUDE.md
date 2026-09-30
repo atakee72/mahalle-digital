@@ -27,7 +27,7 @@ pnpm preview      # Preview production build
 pnpm type-check   # TypeScript validation
 npx -y svelte-check@4  # Svelte diagnostics sweep — dev-only warnings (e.g. state_referenced_locally) never appear in `pnpm build` output
 # CI (checks.yml) gates PRs on ratchet-only error budgets: tsc ≤16, svelte-check ≤81 (27/94→26/93 on 09-06 when the contact-form i18n fix cleared an untyped record, 93→92 on 09-10 with the shared initialsOf helper, 26/92→23/89 on 09-21 when the three unused legacy `/api/*/all` routes were deleted, 23/89→16/81 on 09-30 when the dead legacy React/dark-glass cluster was deleted — lower them when errors get fixed, never raise them)
-# Dead-code sweep (read-only, never installed, never `fix`): `npx -y knip@latest --include files` (text mode — the JSON reporter hides unused files) and `npx -y fallow@latest dead-code` / `fallow dupes`. Both are blind to `scripts/`, `.github/` and `scratchpad/`, so grep those before removing a package (dotenv, exceljs, @astrojs/node are used only there); their false positives here: `auth.config.ts` (loaded by auth-astro by convention), every `*.test.ts` (run by hand with `npx tsx`), all of `src/styles/*.css` (`.astro` frontmatter imports + `global.css` `@import`s), `design/handoffs/**`. Phase 1 (22 dead React/dark-glass files) landed 2026-09-30 (`9f7b92dc`); Phase 2 (19 zero-import packages + the `netlify:*` scripts + the `mongoose` SSR external) landed 2026-09-30; still open: the same session/ban/connect prelude copied into 13 API routes (candidate `requireMemberSession()` next to `requireAdminSession()`).
+# Dead-code sweep (read-only, never installed, never `fix`): `npx -y knip@latest --include files` (text mode — the JSON reporter hides unused files) and `npx -y fallow@latest dead-code` / `fallow dupes`. Both are blind to `scripts/`, `.github/` and `scratchpad/`, so grep those before removing a package (dotenv, exceljs, @astrojs/node are used only there); their false positives here: `auth.config.ts` (loaded by auth-astro by convention), every `*.test.ts` (run by hand with `npx tsx`), all of `src/styles/*.css` (`.astro` frontmatter imports + `global.css` `@import`s), `design/handoffs/**`. Phase 1 (22 dead React/dark-glass files) landed 2026-09-30 (`9f7b92dc`); Phase 2 (19 zero-import packages + the `netlify:*` scripts + the `mongoose` SSR external) landed 2026-09-30; Phase 3 (`requireMemberSession()` in 22 member write routes) landed 2026-09-30 — the sweep is closed; parked: ~100 unused exports, 60 unused types, 9 unread Svelte props, the `global.css` glass block.
 ```
 
 ## Project Structure
@@ -83,6 +83,7 @@ src/
 - **emailVerified (soft gate)**: propagated through the same `authorize` → `jwt` → `session` chain as `role`, so `session.user.emailVerified` exists everywhere — but it SNAPSHOTS at login (JWT). For live truth use `GET /api/auth/verification-status`. Verification never blocks login or features; it only drives `/verify-email` + the `VerifyEmailBanner` nag in `KioskLayout`. Emailed links (reset + verify) build their base URL via `getTrustedBaseUrl()` (`src/lib/auth/baseUrl.ts`, NEXTAUTH_URL, prod fail-closed).
 - **Other-device sign-out**: the `jwt` callback stamps an immutable `token.loginAt` once at login (deliberately NOT the auto-refreshed `iat` claim) and, at most every 5 minutes per token, compares it against `users.passwordChangedAt` — a token whose `loginAt` predates a password change/reset returns `null` from the callback, forcing that device to re-authenticate. Full story (silent same-device re-login, legacy-token handling) in `src/components/profile/kiosk/CLAUDE.md`'s "Password change" section.
 - **Admin gate helper**: `requireAdminSession(request)` in `src/lib/auth.ts` returns `{ ok: true, userId }` or a pre-shaped 401/403 `Response`. Used by all `/api/admin/announcements/*` endpoints.
+- **Member gate helper**: `requireMemberSession(request)` in the same file returns `{ ok: true, userId, session }` or a pre-shaped 401/403 `Response` (session, then live `rejectIfBanned`). Used by the 22 member write routes — see „API Routes" below.
 
 ### Landing + login gating (Aug 2026)
 - `/` is the public landing page; any request with a session is SSR-redirected to `/forum` before render (members never see the landing). Logged-out visitors get the landing, `/forum` and the other member surfaces bounce to login.
@@ -96,20 +97,21 @@ src/
 - **`/landing` → `/` (301)**: the old `/landing` route is a redirect-only fossil kept for any stale bookmarks/links from before the route swap.
 
 ### API Routes
-All API routes in `src/pages/api/` follow this pattern:
+Member write routes in `src/pages/api/` (create/edit/upload/draft/submit/report/move, 22 files since 2026-09-30) open with ONE helper:
 ```typescript
 import type { APIRoute } from 'astro';
-import { getSession } from 'auth-astro/server';
+import { requireMemberSession } from '../../../lib/auth';
 import { connectDB } from '../../../lib/mongodb';
 
 export const POST: APIRoute = async ({ request }) => {
-  const session = await getSession(request);
-  if (!session?.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-  }
+  // session → 401 `{ error: 'Unauthorized - Please login' }`, then LIVE ban check → 403 `account_banned`
+  const gate = await requireMemberSession(request);
+  if (!gate.ok) return gate.response;
+  const { session, userId } = gate;   // session.user.role/name/email as before
   // ... handler logic
 };
 ```
+`requireMemberSession()` sits beside `requireAdminSession()` in `src/lib/auth.ts`; its decision logic is the pure, tested `gateMember()` in `src/lib/auth/memberGate.ts` (`npx tsx --test src/lib/auth/memberGate.test.ts`). Rules: the 401 text is frozen (clients may match it); a route that validates a path id BEFORE the session (`events/[id]/like`, `events/[id]/rsvp`) calls the helper after that check; a session without `user.id` is refused (before the helper it slipped through — the only behaviour change of the refactor). Routes with a different 401 body (`likes/toggle`, `listings/[id]/bump|status`, `profile/*`, `users/update`, `posts/drafts`) still hand-write their prelude — convert them only together with their clients. The middleware answers 401 first for the gated `/api/*` prefixes, so from outside the helper's own 401 is reachable on `/api/posts/*` and `/api/reports/*` only.
 
 ### Outgoing Email (shared mailer)
 - **One transport chooser**: `src/lib/email/mailer.ts` (SERVER-ONLY) — SMTP (nodemailer, mailbox.org) when `SMTP_HOST/USER/PASS` set, else Resend when `RESEND_API_KEY` set, else "not configured" and each send module dev-logs its link instead of sending. `sendMail()` THROWS on failure — including Resend's `{ error }` return, which the SDK does not throw on — and captures to Sentry with `flush(2000)` before rethrowing (best-effort callers swallow the throw; Vercel freeze would eat an unflushed capture).
