@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getSession } from 'auth-astro/server';
+import { requireMemberSession } from '../../../../lib/auth';
 import { connectDB } from '../../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 import type { Listing } from '../../../../types/listing';
@@ -8,14 +8,11 @@ import { canMutateListing } from '../../../../lib/listingActions';
 
 export const DELETE: APIRoute = async ({ request, params }) => {
   try {
-    const session = await getSession(request);
-
-    if (!session?.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // Session + LIVE ban check (401 / 403 pre-shaped) — a banned member
+    // may read but not remove their content either. See requireMemberSession.
+    const gate = await requireMemberSession(request);
+    if (!gate.ok) return gate.response;
+    const { userId } = gate;
 
     const { id } = params;
 
@@ -25,8 +22,6 @@ export const DELETE: APIRoute = async ({ request, params }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    const userId = session.user.id;
 
     const db = await connectDB();
     const listingsCollection = db.collection<Listing>('listings');
