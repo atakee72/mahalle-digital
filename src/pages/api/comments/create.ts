@@ -1,5 +1,4 @@
 import type { APIRoute } from 'astro';
-import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
@@ -7,28 +6,17 @@ import type { Comment, FlaggedContent } from '../../../types';
 import { CommentCreateSchema } from '../../../schemas/comment.schema';
 import { parseRequestBody } from '../../../schemas/validation.utils';
 import { moderateText, checkSpamWithGPT, createFlaggedContentRecord, mergeModerationResults } from '../../../lib/moderation';
-import { rejectIfBanned } from '../../../lib/auth/banGuard';
+import { requireMemberSession } from '../../../lib/auth';
 import { notify, commentTarget } from '../../../lib/notifications';
 import { resolveMentions, notifyMentions, applyBroadcast, notifyAdminHint } from '../../../lib/mentions/mentionsStore';
 import { alertComment, alertModerationFlagged } from '../../../lib/adminAlerts';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    // Get session from NextAuth
-    const session = await getSession(request);
-
-    if (!session?.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Ban enforcement: banned accounts are read-only (3-strike Sperre).
-    const bannedRes = await rejectIfBanned(session.user.id);
-    if (bannedRes) return bannedRes;
-
-    const userId = session.user.id;
+    // Session + live ban check (401 / 403 pre-shaped) — see requireMemberSession.
+    const gate = await requireMemberSession(request);
+    if (!gate.ok) return gate.response;
+    const { session, userId } = gate;
 
     // Validate request body with Zod
     const validation = await parseRequestBody(request, CommentCreateSchema);

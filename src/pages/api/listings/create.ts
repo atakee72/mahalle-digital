@@ -1,30 +1,19 @@
 import type { APIRoute } from 'astro';
-import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
 import type { Listing } from '../../../types/listing';
 import type { FlaggedContent } from '../../../types';
 import { ListingCreateSchema } from '../../../schemas/listing.schema';
 import { parseRequestBody } from '../../../schemas/validation.utils';
 import { moderatePost, checkSpamWithGPT, checkImagesWithGPT, createFlaggedContentRecord, mergeModerationResults } from '../../../lib/moderation';
-import { rejectIfBanned } from '../../../lib/auth/banGuard';
+import { requireMemberSession } from '../../../lib/auth';
 import { alertContentNew, alertModerationFlagged } from '../../../lib/adminAlerts';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const session = await getSession(request);
-
-    if (!session?.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Ban enforcement: banned accounts are read-only (3-strike Sperre).
-    const bannedRes = await rejectIfBanned(session.user.id);
-    if (bannedRes) return bannedRes;
-
-    const userId = session.user.id;
+    // Session + live ban check (401 / 403 pre-shaped) — see requireMemberSession.
+    const gate = await requireMemberSession(request);
+    if (!gate.ok) return gate.response;
+    const { session, userId } = gate;
 
     // Check daily listing limit (5 per rolling 24h)
     const db = await connectDB();

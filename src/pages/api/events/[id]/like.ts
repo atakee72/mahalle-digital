@@ -1,8 +1,7 @@
 import type { APIRoute } from 'astro';
-import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
-import { rejectIfBanned } from '../../../../lib/auth/banGuard';
+import { requireMemberSession } from '../../../../lib/auth';
 
 export const POST: APIRoute = async ({ params, request }) => {
   try {
@@ -15,19 +14,10 @@ export const POST: APIRoute = async ({ params, request }) => {
       });
     }
 
-    // Get the NextAuth session
-    const session = await getSession(request);
-
-    if (!session?.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Ban enforcement: banned accounts are read-only (3-strike Sperre).
-    const bannedRes = await rejectIfBanned(session.user.id);
-    if (bannedRes) return bannedRes;
+    // Session + live ban check (401 / 403 pre-shaped) — see requireMemberSession.
+    const gate = await requireMemberSession(request);
+    if (!gate.ok) return gate.response;
+    const { session } = gate;
 
     const body = await request.json();
     const { action } = body;
