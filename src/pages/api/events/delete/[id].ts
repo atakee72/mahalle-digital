@@ -60,9 +60,6 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 
     // Cascade the comment thread (reported comments stay in the queue, marked deleted).
     const cascade = await deleteCommentsForPost(db, id);
-    // Bell rows about the post and its thread target the post id; the ids of the
-    // deleted comments catch the one moderation-row shape that targets a comment.
-    await purgeNotificationsFor(db, [id, ...cascade.commentIds]);
 
     // A pending report/flag on now-deleted content stays in the moderation
     // queue, marked deleted (still strikeable from the stored snapshot).
@@ -70,6 +67,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       { contentId: id, contentType: 'event' },
       { $set: { contentDeleted: true, contentDeletedAt: new Date() } }
     );
+
+    // Bell rows about the post and its thread target the post id; the ids of the
+    // deleted comments catch the one moderation-row shape that targets a comment.
+    await purgeNotificationsFor(db, [id, ...cascade.commentIds]);
 
     return new Response(JSON.stringify({
       message: 'Event deleted successfully',

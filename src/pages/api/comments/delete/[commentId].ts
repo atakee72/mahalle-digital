@@ -56,8 +56,6 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 
     // Delete the comment
     await commentsCollection.deleteOne({ _id: new ObjectId(commentId) });
-    // Mention / @alle / „replied" rows that name this comment as their source.
-    await purgeNotificationsFor(db, [commentId]);
 
     // Remove comment reference from the parent post
     // We need to check all collections since we don't know the parent type
@@ -75,6 +73,9 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       { contentId: commentId, contentType: 'comment' },
       { $set: { contentDeleted: true, contentDeletedAt: new Date() } }
     );
+
+    // Mention / @alle / „replied" rows that name this comment as their source.
+    await purgeNotificationsFor(db, [commentId]);
 
     return new Response(
       JSON.stringify({ message: 'Comment deleted successfully' }),
