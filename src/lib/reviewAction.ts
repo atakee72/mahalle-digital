@@ -229,10 +229,14 @@ export async function processReviewAction(
     // A moderated COMMENT deep-links to its parent post when we know it
     // (approve path stores parentPostId/parentCollection on the flagged
     // record); otherwise moderationTarget's fallback links to the forum.
+    // A rejected item its author already deleted has no page left to link to —
+    // the strike notice points at the forum index (contentId kept for the purge).
     const target =
       flaggedContent.contentType === 'comment' && flaggedAny.parentPostId && flaggedAny.parentCollection
         ? commentTarget(flaggedAny.parentCollection, flaggedAny.parentPostId, excerpt)
-        : moderationTarget(flaggedContent.contentType, flaggedContent.contentId, excerpt);
+        : flaggedContent.contentDeleted === true
+          ? { contentType: 'forum' as const, contentId: flaggedContent.contentId, title: excerpt, href: '/forum' }
+          : moderationTarget(flaggedContent.contentType, flaggedContent.contentId, excerpt);
     await notify({
       userId: flaggedContent.authorId,
       type: 'moderation',
