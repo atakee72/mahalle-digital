@@ -4,12 +4,11 @@
 // belong to /admin/announcements and carry the pin lifecycle). The heavy
 // lifting is src/lib/forum/movePost.ts.
 import type { APIRoute } from 'astro';
-import { getSession } from 'auth-astro/server';
 import { ObjectId } from 'mongodb';
 import * as Sentry from '@sentry/astro';
 import { connectDB } from '../../../../lib/mongodb';
 import { invalidateKiezKontext } from '../../../../lib/kiez/kontext';
-import { rejectIfBanned } from '../../../../lib/auth/banGuard';
+import { requireMemberSession } from '../../../../lib/auth';
 import { isOwner } from '../../../../utils/authHelpers';
 import { parseRequestBody } from '../../../../schemas/validation.utils';
 import { PostMoveSchema } from '../../../../schemas/forum.schema';
@@ -21,11 +20,10 @@ const json = (body: unknown, status = 200) =>
 
 export const POST: APIRoute = async ({ request, params }) => {
   try {
-    const session = await getSession(request);
-    if (!session?.user) return json({ error: 'Unauthorized - Please login' }, 401);
-
-    const bannedRes = await rejectIfBanned(session.user.id);
-    if (bannedRes) return bannedRes;
+    // Session + live ban check (401 / 403 pre-shaped) — see requireMemberSession.
+    const gate = await requireMemberSession(request);
+    if (!gate.ok) return gate.response;
+    const { session } = gate;
 
     const id = params.id;
     if (!id || !ObjectId.isValid(id)) return json({ error: 'Invalid post ID' }, 400);
