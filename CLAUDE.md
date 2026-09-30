@@ -34,7 +34,7 @@ npx -y svelte-check@4  # Svelte diagnostics sweep — dev-only warnings (e.g. st
 ```
 src/
 ├── components/       # React components (.tsx)
-├── layouts/          # Astro layouts (BaseLayout.astro)
+├── layouts/          # Astro layouts (KioskLayout, LandingLayout, AuthLayout, AdminLayout, blog/*)
 ├── pages/            # File-based routing
 │   ├── api/          # API routes (serverless functions)
 │   │   ├── auth/     # Registration endpoint
@@ -121,8 +121,7 @@ export const POST: APIRoute = async ({ request }) => {
 
 ### Data Fetching
 - TanStack Query for client-side data fetching
-- Custom hooks in `src/hooks/api/` (useTopicsQuery, useEventsQuery, etc.)
-- QueryProvider wrapper in `src/providers/QueryProvider.tsx`
+- Custom hooks in `src/hooks/api/`: only the four marketplace ones remain (`useBumpListingMutation`, `useContactListingMutation`, `useListingStatusMutation`, `useListingsQuery`); the legacy forum/news/comment/report hooks and the `QueryProvider` wrapper were removed on 2026-09-30 (dead since the kiosk migrations).
 
 ### State Management
 - TanStack Query for server state (hooks in `src/hooks/api/*`)
@@ -207,7 +206,7 @@ AUTH_SECRET=            # NextAuth secret
 AUTH_TRUST_HOST=true
 NEXTAUTH_URL=           # Canonical app origin — https://mahalle.digital in prod (domain live since 2026-08-09; the old mahalle-das-kiezgesichterbuch.vercel.app 308-redirects here, deep links preserved). REQUIRED in prod — the password-reset link is built from this, NOT the request Host header (host-header-injection protection). If unset in prod the forgot-password flow FAILS CLOSED (no reset email sent). Dev falls back to the request origin.
 MONGODB_URI=            # MongoDB connection string. DB name rides in the URI path (client.db() reads it): prod = /mahalle, local dev + Vercel Preview = /mahalle-dev (split 2026-08-14; same Atlas cluster). Seed dev via scripts/seed-dev-db.ts (interlock: refuses any db name without "dev"). Pre-split snapshot CommunityWebApp-test is frozen — never write to it.
-CLOUD_NAME=             # Cloudinary cloud name — the upload routes read CLOUD_NAME (not CLOUDINARY_CLOUD_NAME; only env.schema.ts still mentions the long form, as optional)
+CLOUD_NAME=             # Cloudinary cloud name — the upload routes read CLOUD_NAME (not CLOUDINARY_CLOUD_NAME)
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 OPENAI_API_KEY=         # Content moderation API + news relevance scoring
@@ -249,7 +248,6 @@ SENTRY_WEBHOOK_SECRET=  # Random 32+ chars guarding POST /api/hooks/sentry. Unse
 ### Client-Side React Components
 Use `client:load` or `client:only="react"` directive:
 ```astro
-<Navbar client:load user={session?.user} />
 <CalendarWrapper client:only="react" />
 <ForumWrapper client:only="react" session={session} />
 ```
@@ -293,8 +291,7 @@ See `src/components/profile/kiosk/CLAUDE.md` — full notes load when working in
 - **`prefillDates` memoized** via `useMemo` in CalendarContainer to prevent useEffect churn in EventModal
 
 ### Pagination
-- **React component**: `src/components/ui/Pagination.tsx` — reusable with props for accent color, page size options, item label
-- **Used in**: Forum (`ForumContainer.tsx`, client-side slicing, 12/24/48), Newsboard (`NewsCards.tsx`, server-side, 12/24/48)
+- The React `Pagination.tsx` component was removed on 2026-09-30 (dead since the kiosk migrations); every live pager is written inline in Svelte.
 - **Svelte inline**: Marketplace (`MarketplaceBrowse.svelte`), Blog (`BlogSearch.svelte`), Admin Moderation (`ModerationApp.svelte`, queue + Protokoll each with their own pager) — same layout, adapted to Svelte syntax
 - **Features**: First/Prev/Next/Last buttons, "Page X of Y · N items" display, optional page size dropdown
 - **Accent colors**: Wine/burgundy for forum and newsboard, teal for marketplace/moderation, white-on-dark for blog
@@ -303,20 +300,7 @@ See `src/components/profile/kiosk/CLAUDE.md` — full notes load when working in
 See `src/components/blog/CLAUDE.md` — full notes load when working in that subtree.
 
 ### Splash Screen
-- `SplashScreen.astro` — plays logo video with fade-out and 3D CSS effect
-- **Page allowlist**: Only shows on main nav pages (`/newsboard`, `/calendar`, `/marketplace`, `/profile`, `/schillerkiez`). `/blog` was dropped from the allowlist when it migrated to the kiosk system (kiosk pages don't use `SplashScreen` — see `KioskLayout.astro`). `/` was dropped from the allowlist with the Aug 2026 landing release — the new public landing page doesn't use `SplashScreen` either. Sub-pages (e.g. `/login`) skip it entirely via pathname check.
-- **Session-gated**: `sessionStorage['mahalle-splash-shown']` — shows once per session, skipped on subsequent main-page visits/reloads. Also skipped if `prefers-reduced-motion: reduce`.
-- Included in `BaseLayout.astro`
-- Uses `<script is:inline data-astro-rerun>` for synchronous execution and ViewTransitions compatibility
-- Hidden by default (`display: none` in CSS) — JS shows it only on allowed pages to prevent flash-of-overlay
-- Dual-gate dismiss: waits for both video end AND `window.load` before fading out. Safety timeout bumped to 4s.
-- **No blob flash**: `<video>` has `visibility: hidden` + dark bg (`#0e1033`) until `loadeddata` fires (first frame decoded), then JS adds `.ready` class to reveal. Prevents empty blob-shape showing before frames paint.
-- **Autoplay fallback**: `video.play()` catch → dismiss after 600ms. Covers mobile Firefox where muted autoplay still blocks.
-- **Overlay**: transparent bg, `backdrop-filter: blur(2px)` — just softens the page behind, no dark tint.
-- **Body bg**: `BaseLayout` uses `bg-[#0e1033]` (dark indigo) to match dark-glass redesign pages — no yellow flash behind glass divs.
-- **Video**: compressed to ~56 KB (H.264 720x720 CRF 30, `+faststart`, no audio). `fetchpriority="high"` on `<video>` for early download.
-- Uses native Web Animations API (not Motion) because `is:inline` scripts can't use ES imports
-- `astro:before-swap` listener (commented out, available if needed) strips overlay from incoming pages
+`SplashScreen.astro` (the logo-video overlay of the old `BaseLayout`) was removed on 2026-09-30 (dead since the kiosk migrations) — no kiosk page ever used it. The auth door's `KioskSplash.astro` is its own component.
 
 ### Global UI: Toasts & Confirm Dialogs
 - **Toast system**: `sonner` library, triggered via `CustomEvent` bridge (`app:toast`) from `src/utils/toast.ts`
@@ -328,16 +312,13 @@ See `src/components/blog/CLAUDE.md` — full notes load when working in that sub
 
 ### Cloudinary URL Optimization
 - **Utility**: `src/utils/cloudinary.ts` exports `optimizeCloudinary(url)` — rewrites any Cloudinary URL to inject `f_auto,q_auto` (auto format + auto quality) for ~30-60% smaller transfers. No-op for non-Cloudinary URLs or URLs that already have those transforms.
-- **Applied in**: `Navbar.tsx` (user avatar), `UserProfile.tsx` (profile picture), `ForumContainer.tsx` (post cover images), `ReadMoreModal.tsx` (post gallery images). Apply anywhere you render user-uploaded Cloudinary images.
+- **Applied in**: `KioskAvatar.svelte`, `ForumPostCard.svelte`, `ForumPostDetail.svelte`, `ArticleImage.svelte`, `ListingLead.svelte`, `ListingImagePlaceholder.svelte`, `OwnerDraftsSection.svelte`, `DraftsPage.svelte`, `AdmQueueCard.svelte`, `LandingPage.svelte`. Apply anywhere you render user-uploaded Cloudinary images.
 
 ### Page Header
-- **Component**: `src/components/ui/PageHeader.astro` — animated title with fade-in + sweeping status bars
-- **Props**: `title`, `subtitle?`, `color?` (hex, defaults to wine `#814256`), `subtitleClass?` (defaults to `text-gray-600`)
-- **Animation**: `is:inline data-astro-rerun` script — re-triggers on every ViewTransitions navigation. Title fades in + slides up, then 3 decorative bars sweep in with staggered delays. Respects `prefers-reduced-motion`.
-- **Used on**: Remaining legacy main pages (`/`, `/calendar`, `/newsboard`, `/marketplace`, `/profile`). Marketplace uses `color="#4b9aaa"` (teal). (`/schillerkiez` and `/blog` no longer use PageHeader — both are on the kiosk system.)
+`src/components/ui/PageHeader.astro` (the animated title of the legacy pages) was removed on 2026-09-30 (dead since the kiosk migrations); kiosk pages build their own title blocks.
 
 ### Glass Utility System
-Five opt-in CSS utilities in `global.css` layer the dark-glass look. Pair them as needed with standard Tailwind dark-glass classes (`bg-white/[0.06] backdrop-blur-sm border border-white/[0.15] ...`).
+**No live surface uses these any more** (2026-09-30: only comments in `KioskLayout.astro` mention them); the CSS block in `global.css` stays until a separate decision removes it. Five opt-in CSS utilities in `global.css` layer the dark-glass look. Pair them as needed with standard Tailwind dark-glass classes (`bg-white/[0.06] backdrop-blur-sm border border-white/[0.15] ...`).
 
 - **`.glass-inner-glow`** — Apple-style `box-shadow: inset 0 0 22px -4px rgba(255,255,255,0.4)`. Zero cost. Drop-in on any glass surface for a subtle inner highlight.
 - **`.glass-luxe`** — full-area liquid glass: `::after` with `backdrop-filter: blur(8px)` + `#glass-distortion` SVG filter (wobble). Used on the profile hero card. Host must have **no** `bg-*` or `backdrop-blur-*` — the pseudo handles it.
@@ -345,14 +326,14 @@ Five opt-in CSS utilities in `global.css` layer the dark-glass look. Pair them a
 - **`.glass-smooth`** — same shape as `glass-luxe` but **no SVG filter**: flat blur + tint, no wobble. Use when the wobble looks too fragmented or the surface doesn't need refraction.
 - **`.glass-smooth-edge`** — flat blur + tint masked to an edge frame. Use when you want a glass frame without the SVG cost.
 
-**Required helper component:** `GlassFilters.astro` (injected once in `BaseLayout`) defines three SVG filters — `#glass-distortion` (default, scale 60), `#glass-distortion-strong` (scale 110, for hover), `#glass-distortion-subtle` (low-frequency, heavy blur, scale 85 for organic curl without chunkiness). Without this component mounted, `.glass-luxe*` classes render as flat glass (SVG url() refs silently no-op).
+**SVG filter host:** `GlassFilters.astro` (the three `#glass-distortion*` filters, mounted once in `BaseLayout`) was removed on 2026-09-30 (dead since the kiosk migrations), together with that layout; without it `.glass-luxe*` classes render as flat glass (SVG url() refs silently no-op).
 
 **Why `::after` instead of filtering the host:** `backdrop-filter` and `filter` create a containing block for `position: fixed` descendants (see Common Errors). Putting the filter on `::after` keeps the host a normal element, so modals inside still escape to the viewport. Also isolates `z-index` via `isolation: isolate`.
 
 **Reduced motion:** all `.glass-luxe*` variants drop the SVG filter under `prefers-reduced-motion: reduce` (flat glass fallback). Effect gracefully degrades — nothing disappears.
 
 ### Low-perf Device Detector
-Inline script in `<head>` of `BaseLayout.astro`. Runs before first paint, tags underpowered devices so heavy SVG filters degrade to flat glass.
+The inline `<head>` script lived in `BaseLayout.astro` and was removed on 2026-09-30 (dead since the kiosk migrations) with it (the kiosk layouts carry no heavy filters). The recipe, for reference — it ran before first paint and tagged underpowered devices so heavy SVG filters degraded to flat glass:
 
 ```js
 if ((navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) ||
@@ -387,7 +368,6 @@ Usage:
 Self-disables when the host has no box (e.g. `lg:contents` to dissolve the wrapper on desktop): `scrollWidth/clientWidth` read 0, no attrs match, no fade applies. So you can pair it with responsive layouts that switch from "scroll on mobile" to "flex-wrap on desktop" without extra responsive CSS. **Caveat:** `mask-image` masks the entire painted output including borders — if the scroll host has a `border-b border-dashed`, the dashed line will fade at the edges in mid-scroll. Move the border to a sibling element if that looks distracting. React-side: import the function directly and drive it from a `useEffect` — the lifecycle just doesn't get the Svelte action's automatic mount/destroy. Used today: forum TagBar (filters + tag rows), calendar mobile category rail, event-compose category rail.
 
 ### Animation (Motion Library)
-- **Navbar**: `motion/react` — spring-based menu slide (`AnimatePresence`), staggered nav item entrance
 - **Calendar**: `motion/react` — spring-physics slide on month change (grid slides horizontally, month name slides vertically). `AnimatePresence mode="popLayout"` for smooth height transitions between 4/5/6-week months. Direction tracked via `useRef`.
 - **Newsboard**: `motion/react` — `whileInView` scroll-triggered card reveals with per-column stagger delay
 - **Splash screen**: Native Web Animations API (fade-in/out) — `is:inline` context, no imports
@@ -431,8 +411,8 @@ When migrating a surface into kiosk, swap kicker + italic-accent text to the pag
 ### SSR Compatibility
 - `typewriter-editor` requires dynamic import inside `onMount()` to avoid SSR errors - it accesses browser globals (KeyboardEvent) at module load time
 - **Prerendered pages + auth**: Middleware uses `context.isPrerendered` to skip `getSession()` on prerendered routes (avoids `Astro.request.headers` warning). The legacy `BlogBaseLayout` (deleted in the kiosk blog migration, July 2026) used to read session from `Astro.locals.session` because `/blog` was prerendered; the kiosk `/blog` routes are SSR (no `prerender` export anywhere under `src/pages/blog`) and go through `KioskLayout`, which calls `getSession(Astro.request)` directly like every other kiosk page — see `src/components/blog/CLAUDE.md`'s "Decision 1" for why SSR was required.
-- **Navbar on prerendered pages**: `BaseLayout` calls `getSession(Astro.request)` which returns `null` at build time, so `user={undefined}` is baked into static HTML. `Navbar.tsx` compensates by fetching `/api/auth/session` client-side in `useEffect` when `initialUser` is undefined — ensures login state reflects reality on prerendered routes (e.g. `/schillerkiez`).
-- **QueryProvider hydration**: `src/providers/QueryProvider.tsx` renders the same JSX tree on SSR and client (`<QueryClientProvider>` only). The cache persister attaches imperatively via `persistQueryClient` in a client-only `useEffect` — if you wrap with `<PersistQueryClientProvider>` instead, the SSR/client trees differ and React hydration crashes, which cascades to Svelte `effect_orphan` errors on any `client:only="svelte"` island.
+- **Navbar on prerendered pages**: `Navbar.tsx` and `BaseLayout` were removed on 2026-09-30 (dead since the kiosk migrations); the kiosk chrome is `KioskNav.svelte`, fed by `KioskLayout`'s SSR session.
+- **QueryProvider hydration**: `src/providers/QueryProvider.tsx` was removed on 2026-09-30 (dead since the kiosk migrations); no page mounts a React Query provider any more.
 
 ### Astro Script + ViewTransitions
 - Module `<script>` tags are deferred and only execute once — they do NOT re-run on ViewTransitions navigation
@@ -465,7 +445,7 @@ When migrating a surface into kiosk, swap kicker + italic-accent text to the pag
 - **Unlike the sticky/overflow gotcha, this one was masked by working tests** — the modal works when opened from a non-glass-wrapped page, fails on forum/calendar/etc. First hit: forum ReadMoreModal in April 2026.
 
 ### Modal scroll-lock: wrap in `<RemoveScroll>` from `react-remove-scroll`
-- All 5 modals (ReportModal, EventModal, PostModal, ReadMoreModal, EventViewModal) use `<RemoveScroll enabled={isOpen}>` as the outermost wrapper. Battle-tested lib (used by Radix, Headless UI) that handles iOS touch-scroll, desktop scrollbar-gutter compensation, and nested-scroller preservation.
+- The five React modals that used `<RemoveScroll enabled={isOpen}>` (ReportModal, EventModal, PostModal, ReadMoreModal, EventViewModal) are gone (`ReportModal.tsx` removed on 2026-09-30 (dead since the kiosk migrations)); the notes below stay as the recipe for any future React modal. The lib handles iOS touch-scroll, desktop scrollbar-gutter compensation, and nested-scroller preservation.
 - Replaced earlier `overflow: hidden` on html/body and `position: fixed; top: -scrollY` patterns — both had edge cases (iOS touch leaks, fixed-descendant conflicts with `backdrop-filter` containing blocks).
 - For new modals: just wrap in `<RemoveScroll enabled={isOpen}>` and drop any bespoke scroll-lock `useEffect`.
 - **Svelte native `<dialog>` modals are NOT covered by the browser** (audit 2026-09-09): `showModal()` makes the page inert but the document still scrolls under the backdrop. All four Svelte ones (`EventDetailModal`, `KioskReportModal`, `PDeleteAccountModal`, marketplace `DetailGallery` lightbox) plus the React `ConfirmDialog` call `lockPageScroll()` from `src/lib/scrollLock.ts` while open — it locks `<html>` only (see the `overflow-x: clip` corollary above for why never `<body>`) and compensates the scrollbar gutter. Any new native-dialog island must do the same; a comment saying "the browser handles scroll-lock" is wrong.

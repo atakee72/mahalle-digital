@@ -66,15 +66,12 @@ Frontend-only, no backend. Both live in `AuthLayout` (login/register only).
 - **`KioskSplash.astro`** — once-per-session splash overlay on the auth front door.
   Reuses `SplashScreen.astro`'s proven logic (`/LogoVideo.mp4`, dual-gate dismiss =
   video-ended AND window-load, 4s safety timeout) but paper-skinned for kiosk. Gate =
-  `sessionStorage['mahalle-splash-shown']` — the SAME key as the global SplashScreen,
-  so it is once-per-session app-wide. `prefers-reduced-motion` (or video-can't-play)
+  `sessionStorage['mahalle-splash-shown']` (the key the global SplashScreen shared
+  until that component was removed on 2026-09-30), so it is once per session. `prefers-reduced-motion` (or video-can't-play)
   → skip the video and show the CSS carve-in reveal fallback (ochre monogram + wordmark
   + tagline). Scoped to AuthLayout; extending to `KioskLayout` (the deferred "Kiosk
-  variant TBD") is a future follow-up, not done here. **Gotcha for that follow-up:**
-  `KioskSplash` and the global `SplashScreen.astro` share the `mahalle-splash-shown`
-  sessionStorage key — they must NEVER co-mount on the same page, or both `is:inline`
-  scripts fight over the flag and one overlay flashes then vanishes. (Safe today:
-  AuthLayout never includes SplashScreen.)
+  variant TBD") is a future follow-up, not done here. (The old co-mount gotcha with
+  the global `SplashScreen.astro` ended when that file was removed on 2026-09-30.)
 
 Rate-limit (state 05) shipped — see the Rate-limit / hardening section.
 

@@ -23,7 +23,7 @@ A modern, performant community web application built with Astro, TypeScript, and
 ```
 src/
 ├── components/       # React (.tsx) and Svelte (.svelte) components
-├── layouts/          # Astro layouts (BaseLayout.astro)
+├── layouts/          # Astro layouts (KioskLayout, LandingLayout, AuthLayout, AdminLayout, blog/*)
 ├── pages/            # File-based routing
 │   ├── api/          # API routes (serverless functions)
 │   │   ├── auth/     # Registration endpoint
@@ -96,7 +96,6 @@ Semantic accents stay constant across all kiosk surfaces (never swapped per page
 - `KioskReportModal` — paper-warm community-report modal (forum + calendar, reusable for upcoming kiosk surfaces)
 - `OwnStatusBanner` — author-facing moderation banner (pending / reported / rejected, with optional rejection-reason blockquote)
 - Sonner toasts re-skinned via `unstyled: true` + `.kiosk-toast*` classes (paper-warm bg, ink-2 border, Bricolage font, Instrument italic descriptions, print-shadow per type)
-- `GlassFilters.astro` — shared SVG `feTurbulence` filters for liquid-glass refraction (used by legacy `.glass-luxe*` utilities on unmigrated pages)
 
 ### Legacy dark-glass utilities (still in use on unmigrated pages)
 Utilities in `global.css`: `.dark-glass-bg`, `.dark-glass-gradient` (fixed background divs), `.carved-title` (beveled text with `--carved-accent` CSS var), `.glass-luxe`, `.glass-luxe-edge`, `.glass-smooth`, `.glass-smooth-edge`, `.glass-inner-glow`. Blog is fully migrated as of July 2026 and no longer uses these.

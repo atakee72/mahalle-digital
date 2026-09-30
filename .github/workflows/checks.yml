@@ -16,8 +16,9 @@ jobs:
       # untyped local record, clearing one pre-existing tsc + one svelte-check error.
       # Lowered 93→92 on 2026-09-10: the shared initialsOf helper cleared one svelte-check error.
       # Lowered 26→23 / 92→89 on 2026-09-21: the three unused legacy /api/*/all routes were deleted.
-      TSC_ERROR_BUDGET: "23"
-      SVELTE_CHECK_ERROR_BUDGET: "89"
+      # Lowered 23→16 / 89→81 on 2026-09-30: the dead legacy React/dark-glass cluster (22 files) was deleted.
+      TSC_ERROR_BUDGET: "16"
+      SVELTE_CHECK_ERROR_BUDGET: "81"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
