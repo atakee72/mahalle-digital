@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { getSession } from 'auth-astro/server';
+import { rejectIfBanned } from './auth/banGuard';
+import { gateMember, type MemberGate } from './auth/memberGate';
 
 interface JWTPayload {
   userId: string;
@@ -46,6 +48,25 @@ export async function requireAdminSession(
     };
   }
   return { ok: true, userId: session.user.id };
+}
+
+/**
+ * Member guard for write endpoints: session, then LIVE ban check
+ * (`rejectIfBanned`, reads the DB — the JWT snapshots at login and a ban
+ * happens mid-session). Same tagged-union shape as requireAdminSession.
+ *
+ * Usage:
+ *   const gate = await requireMemberSession(request);
+ *   if (!gate.ok) return gate.response;
+ *   const { session, userId } = gate;
+ *
+ * 401 body is exactly `{ error: 'Unauthorized - Please login' }` (the text
+ * the routes used before 2026-09-30); 403 is rejectIfBanned's own response.
+ * Routes that check a path id BEFORE the session keep doing so — call this
+ * after that check. Decision logic + tests: src/lib/auth/memberGate.ts.
+ */
+export async function requireMemberSession(request: Request): Promise<MemberGate> {
+  return gateMember(await getSession(request), rejectIfBanned);
 }
 
 const JWT_SECRET = import.meta.env.JWT_SECRET || 'default-secret-key';
