@@ -26,7 +26,8 @@ pnpm build        # Production build
 pnpm preview      # Preview production build
 pnpm type-check   # TypeScript validation
 npx -y svelte-check@4  # Svelte diagnostics sweep — dev-only warnings (e.g. state_referenced_locally) never appear in `pnpm build` output
-# CI (checks.yml) gates PRs on ratchet-only error budgets: tsc ≤23, svelte-check ≤89 (27/94→26/93 on 09-06 when the contact-form i18n fix cleared an untyped record, 93→92 on 09-10 with the shared initialsOf helper, 26/92→23/89 on 09-21 when the three unused legacy `/api/*/all` routes were deleted — lower them when errors get fixed, never raise them)
+# CI (checks.yml) gates PRs on ratchet-only error budgets: tsc ≤16, svelte-check ≤81 (27/94→26/93 on 09-06 when the contact-form i18n fix cleared an untyped record, 93→92 on 09-10 with the shared initialsOf helper, 26/92→23/89 on 09-21 when the three unused legacy `/api/*/all` routes were deleted, 23/89→16/81 on 09-30 when the dead legacy React/dark-glass cluster was deleted — lower them when errors get fixed, never raise them)
+# Dead-code sweep (read-only, never installed, never `fix`): `npx -y knip@latest --include files` (text mode — the JSON reporter hides unused files) and `npx -y fallow@latest dead-code` / `fallow dupes`. Both are blind to `scripts/`, `.github/` and `scratchpad/`, so grep those before removing a package (dotenv, exceljs, @astrojs/node are used only there); their false positives here: `auth.config.ts` (loaded by auth-astro by convention), every `*.test.ts` (run by hand with `npx tsx`), all of `src/styles/*.css` (`.astro` frontmatter imports + `global.css` `@import`s), `design/handoffs/**`. Phase 1 (22 dead React/dark-glass files) landed 2026-09-30 (`9f7b92dc`); still open: ~10 unused packages + the `netlify:*` scripts, and the same session/ban/connect prelude copied into 13 API routes (candidate `requireMemberSession()` next to `requireAdminSession()`).
 ```
 
 ## Project Structure
