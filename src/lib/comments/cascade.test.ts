@@ -58,9 +58,10 @@ function seed() {
 }
 
 test('deletes exactly the comments of the given post', async () => {
-  const { db, store, post, other } = seed();
+  const { db, store, post, other, c1, c2 } = seed();
   const r = await deleteCommentsForPost(db, post.toHexString());
   assert.equal(r.deletedComments, 2);
+  assert.deepEqual([...r.commentIds].sort(), [c1.toHexString(), c2.toHexString()].sort());
   const left = store.get('comments')!;
   assert.equal(left.length, 1);
   assert.equal(String(left[0].relevantPostId), String(other));
@@ -83,9 +84,9 @@ test('is idempotent and safe on a post without comments', async () => {
   const { db, post } = seed();
   await deleteCommentsForPost(db, post.toHexString());
   const again = await deleteCommentsForPost(db, post.toHexString());
-  assert.deepEqual(again, { deletedComments: 0, flaggedMarked: 0 });
+  assert.deepEqual(again, { deletedComments: 0, flaggedMarked: 0, commentIds: [] });
   const none = await deleteCommentsForPost(db, new ObjectId().toHexString());
-  assert.deepEqual(none, { deletedComments: 0, flaggedMarked: 0 });
+  assert.deepEqual(none, { deletedComments: 0, flaggedMarked: 0, commentIds: [] });
 });
 
 test('rejects an invalid post id without touching the db', async () => {

@@ -18,6 +18,8 @@ export type CascadeDb = Pick<Db, 'collection'>;
 export interface CascadeResult {
   deletedComments: number;
   flaggedMarked: number;
+  /** Ids of the deleted comments (strings) — the caller purges their notifications with the post's. */
+  commentIds: string[];
 }
 
 export async function deleteCommentsForPost(db: CascadeDb, postId: string): Promise<CascadeResult> {
@@ -28,7 +30,7 @@ export async function deleteCommentsForPost(db: CascadeDb, postId: string): Prom
   // Ids first: the flag stamp needs them after the rows are gone.
   const ids = (await comments.find({ relevantPostId: parent }, { projection: { _id: 1 } }).toArray())
     .map((c) => String(c._id));
-  if (ids.length === 0) return { deletedComments: 0, flaggedMarked: 0 };
+  if (ids.length === 0) return { deletedComments: 0, flaggedMarked: 0, commentIds: [] };
 
   const del = await comments.deleteMany({ relevantPostId: parent });
 
@@ -37,5 +39,5 @@ export async function deleteCommentsForPost(db: CascadeDb, postId: string): Prom
     { $set: { contentDeleted: true, contentDeletedAt: new Date() } }
   );
 
-  return { deletedComments: del.deletedCount ?? 0, flaggedMarked: flagged.modifiedCount ?? 0 };
+  return { deletedComments: del.deletedCount ?? 0, flaggedMarked: flagged.modifiedCount ?? 0, commentIds: ids };
 }
