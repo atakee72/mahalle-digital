@@ -59,14 +59,20 @@ export const HEAT_THRESHOLD = 2;
 
 // Map free-string aiCategory → one of the 7 sektions. Best-effort substring
 // match; defaults to 'lokales' (the catch-all for neighborhood news).
+// The values come from GPT's list in fetch-daily.ts (local, city, regional,
+// culture, environment, politics, health, education, housing, transport,
+// community — plus off-list ones like sport/crime) or from the submit form's
+// SektionKey. Keep every GPT word covered here and keep the sport rule LAST
+// and word-anchored: until 2026-10-01 „transport" fell through to the bare
+// /sport/ substring and every traffic article printed as SPORT.
 export function resolveSektion(aiCategory?: string | null): SektionKey {
   const c = (aiCategory ?? '').toLowerCase();
   if (/(polit|senat|wahl|bvv|bezirksverordnet)/.test(c)) return 'politik';
   if (/(kultur|kunst|musik|festival|karneval|kino|theater|culture)/.test(c)) return 'kultur';
-  if (/(verkehr|transit|u-?bahn|fahrrad|stra(ss|ß)e|mobilit)/.test(c)) return 'verkehr';
+  if (/(verkehr|transport|transit|u-?bahn|fahrrad|stra(ss|ß)e|mobilit)/.test(c)) return 'verkehr';
   if (/(wirtschaft|economy|gewerbe|markt|handel|business)/.test(c)) return 'wirtschaft';
-  if (/(klima|umwelt|climate|feinstaub|luft|energie)/.test(c)) return 'klima';
-  if (/(sport|fu(ss|ß)ball|verein|liga)/.test(c)) return 'sport';
+  if (/(klima|umwelt|climate|environment|feinstaub|luft|energie)/.test(c)) return 'klima';
+  if (/(\bsport|fu(ss|ß)ball|verein|liga)/.test(c)) return 'sport';
   return 'lokales';
 }
 

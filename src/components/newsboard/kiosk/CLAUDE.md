@@ -53,6 +53,13 @@ real free-string DB fields onto it at render time:
 
 - `resolveSektion(aiCategory)` — substring-matches `aiCategory` → one of 7
   sektions; defaults to `'lokales'` (catch-all for neighborhood news).
+  **Its vocabulary must cover GPT's category list in `fetch-daily.ts`**
+  (tested in `newsTaxonomy.test.ts`): until 2026-10-01 `transport` matched
+  nothing but the bare `/sport/` substring, so every traffic article (11 of
+  the latest 100 in prod) printed as SPORT, and `environment` fell to Lokales
+  instead of Klima. The sport rule is word-anchored (`\bsport`) and checked
+  last. Off-list GPT values seen in prod (`crime`, `technology`,
+  `entertainment`) deliberately land in Lokales.
 - `resolveQuelle(sourceName, source)` — `source === 'user_submitted'` → `'user'`;
   otherwise matches `sourceName` → a known source key; defaults to `'newsdata'`
   (neutral styling for unknown RSS/API sources).
