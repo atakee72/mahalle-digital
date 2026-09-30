@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getSession } from 'auth-astro/server';
+import { requireMemberSession } from '../../../../lib/auth';
 import { connectDB } from '../../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 
@@ -23,17 +23,11 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
-    // Get session from NextAuth
-    const session = await getSession(request);
-
-    if (!session?.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    const userId = session.user.id;
+    // Session + LIVE ban check (401 / 403 pre-shaped) — a banned member
+    // may read but not remove their content either. See requireMemberSession.
+    const gate = await requireMemberSession(request);
+    if (!gate.ok) return gate.response;
+    const { userId } = gate;
 
     // Connect to database
     const db = await connectDB();
