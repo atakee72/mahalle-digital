@@ -553,7 +553,7 @@ const results = [];
 const check = (name, ok, detail) => { results.push({ name, ok, detail }); console.log(`${ok ? 'OK  ' : 'FAIL'} ${name} — ${detail}`); };
 (async () => {
   // 1–3. logged-out on the UNGATED prefixes (the middleware would answer first on /api/topics etc.)
-  let r = await fetch(BASE + '/api/posts/upload', { method: 'POST' });
+  let r = await fetch(BASE + '/api/posts/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); // JSON: a bodiless/form POST without Origin is 403'd by Astro's CSRF check before any route runs (same on main)
   check('logged-out posts/upload is 401 with the legacy body', r.status === 401 && (await r.text()) === '{"error":"Unauthorized - Please login"}', `status ${r.status}`);
   r = await fetch(BASE + '/api/reports/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
   check('logged-out reports/submit is 401 JSON', r.status === 401 && (r.headers.get('content-type') || '').includes('application/json') && (await r.text()) === '{"error":"Unauthorized - Please login"}', `status ${r.status} ${r.headers.get('content-type')}`);

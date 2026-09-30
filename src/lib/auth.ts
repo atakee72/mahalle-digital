@@ -1,3 +1,5 @@
+// SERVER-ONLY: imports banGuard → mongodb. Never import from a client island
+// or a shared (page + component) module — see CLAUDE.md „Server-only modules".
 import jwt from 'jsonwebtoken';
 import { getSession } from 'auth-astro/server';
 import { rejectIfBanned } from './auth/banGuard';
