@@ -195,7 +195,12 @@ truncated to 32 chars (same salt as the contact relay).
   for that email inside the 5-min window see the flag too.
 - **Writes**: `rejectIfBanned(userId)` in `src/lib/auth/banGuard.ts`
   (SERVER-ONLY — never import from islands) guards all public-facing write
-  APIs (content create/edit, comments, likes, RSVP, uploads, listings
+  APIs — since 2026-09-30 the 22 member create/edit/upload/draft/submit/report/move
+  routes reach it through `requireMemberSession()` (`src/lib/auth.ts`, root
+  CLAUDE.md „API Routes"); the profile routes, likes, bump/status and drafts
+  still call it by hand. NOT ban-gated (user-noted 09-30, policy open): the
+  self-delete routes, `listings/[id]/save`, `my-listings` — a banned member
+  can still delete their own content. It guards (content create/edit, comments, likes, RSVP, uploads, listings
   lifecycle, news submit, reports, profile update) with
   403 `{ error: 'account_banned' }`. LIVE DB read every time — the JWT
   snapshots at login and bans happen mid-session. Deliberately NOT
