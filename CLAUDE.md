@@ -10,10 +10,10 @@ Mahalle - A Fullstack Community Web App for Local Neighborhoods. The name means 
 ## Tech Stack
 - **Framework**: Astro 5.x with React 18.2 (hybrid SSR/SSG)
 - **Styling**: Tailwind CSS 3.4
-- **Animation**: Motion 12.x (`motion/react` for React, Web Animations API for Astro inline scripts)
-- **State Management**: TanStack Query for server state + local `useState` for UI (no Zustand/Redux)
-- **Data Fetching**: TanStack Query 5.17 (with `@tanstack/react-query-devtools` in dev)
-- **Authentication**: auth-astro with NextAuth (Credentials provider)
+- **Animation**: CSS transitions, Svelte `transition:`, Web Animations API in `is:inline` scripts, View Transitions (the `motion` package left on 2026-09-30 with the last React surfaces that used it)
+- **State Management**: TanStack Svelte Query (`@tanstack/svelte-query` 6) for server state in the forum + calendar islands, local Svelte `$state` for UI (no Zustand/Redux); the React query packages (`@tanstack/react-query` + devtools/persisters) were removed on 2026-09-30
+- **Data Fetching**: `createQuery`/`createMutation` from Svelte Query in the forum + calendar islands; plain `fetch` helpers everywhere else
+- **Authentication**: auth-astro over `@auth/core` (Credentials provider); the `next-auth` package is a pinned type-only DEV dependency — auth-astro's `client.ts` imports its sign-in/sign-out option types, svelte-check gains 5 errors in the login/profile islands without it (verified 2026-09-30, do not remove)
 - **Database**: MongoDB 6.3 (direct driver, no Mongoose)
 - **Deployment**: Vercel (serverless) — function region pinned to `fra1` in `vercel.json` (July 2026): the Atlas cluster lives in Frankfurt, and the default `iad1` made every DB roundtrip cross the Atlantic (root cause of recurring `MongoServerSelectionError` blips + slow SSR). Don't remove the `regions` pin; verify with `curl -sI <prod>/api/kiez-stats | grep x-vercel-id` → must show `fra1::fra1`. Full incident record: `docs/runbooks/mongo-region-incident.md`.
 - **Validation**: Zod schemas
@@ -27,7 +27,7 @@ pnpm preview      # Preview production build
 pnpm type-check   # TypeScript validation
 npx -y svelte-check@4  # Svelte diagnostics sweep — dev-only warnings (e.g. state_referenced_locally) never appear in `pnpm build` output
 # CI (checks.yml) gates PRs on ratchet-only error budgets: tsc ≤16, svelte-check ≤81 (27/94→26/93 on 09-06 when the contact-form i18n fix cleared an untyped record, 93→92 on 09-10 with the shared initialsOf helper, 26/92→23/89 on 09-21 when the three unused legacy `/api/*/all` routes were deleted, 23/89→16/81 on 09-30 when the dead legacy React/dark-glass cluster was deleted — lower them when errors get fixed, never raise them)
-# Dead-code sweep (read-only, never installed, never `fix`): `npx -y knip@latest --include files` (text mode — the JSON reporter hides unused files) and `npx -y fallow@latest dead-code` / `fallow dupes`. Both are blind to `scripts/`, `.github/` and `scratchpad/`, so grep those before removing a package (dotenv, exceljs, @astrojs/node are used only there); their false positives here: `auth.config.ts` (loaded by auth-astro by convention), every `*.test.ts` (run by hand with `npx tsx`), all of `src/styles/*.css` (`.astro` frontmatter imports + `global.css` `@import`s), `design/handoffs/**`. Phase 1 (22 dead React/dark-glass files) landed 2026-09-30 (`9f7b92dc`); still open: ~10 unused packages + the `netlify:*` scripts, and the same session/ban/connect prelude copied into 13 API routes (candidate `requireMemberSession()` next to `requireAdminSession()`).
+# Dead-code sweep (read-only, never installed, never `fix`): `npx -y knip@latest --include files` (text mode — the JSON reporter hides unused files) and `npx -y fallow@latest dead-code` / `fallow dupes`. Both are blind to `scripts/`, `.github/` and `scratchpad/`, so grep those before removing a package (dotenv, exceljs, @astrojs/node are used only there); their false positives here: `auth.config.ts` (loaded by auth-astro by convention), every `*.test.ts` (run by hand with `npx tsx`), all of `src/styles/*.css` (`.astro` frontmatter imports + `global.css` `@import`s), `design/handoffs/**`. Phase 1 (22 dead React/dark-glass files) landed 2026-09-30 (`9f7b92dc`); Phase 2 (19 zero-import packages + the `netlify:*` scripts + the `mongoose` SSR external) landed 2026-09-30; still open: the same session/ban/connect prelude copied into 13 API routes (candidate `requireMemberSession()` next to `requireAdminSession()`).
 ```
 
 ## Project Structure
@@ -59,7 +59,7 @@ src/
 │   ├── 500.astro     # SSR error page (dependency-free by design — no session/DB imports ever)
 │   └── *.astro       # Page components
 ├── hooks/
-│   └── api/          # TanStack Query hooks
+│   └── api/          # marketplace fetch helpers (plain functions)
 ├── lib/
 │   ├── mongodb.ts    # Database connection
 │   ├── auth.ts       # Auth utilities
@@ -121,12 +121,12 @@ export const POST: APIRoute = async ({ request }) => {
 `src/lib/adminAlerts.ts` (server-only) pings the single admin: Telegram for everything (new member, moderation-queue item, report, new content/comment, marketplace contact, Sentry issue via `POST /api/hooks/sentry` — secret-guarded, middleware-allowlisted), email mirror (`ADMIN_ALERT_EMAIL`) only for member/moderation/report — the mirror is OFF in prod since 2026-09-14 (var removed to keep Resend Free under 100 mails/day for the debut event). Contract: never-throw (static `captureMessage` + flush), awaited best-effort in the request window, 10s TG timeout, silent no-op without `TELEGRAM_BOT_TOKEN`/`TELEGRAM_ADMIN_CHAT_ID` (preview/dev default). Self-suppression: the admin's own actions never alert (rides the `skipModeration` gates), EXCEPT the marketplace contact relay (`/api/listings/[id]/contact`) which is session-less by design (buyer is anonymous) — an admin using the relay does ping himself. Either/or rule: a creation sends `content_new` OR `moderation_flagged`, never both; news always sends `moderation_flagged` (editorial queue). The `moderation_flagged` alert on fail-safe `moderation_error` records doubles as an OpenAI-outage tripwire.
 
 ### Data Fetching
-- TanStack Query for client-side data fetching
+- TanStack Svelte Query for client-side data fetching in the forum + calendar islands; plain `fetch` helpers elsewhere
 - Custom hooks in `src/hooks/api/`: only the four marketplace ones remain (`useBumpListingMutation`, `useContactListingMutation`, `useListingStatusMutation`, `useListingsQuery`); the legacy forum/news/comment/report hooks and the `QueryProvider` wrapper were removed on 2026-09-30 (dead since the kiosk migrations).
 
 ### State Management
-- TanStack Query for server state (hooks in `src/hooks/api/*`)
-- Local `useState` in container components for UI state — no Zustand/Redux
+- TanStack Svelte Query for server state (`src/lib/forumMutations.ts`, `calendarMutations.ts`, `savedEventsQueries.ts`, `userProfilesQueries.ts`)
+- Local Svelte `$state` in the island orchestrators for UI state — no Zustand/Redux
 - Canonical v5 mutation pattern: optimistic `onMutate` + `onError` rollback + single `onSettled` invalidation. Never stack `onSuccess` + `onSettled` invalidations (causes double-refetch flicker).
 
 ### Content Moderation
@@ -151,7 +151,7 @@ export const POST: APIRoute = async ({ request }) => {
 See `src/components/admin/CLAUDE.md` — full notes load when working in that subtree.
 
 ### Newsboard
-See `src/pages/api/news/CLAUDE.md` — full notes load when working in that subtree (or read directly for UI work — frontend lives at `src/components/NewsCardsWrapper.tsx` and `src/components/ui/NewsCards.tsx`). **Second daily fetch (2026-09-22):** besides the Vercel cron (06:00 UTC), `.github/workflows/news-afternoon-fetch.yml` rings the same `/api/news/fetch-daily` route ~15:00 Berlin via GitHub Actions (Vercel Hobby allows only one cron/day, same workaround as the air logger) — dedup is by `sourceUrl`/`title` with no time window, so the afternoon run naturally sees the morning's docs and only saves what's new.
+See `src/pages/api/news/CLAUDE.md` — full notes load when working in that subtree (or read directly for UI work — frontend lives in `src/components/newsboard/kiosk/`). **Second daily fetch (2026-09-22):** besides the Vercel cron (06:00 UTC), `.github/workflows/news-afternoon-fetch.yml` rings the same `/api/news/fetch-daily` route ~15:00 Berlin via GitHub Actions (Vercel Hobby allows only one cron/day, same workaround as the air logger) — dedup is by `sourceUrl`/`title` with no time window, so the afternoon run naturally sees the morning's docs and only saves what's new.
 
 **Kiosk UI** (June 2026): the Newsboard index was migrated to the kiosk design system — `src/pages/newsboard.astro` + `src/components/newsboard/kiosk/` (Svelte islands). Full notes: `src/components/newsboard/kiosk/CLAUDE.md` (loads when working in that subtree). **Recency order + Kiez ink cards (2026-09-22, refined same day 12:18):** the server sorts a day by the article's real `publishedAt` first; inside today's articles the island re-orders by `aiRelevanceScore` desc (publishedAt tiebreak, user decision to keep the score „just for sorting the articles of today") via `orderBoard()`, which also picks the lead (today's top score, else yesterday's newest); GESTERN/ÄLTER stay publish-time order. Kiez/Neukölln-sourced articles print as ink cards with an „Aus dem Kiez" kicker so they stay visible — see the area file's „Kiez cards + lead pick" section. **Card grid (2026-09-22 afternoon):** the lead card is gone — cards sit in a 1/2/3-column grid, today's top two scores print double-width (bento), and the save control is the app's 🔖 speichern/gespeichert pill (area file „Card grid + bento + save pill").
 
@@ -245,19 +245,8 @@ SENTRY_WEBHOOK_SECRET=  # Random 32+ chars guarding POST /api/hooks/sentry. Unse
 ```
 
 ## Component Patterns
-
-### Client-Side React Components
-Use `client:load` or `client:only="react"` directive:
-```astro
-<CalendarWrapper client:only="react" />
-<ForumWrapper client:only="react" session={session} />
-```
-Note: `ForumWrapper` uses `client:only="react"` (not `client:load`) because the forum is fully interactive (TanStack Query, client-side state) with no SEO benefit from server rendering.
-
-### Wrapper Pattern
-Complex React components use a wrapper pattern:
-- `CalendarWrapper.tsx` → `CalendarContainer.tsx`
-- `ForumWrapper.tsx` → `ForumContainer.tsx`
+### Client-side islands
+Everything interactive is a Svelte 5 island (`client:only="svelte"` for the orchestrators that read the URL or session on the client, `client:load` for the rest). The only React islands left are `ToastProvider.tsx` + `ConfirmDialog.tsx` (mounted by the layouts) and the `src/emails/*.tsx` templates (server-rendered with React Email). The old React wrapper pattern (`CalendarWrapper` → `CalendarContainer`, `ForumWrapper` → `ForumContainer`) is gone since the kiosk migrations.
 
 ### Forum patterns (List/Pagination, Performance/SSR, Post Images, Save/Bookmark, Search & Tag Filtering, Card Interactions)
 See `src/components/forum/kiosk/CLAUDE.md` — full notes load when working in that subtree. **`@handle` mentions in posts and comments since 2026-09-21** (resolved when the text is saved, stored on the document as `mentions: [{ handle, userId }]`, linked by user id, notified once and only when the content is public, autocomplete after „@", `@admin` alias for the admin account since 2026-09-26) — section „Mentions" there; not in listings, events or News. **`@alle` Admin-Hinweis since 2026-09-22** (admin-only broadcast to active members, same forum posts + comments scope) — same section, see „`@alle` Admin-Hinweis". Since 2026-09-13 an author can change a post's kind from edit mode (cross-collection move, `src/lib/forum/movePost.ts` + `POST /api/posts/move/[id]`; old URLs 302) — details under „Kind change in edit mode" there. **Search since 2026-09-24, site-wide since 2026-09-25**: masthead magnifier → centred modal over a blurred scrim → `/search`; one endpoint `GET /api/search` over Forum, Kalender, Markt, News and Blog, each under its own index page's visibility (`src/lib/search/`, area file `src/components/search/CLAUDE.md`). The forum spans dirs (`src/pages/api/topics/*`, `src/lib/topicsQuery.ts`, `src/lib/forumQueryOptions.ts`); read the area file directly when working on those server-side pieces.
@@ -276,20 +265,12 @@ See `src/components/auth/kiosk/CLAUDE.md` — full notes load when working in th
 ### Profile (kiosk) patterns (own profile, Plan A)
 See `src/components/profile/kiosk/CLAUDE.md` — full notes load when working in that subtree. Spans `src/lib/profile/*`, `src/pages/api/profile/*`, `src/pages/api/users/{update,profiles}.ts`; read the area file directly when working on those server-side pieces. Ochre accent (shared with Auth); `/profile` is NOT redirect-protected — it renders its own logged-out state in-page (state §10) rather than bouncing through middleware. Plan A = own profile only; public profile (`/nachbarn/[handle]`), Chronik, and konto-change flows are Plan B.
 
-### TanStack Query — optimistic updates (gotchas)
-- **Use real userId, not placeholders**: optimistic `setQueryData` that mutates `likedBy: [...ids, 'optimistic-user-id']` will not match the real user id in subsequent `.includes(user.id)` checks, so UI state (heart filled/unfilled) won't flip until server refetch. Pass the actual `user?.id` into the mutation hook. See `useLikeMutation.ts`.
+### TanStack Query — optimistic updates (gotchas; Svelte Query today, learned on the React side)
+- **Use real userId, not placeholders**: optimistic `setQueryData` that mutates `likedBy: [...ids, 'optimistic-user-id']` will not match the real user id in subsequent `.includes(user.id)` checks, so UI state (heart filled/unfilled) won't flip until server refetch. Pass the actual `user?.id` into the mutation. Worked example: `src/lib/forumMutations.ts`.
 - **Don't stack `onSuccess` + `onSettled` invalidations** with `refetchType: 'all'` — the double refetch overwrites the optimistic state and causes visible flicker/delay. Canonical v5 pattern: `onMutate` does the optimistic write + snapshot, `onError` rolls back, `onSettled` runs a single `invalidateQueries`. Drop `onSuccess` entirely.
 
 ### Calendar Date Range Selection
-- **Click-to-select**: Click a future day to select it (teal highlight + speech-bubble tooltip), click another future day to select a range (teal highlight across days)
-- **Tooltip**: Floating speech-bubble with "+" (mobile) / "+ Event" (desktop) above selected cell — opens EventModal with dates pre-filled (09:00–17:00, or next full hour if today)
-- **State design**: `selectedDate` (sidebar filtering) is separate from `rangeStart`/`rangeEnd` (event creation) — past date clicks update sidebar only and clear range
-- **Auto-swap**: If second click is before start date, they swap automatically
-- **Extend/shorten**: Click after end → extends range forward; click within range → shortens to that day
-- **Pivot**: Click end date again → makes it the new start (ready to select new range from there)
-- **Deselect**: Click start date (no range) → deselects; click before start (range exists) → new selection
-- **Auth-gated**: Tooltip only appears for logged-in users
-- **`prefillDates` memoized** via `useMemo` in CalendarContainer to prevent useEffect churn in EventModal
+Lives in the kiosk calendar — click/drag-to-select ranges, the compose prefill and the touch drag are documented in `src/components/calendar/kiosk/CLAUDE.md`. The React `CalendarContainer`/`EventModal` version this block used to describe (speech-bubble tooltip, `prefillDates` memo) was deleted with the kiosk migration.
 
 ### Pagination
 - The React `Pagination.tsx` component was removed on 2026-09-30 (dead since the kiosk migrations); every live pager is written inline in Svelte.
@@ -322,7 +303,7 @@ See `src/components/blog/CLAUDE.md` — full notes load when working in that sub
 **No live surface uses these any more** (2026-09-30: only comments in `KioskLayout.astro` mention them); the CSS block in `global.css` stays until a separate decision removes it. Five opt-in CSS utilities in `global.css` layer the dark-glass look. Pair them as needed with standard Tailwind dark-glass classes (`bg-white/[0.06] backdrop-blur-sm border border-white/[0.15] ...`).
 
 - **`.glass-inner-glow`** — Apple-style `box-shadow: inset 0 0 22px -4px rgba(255,255,255,0.4)`. Zero cost. Drop-in on any glass surface for a subtle inner highlight.
-- **`.glass-luxe`** — full-area liquid glass: `::after` with `backdrop-filter: blur(8px)` + `#glass-distortion` SVG filter (wobble). Used on the profile hero card. Host must have **no** `bg-*` or `backdrop-blur-*` — the pseudo handles it.
+- **`.glass-luxe`** — full-area liquid glass: `::after` with `backdrop-filter: blur(8px)` + `#glass-distortion` SVG filter (wobble). Was used on the legacy profile hero card; no live user since 2026-09-30. Host must have **no** `bg-*` or `backdrop-blur-*` — the pseudo handles it.
 - **`.glass-luxe-edge`** — same wobble as luxe but masked to an edge frame via radial `mask-composite: exclude`. Host keeps its own bg color visible in the center. Used on forum cards so the tan `bg-[#c9c4b9]/75` remains the trademark center while edges show the glass refraction. Base uses `#glass-distortion-subtle` (gentler scale/blur settings).
 - **`.glass-smooth`** — same shape as `glass-luxe` but **no SVG filter**: flat blur + tint, no wobble. Use when the wobble looks too fragmented or the surface doesn't need refraction.
 - **`.glass-smooth-edge`** — flat blur + tint masked to an edge frame. Use when you want a glass frame without the SVG cost.
@@ -368,10 +349,9 @@ Usage:
 
 Self-disables when the host has no box (e.g. `lg:contents` to dissolve the wrapper on desktop): `scrollWidth/clientWidth` read 0, no attrs match, no fade applies. So you can pair it with responsive layouts that switch from "scroll on mobile" to "flex-wrap on desktop" without extra responsive CSS. **Caveat:** `mask-image` masks the entire painted output including borders — if the scroll host has a `border-b border-dashed`, the dashed line will fade at the edges in mid-scroll. Move the border to a sibling element if that looks distracting. React-side: import the function directly and drive it from a `useEffect` — the lifecycle just doesn't get the Svelte action's automatic mount/destroy. Used today: forum TagBar (filters + tag rows), calendar mobile category rail, event-compose category rail.
 
-### Animation (Motion Library)
-- **Calendar**: `motion/react` — spring-physics slide on month change (grid slides horizontally, month name slides vertically). `AnimatePresence mode="popLayout"` for smooth height transitions between 4/5/6-week months. Direction tracked via `useRef`.
-- **Newsboard**: `motion/react` — `whileInView` scroll-triggered card reveals with per-column stagger delay
-- **Splash screen**: Native Web Animations API (fade-in/out) — `is:inline` context, no imports
+### Animation
+- The `motion` package (`motion/react`) was removed on 2026-09-30 with the React calendar/newsboard it animated; the logo-video splash went with `BaseLayout`.
+- **Live today**: CSS transitions and Svelte `transition:` in the islands, Web Animations API in `is:inline` scripts, Astro View Transitions between pages.
 - **Kiez dashboard**: Scroll-triggered section reveal via IntersectionObserver (`use:reveal` Svelte action). CSS transitions for opacity + translateY. Respects `prefers-reduced-motion`.
 
 ## Color Palette
@@ -410,7 +390,7 @@ When migrating a surface into kiosk, swap kicker + italic-accent text to the pag
 ## Common Errors to Avoid
 
 ### SSR Compatibility
-- `typewriter-editor` requires dynamic import inside `onMount()` to avoid SSR errors - it accesses browser globals (KeyboardEvent) at module load time
+- A library that touches browser globals at module load (the former `typewriter-editor`, removed 2026-09-30, read `KeyboardEvent` at import) needs a dynamic import inside `onMount()` — a static import breaks SSR
 - **Prerendered pages + auth**: Middleware uses `context.isPrerendered` to skip `getSession()` on prerendered routes (avoids `Astro.request.headers` warning). The legacy `BlogBaseLayout` (deleted in the kiosk blog migration, July 2026) used to read session from `Astro.locals.session` because `/blog` was prerendered; the kiosk `/blog` routes are SSR (no `prerender` export anywhere under `src/pages/blog`) and go through `KioskLayout`, which calls `getSession(Astro.request)` directly like every other kiosk page — see `src/components/blog/CLAUDE.md`'s "Decision 1" for why SSR was required.
 - **Navbar on prerendered pages**: `Navbar.tsx` and `BaseLayout` were removed on 2026-09-30 (dead since the kiosk migrations); the kiosk chrome is `KioskNav.svelte`, fed by `KioskLayout`'s SSR session.
 - **QueryProvider hydration**: `src/providers/QueryProvider.tsx` was removed on 2026-09-30 (dead since the kiosk migrations); no page mounts a React Query provider any more.
@@ -436,7 +416,7 @@ When migrating a surface into kiosk, swap kicker + italic-accent text to the pag
   ```
 - **If sticky stops working anywhere in the project**, check `global.css` and any container components for `overflow-x: hidden` on the axis-scroll ancestors. Use `getComputedStyle(el).overflowY` in devtools to verify — the "upgraded" value shows as `auto` even if you wrote `visible`.
 - **This was a real latent bug discovered in March 2026.** The fix preserves sticky positioning globally (sticky headers, blog sidebars, calendar agenda headers, and any future sticky usage).
-- **Corollary (Aug 2026, avatar-menu mobile sheet): the `html { overflow-x: clip }` rule ALSO defeats body-only scroll-locks.** With html's overflow non-`visible`, the body's overflow no longer propagates to the viewport — `document.body.style.overflow = 'hidden'` compiles, looks right in devtools, and does nothing (page still scrolls). Any JS scroll-lock in this project must set `overflow: hidden` on `document.documentElement` — **and on `<html>` ONLY** (inline style, save/restore the previous inline value so the stylesheet's `clip` survives). **Corrected 2026-09-19:** until then this note said „BOTH html AND body", and every lock did that. Measured on the real page: `html` alone locks (touch + wheel); `body` alone locks nothing; and `body { overflow: hidden }` turns `<body>` into its own scroll container, so the sticky masthead sticks to `<body>` instead of the screen — with the account sheet, the notification panel or any `lockPageScroll()` dialog open at `scrollY > 0`, the top bar scrolled away under the scrim (prod: header top `-380` at `scrollY 380`). Use `lockPageScroll()` (`src/lib/scrollLock.ts`); worked hand-written examples: `AvatarMenu.svelte`, `NotificationPanel.svelte`. Probe: `scratchpad/scrolllock-sticky-probe.cjs` (10 checks: bar stays stuck + page really locked, for all three locks). Still body-only and therefore NOT locking anything: `AdmModalShell.svelte` (admin bar is not sticky, so nothing un-sticks there) and the legacy `Navbar.tsx`. React modals are unaffected — they use `react-remove-scroll`, which handles this.
+- **Corollary (Aug 2026, avatar-menu mobile sheet): the `html { overflow-x: clip }` rule ALSO defeats body-only scroll-locks.** With html's overflow non-`visible`, the body's overflow no longer propagates to the viewport — `document.body.style.overflow = 'hidden'` compiles, looks right in devtools, and does nothing (page still scrolls). Any JS scroll-lock in this project must set `overflow: hidden` on `document.documentElement` — **and on `<html>` ONLY** (inline style, save/restore the previous inline value so the stylesheet's `clip` survives). **Corrected 2026-09-19:** until then this note said „BOTH html AND body", and every lock did that. Measured on the real page: `html` alone locks (touch + wheel); `body` alone locks nothing; and `body { overflow: hidden }` turns `<body>` into its own scroll container, so the sticky masthead sticks to `<body>` instead of the screen — with the account sheet, the notification panel or any `lockPageScroll()` dialog open at `scrollY > 0`, the top bar scrolled away under the scrim (prod: header top `-380` at `scrollY 380`). Use `lockPageScroll()` (`src/lib/scrollLock.ts`); worked hand-written examples: `AvatarMenu.svelte`, `NotificationPanel.svelte`. Probe: `scratchpad/scrolllock-sticky-probe.cjs` (10 checks: bar stays stuck + page really locked, for all three locks). Still body-only and therefore NOT locking anything: `AdmModalShell.svelte` (admin bar is not sticky, so nothing un-sticks there) (the legacy `Navbar.tsx` had the same body-only lock and is gone). The React modals were unaffected — they used `react-remove-scroll`, removed with them on 2026-09-30.
 
 ### `backdrop-filter` creates a containing block for `position: fixed` descendants
 - **Any element with `backdrop-filter: blur(*)` (or `filter`, `transform`, `will-change`, `perspective`, `contain: paint/layout/strict`) creates a containing block for its `position: fixed` descendants.** This means a modal with `position: fixed inset-0` inside a glass container with `backdrop-blur-*` will position relative to the container, not the viewport — rendering off-screen or partially visible.
@@ -445,10 +425,10 @@ When migrating a surface into kiosk, swap kicker + italic-accent text to the pag
 - **Known offenders to watch:** `.dark-glass-gradient` (fine — it's a sibling, not ancestor), any `bg-*/[n] backdrop-blur-*` wrapper that has a modal-opening action inside. If you add a new glass wrapper, audit whether any descendant can open a fixed overlay.
 - **Unlike the sticky/overflow gotcha, this one was masked by working tests** — the modal works when opened from a non-glass-wrapped page, fails on forum/calendar/etc. First hit: forum ReadMoreModal in April 2026.
 
-### Modal scroll-lock: wrap in `<RemoveScroll>` from `react-remove-scroll`
-- The five React modals that used `<RemoveScroll enabled={isOpen}>` (ReportModal, EventModal, PostModal, ReadMoreModal, EventViewModal) are gone (`ReportModal.tsx` removed on 2026-09-30 (dead since the kiosk migrations)); the notes below stay as the recipe for any future React modal. The lib handles iOS touch-scroll, desktop scrollbar-gutter compensation, and nested-scroller preservation.
+### Modal scroll-lock
+- The five React modals that used `<RemoveScroll enabled={isOpen}>` (ReportModal, EventModal, PostModal, ReadMoreModal, EventViewModal) are gone (`ReportModal.tsx` removed on 2026-09-30, dead since the kiosk migrations) and `react-remove-scroll` was uninstalled the same day; the notes below stay as the recipe for any future React modal (install it again then). The lib handles iOS touch-scroll, desktop scrollbar-gutter compensation, and nested-scroller preservation.
 - Replaced earlier `overflow: hidden` on html/body and `position: fixed; top: -scrollY` patterns — both had edge cases (iOS touch leaks, fixed-descendant conflicts with `backdrop-filter` containing blocks).
-- For new modals: just wrap in `<RemoveScroll enabled={isOpen}>` and drop any bespoke scroll-lock `useEffect`.
+- For a future React modal: add `react-remove-scroll` back, wrap in `<RemoveScroll enabled={isOpen}>` and drop any bespoke scroll-lock `useEffect`. Svelte modals use `lockPageScroll()` (next bullet).
 - **Svelte native `<dialog>` modals are NOT covered by the browser** (audit 2026-09-09): `showModal()` makes the page inert but the document still scrolls under the backdrop. All four Svelte ones (`EventDetailModal`, `KioskReportModal`, `PDeleteAccountModal`, marketplace `DetailGallery` lightbox) plus the React `ConfirmDialog` call `lockPageScroll()` from `src/lib/scrollLock.ts` while open — it locks `<html>` only (see the `overflow-x: clip` corollary above for why never `<body>`) and compensates the scrollbar gutter. Any new native-dialog island must do the same; a comment saying "the browser handles scroll-lock" is wrong.
 
 ### Nested-island Svelte `<style>` blocks get orphaned in prod builds

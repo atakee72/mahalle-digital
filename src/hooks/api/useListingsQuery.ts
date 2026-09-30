@@ -6,8 +6,8 @@
  * The Svelte orchestrator (Task 2.5) calls fetchListingsClient() inside a
  * $effect, mirroring the pattern used by MarketplaceBrowseInner.svelte.
  *
- * If a React surface ever needs listings, wire up a useQuery wrapper here
- * importing from '@tanstack/react-query'.
+ * There is no React Query in the project any more (removed 2026-09-30);
+ * a future React surface would add it back and wrap this function.
  */
 import type { Listing } from '../../types/listing';
 

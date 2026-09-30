@@ -9,9 +9,9 @@ A modern, performant community web application built with Astro, TypeScript, and
 - **Framework**: Astro 5.x with Hybrid SSR/SSG
 - **UI**: React 18.2 + Svelte 5 for interactive islands
 - **Styling**: Tailwind CSS 3.4 with kiosk design system (paper-warm + ink borders — migration from legacy dark-glass completed July 2026)
-- **Animation**: Motion 12.x (`motion/react`) + Web Animations API for `is:inline` scripts
-- **State Management**: TanStack Query for server state, local `useState` for UI (no Zustand/Redux)
-- **Data Fetching**: TanStack Query 5.17 with localStorage persistence (24h)
+- **Animation**: CSS transitions, Svelte `transition:`, Web Animations API for `is:inline` scripts, Astro View Transitions
+- **State Management**: TanStack Svelte Query for server state in the forum + calendar islands, local Svelte `$state` for UI (no Zustand/Redux)
+- **Data Fetching**: `createQuery`/`createMutation` (`@tanstack/svelte-query` 6) in the islands, plain `fetch` helpers elsewhere
 - **Database**: MongoDB 6.3 (direct driver, no Mongoose)
 - **Authentication**: auth-astro with NextAuth (Credentials provider, JWT strategy)
 - **Deployment**: Vercel (serverless, functions pinned to `fra1` — co-located with the Frankfurt Atlas cluster)
@@ -42,7 +42,7 @@ src/
 │   │   └── kiez-air.ts    # Live BLUME air quality proxy
 │   └── *.astro       # Page components
 ├── hooks/
-│   └── api/          # TanStack Query hooks
+│   └── api/          # marketplace fetch helpers (plain functions)
 ├── lib/
 │   ├── mongodb.ts    # Database connection
 │   ├── auth.ts       # Auth utilities
@@ -182,7 +182,7 @@ Production (`mahalle`) and development (`mahalle-dev`) are separate databases on
 
 - **Hybrid Rendering**: SSG for static pages, SSR for dynamic content
 - **Type Safety**: Full TypeScript with Zod validation
-- **State Management**: Local `useState` for UI, TanStack Query for server state (with 24h localStorage persistence)
+- **State Management**: Local Svelte `$state` for UI, TanStack Svelte Query for server state
 - **MongoDB Integration**: Type-safe database operations (direct driver)
 - **NextAuth Authentication**: Credentials provider with bcrypt + JWT strategy
 - **Responsive Design**: Mobile-first approach
@@ -207,8 +207,7 @@ Production (`mahalle`) and development (`mahalle-dev`) are separate databases on
 - **Notification center** (Aug 2026, R1 + R2): bell + panel in the kiosk nav — neighbors get notified about replies to their posts, moderation decisions (incl. strike number), official announcements (broadcast), and marketplace inquiries. Fan-out on write into a `notifications` collection (90d TTL), read-time actor-name join (deletion-safe), copy rendered client-side from i18n (locale toggle works retroactively), 90s visible-tab polling — plus optional web push (PWA — install Mahalle to the home screen on iOS) via a push-only service worker, no offline caching.
 - **Forum bookmarks**: Save/bookmark posts with server-side persistence (`savedPosts` collection) and optimistic UI updates. Same pattern for saved events (`savedEvents`).
 - **Forum search & tag filtering**: Client-side filtering by title, body, author name, and tags. Clickable tag pills set the search value.
-- **Splash screen**: One-per-session logo video intro (compressed to ~56 KB H.264). Skips on sub-pages, reduced-motion users, and subsequent visits. Dual-gate dismiss (video end + `window.load`) with 4s safety timeout and autoplay-blocked fallback for mobile Firefox.
-- **Performance**: Cloudinary `f_auto,q_auto` URL rewriter (`src/utils/cloudinary.ts`) applied to all user-uploaded images, SSR prefetch for forum default tab, batched `$in` author lookups, and localStorage-persisted React Query cache for instant page switches.
+- **Performance**: Cloudinary `f_auto,q_auto` URL rewriter (`src/utils/cloudinary.ts`) applied to all user-uploaded images, SSR prefetch for forum default tab and batched `$in` author lookups.
 
 ## 🛡️ Content Moderation
 
@@ -433,7 +432,6 @@ Required environment variables:
 For more information:
 - [Astro Documentation](https://docs.astro.build)
 - [TanStack Query](https://tanstack.com/query/latest)
-- [Motion Documentation](https://motion.dev)
 - [auth-astro](https://github.com/nowatica/auth-astro)
 - [MongoDB Node Driver](https://www.mongodb.com/docs/drivers/node/)
 - [Vercel Deployment](https://vercel.com/docs)

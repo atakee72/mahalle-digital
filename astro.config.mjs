@@ -61,7 +61,6 @@ export default defineConfig({
     ssr: {
       external: [
         'mongodb',
-        'mongoose',
         'bcrypt',
         'jsonwebtoken',
         '@mongodb-js/saslprep',

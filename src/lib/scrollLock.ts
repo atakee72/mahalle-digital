@@ -4,8 +4,8 @@
 // Why this exists: a native <dialog> opened with showModal() makes the page
 // INERT but does NOT stop it from scrolling (wheel/touch on the backdrop
 // still moves the document — verified 2026-09-09, Chromium, 390×844). The
-// React modals get this from react-remove-scroll; the Svelte native-dialog
-// modals call lockPageScroll() while open.
+// The old React modals got this from react-remove-scroll (both gone since
+// 2026-09-30); the Svelte native-dialog modals call lockPageScroll() while open.
 //
 // Lock <html>, and ONLY <html>. global.css sets `html { overflow-x: clip }`
 // (the sticky fix), so <html>'s overflow is never `visible` and <body>'s

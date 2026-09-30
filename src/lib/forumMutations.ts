@@ -1,6 +1,6 @@
 /**
- * Forum mutations — Svelte equivalents of the React hooks in
- * src/hooks/api/useTopicsQuery.ts and useCommentsQuery.ts.
+ * Forum mutations — Svelte successors of the React hooks that lived in
+ * src/hooks/api/useTopicsQuery.ts and useCommentsQuery.ts (deleted 2026-09-30).
  *
  * Built on @tanstack/svelte-query's createMutation. Each mutation owns
  * the same optimistic + rollback semantics as the React side, adapted
