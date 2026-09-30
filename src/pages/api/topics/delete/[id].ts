@@ -3,6 +3,7 @@ import { requireMemberSession } from '../../../../lib/auth';
 import { connectDB } from '../../../../lib/mongodb';
 import { invalidateKiezKontext } from '../../../../lib/kiez/kontext';
 import { deleteCommentsForPost } from '../../../../lib/comments/cascade';
+import { purgeNotificationsFor } from '../../../../lib/notificationPurge';
 import { ObjectId } from 'mongodb';
 
 export const DELETE: APIRoute = async ({ params, request }) => {
@@ -59,7 +60,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     }
 
     // Cascade the comment thread (reported comments stay in the queue, marked deleted).
-    await deleteCommentsForPost(db, id);
+    const cascade = await deleteCommentsForPost(db, id);
+    // Bell rows about the post and its thread target the post id; the ids of the
+    // deleted comments catch the one moderation-row shape that targets a comment.
+    await purgeNotificationsFor(db, [id, ...cascade.commentIds]);
 
     // A pending report/flag on now-deleted content stays in the moderation
     // queue, marked deleted (still strikeable from the stored snapshot).

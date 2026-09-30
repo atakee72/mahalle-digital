@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { connectDB } from '../../../../lib/mongodb';
 import { requireAdminSession } from '../../../../lib/auth';
 import { deleteCommentsForPost } from '../../../../lib/comments/cascade';
+import { purgeNotificationsFor } from '../../../../lib/notificationPurge';
 import { AdminAnnouncementUpdateSchema } from '../../../../schemas/forum.schema';
 import { parseRequestBody } from '../../../../schemas/validation.utils';
 import { populateAuthors } from '../../../../lib/topicsQuery';
@@ -125,7 +126,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 
     await collection.deleteOne({ _id: new ObjectId(id) });
     // Officials can be commented like any announcement — cascade the thread.
-    await deleteCommentsForPost(db, id);
+    const cascade = await deleteCommentsForPost(db, id);
+    // Bell rows about the post and its thread target the post id; the ids of the
+    // deleted comments catch the one moderation-row shape that targets a comment.
+    await purgeNotificationsFor(db, [id, ...cascade.commentIds]);
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requireMemberSession } from '../../../../lib/auth';
 import { connectDB } from '../../../../lib/mongodb';
+import { purgeNotificationsFor } from '../../../../lib/notificationPurge';
 import { ObjectId } from 'mongodb';
 
 // Helper function to extract author ID from various formats
@@ -16,8 +17,8 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     const { commentId } = params;
 
-    if (!commentId) {
-      return new Response(JSON.stringify({ error: 'Comment ID is required' }), {
+    if (!commentId || !ObjectId.isValid(commentId)) {
+      return new Response(JSON.stringify({ error: 'Invalid comment ID' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -55,6 +56,8 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 
     // Delete the comment
     await commentsCollection.deleteOne({ _id: new ObjectId(commentId) });
+    // Mention / @alle / „replied" rows that name this comment as their source.
+    await purgeNotificationsFor(db, [commentId]);
 
     // Remove comment reference from the parent post
     // We need to check all collections since we don't know the parent type

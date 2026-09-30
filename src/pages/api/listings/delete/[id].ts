@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requireMemberSession } from '../../../../lib/auth';
 import { connectDB } from '../../../../lib/mongodb';
+import { purgeNotificationsFor } from '../../../../lib/notificationPurge';
 import { ObjectId } from 'mongodb';
 import type { Listing } from '../../../../types/listing';
 import { isValidObjectId } from '../../../../schemas/validation.utils';
@@ -56,6 +57,8 @@ export const DELETE: APIRoute = async ({ request, params }) => {
     // deliberately KEPT here (seller's own snapshots, no third-party PII;
     // the account-deletion pipeline removes it wholesale later).
     await db.collection('listingContacts').deleteMany({ listingId: id });
+    // Seller's „Anfrage" and moderation rows for this listing.
+    await purgeNotificationsFor(db, [id]);
 
     // A pending report/flag on now-deleted content stays in the moderation
     // queue, marked deleted (still strikeable from the stored snapshot).
