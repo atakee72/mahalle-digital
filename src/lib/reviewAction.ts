@@ -106,7 +106,10 @@ export async function processReviewAction(
       if (flaggedContent.contentType === 'comment') {
         const flaggedAny = flaggedContent as any;
 
-        if (!isRejection) {
+        if (flaggedContent.contentDeleted === true) {
+          // The author deleted the comment while it was in the queue (self-delete
+          // keeps the report): nothing to re-attach, nobody to tell it „replied".
+        } else if (!isRejection) {
           // APPROVED: Add comment to parent's comments array
           let parentPostId = flaggedAny.parentPostId;
           let parentCollection = flaggedAny.parentCollection;
@@ -217,7 +220,10 @@ export async function processReviewAction(
   // Notify the author of the decision — every reviewed item, including clean
   // approvals (silent rejection was the dark pattern this feature fixes; an
   // approved item reads as „ist veröffentlicht" per the CD copy).
-  if (flaggedContent.contentId && flaggedContent.contentType && flaggedContent.authorId) {
+  // An item the author already deleted gets no „ist veröffentlicht" row (it would
+  // point at nothing); a rejection still notifies — it carries the strike.
+  const announceOutcome = isRejection || flaggedContent.contentDeleted !== true;
+  if (announceOutcome && flaggedContent.contentId && flaggedContent.contentType && flaggedContent.authorId) {
     const excerpt = (flaggedContent.title ?? flaggedContent.body ?? '').slice(0, 80);
     const flaggedAny = flaggedContent as any;
     // A moderated COMMENT deep-links to its parent post when we know it
@@ -236,6 +242,9 @@ export async function processReviewAction(
         // The moderated thing itself — target.contentType can't carry this for
         // comments (it points at the parent page). Drives Beitrag/Kommentar copy.
         contentKind: flaggedContent.contentType,
+        // The moderated thing's own id — for a comment the target is the PARENT
+        // post, so this is what a comment delete purges by (notificationPurge.ts).
+        sourceId: String(flaggedContent.contentId),
         // CD copy renders „{n}. Verwarnung" — the strike NUMBER, not a flag.
         // newStrikeCount is populated by the strike block above: ≥1 when the
         // author doc was found and updated, 0 if the lookup missed (stale/
