@@ -19,8 +19,9 @@ export interface NotificationMeta {
    *  for comments (it points at the PARENT page the row links to). Drives the
    *  „Beitrag" vs „Kommentar" copy variants. */
   contentKind?: string;
-  /** mention only: id of the post/comment that CONTAINS the mention — the idempotency
-   *  key (target.contentId is the PARENT page for comments, so it cannot serve). */
+  /** mention/admin_hint: id of the post/comment that CONTAINS the mention — the idempotency
+   *  key; comment („replied") rows since 2026-09-30: the comment's own id. Either way the key
+   *  a delete purges by (target.contentId is the PARENT page for comments, so it cannot serve). */
   sourceId?: string;
 }
 

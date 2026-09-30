@@ -119,6 +119,11 @@ export const POST: APIRoute = async ({ request }) => {
           type: 'comment',
           actorId: userId,
           target: commentTarget(parentCollection, topicId, parentDoc.title ?? ''),
+          // The comment behind this row — lets a comment delete purge it
+          // (target.contentId is the PARENT post). No contentKind: the
+          // panel/push copy for 'comment' rows must not switch to the
+          // mention wording.
+          meta: { sourceId: result.insertedId.toString() },
         });
       }
 

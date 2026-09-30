@@ -139,6 +139,8 @@ export async function processReviewAction(
                 type: 'comment',
                 actorId: flaggedContent.authorId,
                 target: commentTarget(parentCollection, parentPostId, parentDoc.title ?? ''),
+                // See comments/create.ts — the comment id lets a comment delete purge this row.
+                meta: { sourceId: String(flaggedContent.contentId) },
               });
             }
           }
