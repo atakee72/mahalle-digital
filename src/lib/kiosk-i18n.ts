@@ -330,10 +330,10 @@ const de = {
 
   // Rate-limited compose (sandbox-only in 4b — wired in 5b).
   // Note: API enforces 5 per rolling 24h, not per hour as JSX implies.
-  'state.rate.kicker': 'LIMIT ERREICHT · 5 BEITRÄGE / TAG',
+  'state.rate.kicker': 'LIMIT ERREICHT · {n} BEITRÄGE / TAG',
   'state.rate.title': 'Pause für Mahalle.',
   'state.rate.body':
-    'Du hast 5 Beiträge in den letzten 24 Stunden geschrieben — das ist viel! Wir geben Mahalle und allen anderen Lesenden ein bisschen Zeit.',
+    'Du hast {n} Beiträge in den letzten 24 Stunden geschrieben — das ist viel! Wir geben Mahalle und allen anderen Lesenden ein bisschen Zeit.',
   'state.rate.unlocks': 'ZURÜCK ZUM POSTEN IN',
   'state.rate.coda':
     'In der Zwischenzeit: Lesen, Kommentieren, ein Beitrag merken. Auch Stille ist Teil der Nachbarschaft.',
@@ -506,7 +506,7 @@ const de = {
     'Der Knopf links wird erst aktiv, wenn du „löschen" tippst. Bewusste Reibung — wir schützen den Thread.',
 
   // Static rate-limit copy (live surface — sandbox keeps the clock).
-  'state.rate.body.short': '5 heute · komm morgen wieder.',
+  'state.rate.body.short': '{n} heute · komm morgen wieder.',
 
   // Live mode for the feed footer.
   'feed.footer.live': '● LIVE · post just landed',
@@ -1175,7 +1175,7 @@ const de = {
   'news.forumcta.heading': 'Was meinst du dazu?',
   'news.forumcta.body': 'Eröffne ein Thema im Forum — der Artikel-Link wird automatisch eingefügt.',
   'news.forumcta.button': 'im Forum diskutieren →',
-  'news.forumcta.exhausted': 'Heute schon 5 Themen erstellt — morgen geht’s weiter.',
+  'news.forumcta.exhausted': 'Tageslimit für Forenbeiträge erreicht — morgen geht’s weiter.', // DRAFT
   'news.forumcta.exhaustedButton': 'Tageskontingent erreicht',
   // ── Newsboard · Phase 2 (submit) ──────────────────────────
   'news.submit.section': 'Sektion',
@@ -1198,7 +1198,7 @@ const de = {
   'news.submit.quotaUsed': 'EINREICHUNGEN HEUTE',
   'news.submit.quotaRemaining': 'verbleibend · Reset um Mitternacht',
   'news.submit.quotaReached': 'Tageskontingent erreicht',
-  'news.submit.quotaReachedTitle': '5 / 5 Einreichungen heute genutzt.',
+  'news.submit.quotaReachedTitle': '{used} / {max} Einreichungen heute genutzt.',
   'news.submit.quotaReachedBody': 'Hilft uns, die Nachbarschaft fokussiert zu halten. Morgen kannst du wieder einreichen.',
   'news.submit.sectionRequired': 'Bitte eine Sektion wählen.',
   // ── Newsboard · Phase 2 (own-submission status straps) ────
@@ -1977,7 +1977,7 @@ const de = {
   'blog.foot.discuss.pre': 'Und was sagst ',
   'blog.foot.discuss.it': 'du',
   'blog.foot.discuss.post': ' dazu?',
-  'blog.foot.discuss.note': 'öffnet ein vorbereitetes Thema mit Titel + Link auf diesen Beitrag — zählt zu deinen 5 Beiträgen/Tag',
+  'blog.foot.discuss.note': 'öffnet ein vorbereitetes Thema mit Titel + Link auf diesen Beitrag — zählt zu deinem Tageslimit', // DRAFT
   'blog.foot.discuss.prefix': 'Beilage: ',
   'blog.rail.title': 'MEHR AUS DER BEILAGE',
   'blog.rail.note': 'sortiert nach geteilten Rubriken · ohne diesen Beitrag · max 3',
@@ -2378,10 +2378,10 @@ const en: Dict = {
     "You're viewing cached posts from {n} min ago. New posts arrive when you're back online.",
   'state.offline.body.empty': "You're offline — cached content unavailable.",
 
-  'state.rate.kicker': 'LIMIT REACHED · 5 POSTS / DAY',
+  'state.rate.kicker': 'LIMIT REACHED · {n} POSTS / DAY',
   'state.rate.title': 'Mahalle says: take a breath.',
   'state.rate.body':
-    "You've made 5 posts in the last 24 hours — that's a lot! We're giving Mahalle and other readers some breathing room.",
+    "You've made {n} posts in the last 24 hours — that's a lot! We're giving Mahalle and other readers some breathing room.",
   'state.rate.unlocks': 'POSTING UNLOCKS IN',
   'state.rate.coda':
     'Meanwhile: read, comment, bookmark. Quiet time is part of the neighborhood too.',
@@ -2543,7 +2543,7 @@ const en: Dict = {
   'delete.friction':
     'The left button stays disabled until you type „delete". Intentional friction — we protect the thread.',
 
-  'state.rate.body.short': '5 today · come back tomorrow.',
+  'state.rate.body.short': '{n} today · come back tomorrow.',
 
   'feed.footer.live': '● LIVE · post just landed',
 
@@ -3161,7 +3161,7 @@ const en: Dict = {
   'news.forumcta.heading': 'What do you think?',
   'news.forumcta.body': 'Start a topic in the forum — the article link is added automatically.',
   'news.forumcta.button': 'discuss in forum →',
-  'news.forumcta.exhausted': '5 topics created today — back tomorrow.',
+  'news.forumcta.exhausted': 'Daily limit for forum posts reached — back tomorrow.', // DRAFT
   'news.forumcta.exhaustedButton': 'Daily quota reached',
   // ── Newsboard · Phase 2 (submit) ──────────────────────────
   'news.submit.section': 'Section',
@@ -3184,7 +3184,7 @@ const en: Dict = {
   'news.submit.quotaUsed': 'SUBMISSIONS TODAY',
   'news.submit.quotaRemaining': 'remaining · resets at midnight',
   'news.submit.quotaReached': 'Daily quota reached',
-  'news.submit.quotaReachedTitle': '5 / 5 submissions used today.',
+  'news.submit.quotaReachedTitle': '{used} / {max} submissions used today.',
   'news.submit.quotaReachedBody': 'Helps keep the neighborhood focused. You can submit again tomorrow.',
   'news.submit.sectionRequired': 'Please choose a section.',
   // ── Newsboard · Phase 2 (own-submission status straps) ────
@@ -3959,7 +3959,7 @@ const en: Dict = {
   'blog.foot.discuss.pre': 'And what do ',
   'blog.foot.discuss.it': 'you',
   'blog.foot.discuss.post': ' think?',
-  'blog.foot.discuss.note': 'opens a pre-filled topic with title + link to this post — counts toward your 5 posts/day',
+  'blog.foot.discuss.note': 'opens a pre-filled topic with title + link to this post — counts toward your daily limit', // DRAFT
   'blog.foot.discuss.prefix': 'Beilage: ',
   'blog.rail.title': 'MORE FROM THE SUPPLEMENT',
   'blog.rail.note': 'ranked by shared rubrics · excluding this post · max 3',

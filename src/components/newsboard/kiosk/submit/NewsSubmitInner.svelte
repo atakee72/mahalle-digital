@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { t } from '../../../../lib/kiosk-i18n';
+  import { t, tStr } from '../../../../lib/kiosk-i18n';
   import { showToast } from '../../../../utils/toast';
   import { type SektionKey } from '../../../../lib/newsboard/newsTaxonomy';
   import KioskBtn from '../../../forum/kiosk/KioskBtn.svelte';
@@ -17,12 +17,13 @@
   let submitting = $state(false);
 
   let used = $state(0);
+  let max = $state(5);
   let quotaReached = $state(false);
 
   onMount(async () => {
     try {
       const res = await fetch('/api/news/daily-count');
-      if (res.ok) { const d = await res.json(); used = d.count; quotaReached = !d.canSubmit; }
+      if (res.ok) { const d = await res.json(); used = d.count; max = typeof d.limit === 'number' ? d.limit : 5; quotaReached = !d.canSubmit; }
     } catch { /* ignore */ }
   });
 
@@ -98,12 +99,12 @@
     <h1 class="font-bricolage" style="font-size:clamp(30px,5vw,44px); font-weight:800; letter-spacing:-0.03em; line-height:1; margin:0 0 10px;">{@html $t['news.submit.heading']}</h1>
     <p class="font-instrument italic" style="font-size:16px; color:var(--k-ink-soft); margin:0 0 18px; max-width:55ch;">{$t['news.submit.intro']}</p>
 
-    <div style="margin-bottom:18px; max-width:420px;"><QuotaIndicator {used} /></div>
+    <div style="margin-bottom:18px; max-width:420px;"><QuotaIndicator {used} {max} /></div>
 
     {#if quotaReached}
       <div style="padding:16px; background:var(--k-paper-soft); border:1.5px solid var(--k-warn); border-radius:var(--k-radius-md); max-width:560px;">
         <div class="font-dmmono" style="font-size:10px; color:var(--k-warn); letter-spacing:0.12em; margin-bottom:6px;">⊘ {$t['news.submit.quotaReached']}</div>
-        <div class="font-bricolage" style="font-size:14px; font-weight:700; margin-bottom:6px;">{$t['news.submit.quotaReachedTitle']}</div>
+        <div class="font-bricolage" style="font-size:14px; font-weight:700; margin-bottom:6px;">{tStr($t['news.submit.quotaReachedTitle'], { used, max })}</div>
         <div class="font-instrument italic" style="font-size:12px; color:var(--k-ink-soft); line-height:1.45;">{$t['news.submit.quotaReachedBody']}</div>
         <div style="margin-top:12px;"><KioskBtn variant="ghost" href="/newsboard">{$t['news.submit.cancel']}</KioskBtn></div>
       </div>

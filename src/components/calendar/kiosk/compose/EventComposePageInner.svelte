@@ -217,6 +217,7 @@
   let submitting = $state(false);
   let modalOpen = $state(false);
   let rateLimited = $state(false);
+  let rateLimit = $state(5);
   let inlineError = $state<string | null>(null);
   let clipMiss = $state(clipMissParam);
 
@@ -301,6 +302,7 @@
       modalOpen = false;
       submitting = false;
       if (caught instanceof RateLimitError) {
+        rateLimit = caught.dailyLimit;
         rateLimited = true;
       } else if (
         isEditing &&
@@ -322,7 +324,7 @@
 </script>
 
 {#if rateLimited}
-  <RateLimitPanel unlocksIn={null} />
+  <RateLimitPanel unlocksIn={null} limit={rateLimit} />
 {:else}
   {#if clipMiss}
     <div class="px-4 md:px-9 lg:px-10 pt-5">

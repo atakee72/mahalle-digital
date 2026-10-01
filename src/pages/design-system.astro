@@ -533,9 +533,9 @@ const replyShort = {
       </h2>
       <p class="font-bricolage text-sm text-ink-soft mb-6 max-w-2xl">
         Sandbox-only in 4b — the compose form (which gates against this)
-        ships in 5b. Copy adapted to <b>5/Tag</b> to match the actual
-        <code class="font-dmmono text-[12px]">dailyLimit: 5</code> enforced by <code class="font-dmmono text-[12px]">/api/topics/create</code> (the JSX shows
-        5/Stunde, which the API never actually enforces).
+        ships in 5b. Copy adapted to <b>n/Tag</b>: the number comes from the member's real
+        daily limit (<code class="font-dmmono text-[12px]">src/lib/limits/dailyLimit.ts</code>; the JSX shows
+        5/Stunde, which the API never enforced).
       </p>
       <RateLimitPanel unlocksIn="04:47:12" client:load />
     </section>

@@ -179,6 +179,7 @@
   let submitting = $state(false);
   let modalOpen = $state(false);
   let rateLimited = $state(false);
+  let rateLimit = $state(5);
   // The error line sits NEXT TO THE BUTTONS (user, 2026-09-21; it used to be a
   // block under the whole form). It stores a dictionary KEY, not a finished
   // sentence — a stored sentence stayed English after the member switched to
@@ -277,6 +278,7 @@
       modalOpen = false;
       submitting = false;
       if (caught instanceof RateLimitError) {
+        rateLimit = caught.dailyLimit;
         rateLimited = true;
       } else {
         // Server text (validation details) is shown as it comes; without one, our own sentence.
@@ -334,7 +336,7 @@
 </script>
 
 {#if rateLimited}
-  <RateLimitPanel unlocksIn={null} />
+  <RateLimitPanel unlocksIn={null} limit={rateLimit} />
 {:else}
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-0 min-h-[calc(100vh-180px)]">
     <ComposeForm
