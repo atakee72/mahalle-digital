@@ -11,9 +11,9 @@ test('self: same type is a no-op (limit survives, no ping)', () => {
 
 test('self: to organisation or business sets the field and pings', () => {
   assert.deepEqual(planSelfTypeChange('person', 'organisation'),
-    { changed: true, set: { memberType: 'organisation' }, unset: [], ping: true });
+    { changed: true, set: { memberType: 'organisation' }, unset: ['dailyLimit'], ping: true });
   assert.deepEqual(planSelfTypeChange('person', 'business'),
-    { changed: true, set: { memberType: 'business' }, unset: [], ping: true });
+    { changed: true, set: { memberType: 'business' }, unset: ['dailyLimit'], ping: true });
 });
 
 test('self: leaving organisation clears the limit', () => {
@@ -88,5 +88,21 @@ test('admin: keeping organisation keeps a stored limit in the result', () => {
   assert.deepEqual(planAdminPatch({ memberType: 'organisation', dailyLimit: 20 }, { memberType: 'organisation' }), {
     ok: true, set: { memberType: 'organisation' }, unset: [],
     result: { memberType: 'organisation', dailyLimit: 20 },
+  });
+});
+
+test('a stray stored limit never comes back with the type', () => {
+  // member chooses organisation while a stray number sits on the document
+  assert.deepEqual(planSelfTypeChange('business', 'organisation'),
+    { changed: true, set: { memberType: 'organisation' }, unset: ['dailyLimit'], ping: true });
+  // admin makes a business with a stray 20 an organisation, without a number
+  assert.deepEqual(planAdminPatch({ memberType: 'business', dailyLimit: 20 }, { memberType: 'organisation' }), {
+    ok: true, set: { memberType: 'organisation' }, unset: ['dailyLimit'],
+    result: { memberType: 'organisation', dailyLimit: null },
+  });
+  // admin sets a person to organisation: nothing stored, unset is harmless
+  assert.deepEqual(planAdminPatch({}, { memberType: 'organisation' }), {
+    ok: true, set: { memberType: 'organisation' }, unset: ['dailyLimit'],
+    result: { memberType: 'organisation', dailyLimit: null },
   });
 });

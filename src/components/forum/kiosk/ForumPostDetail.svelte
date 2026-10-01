@@ -751,8 +751,8 @@
           image={topic.author?.image ?? null}
           size="md"
         />
-        <div class="flex flex-col leading-tight">
-          <span class="flex items-center gap-1.5">
+        <div class="flex flex-col leading-tight min-w-0">
+          <span class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
             {#if authorId}
               <a
                 href={`/nachbarn/id/${authorId}`}

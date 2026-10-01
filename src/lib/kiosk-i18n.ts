@@ -331,7 +331,7 @@ const de = {
   'state.offline.body.empty': 'Du bist offline — zwischengespeicherte Inhalte nicht verfügbar.',
 
   // Rate-limited compose (sandbox-only in 4b — wired in 5b).
-  // Note: API enforces 5 per rolling 24h, not per hour as JSX implies.
+  // Note: the API enforces the member's daily limit per rolling 24h (5 unless raised), not per hour as the JSX implies.
   'state.rate.kicker': 'LIMIT ERREICHT · {n} BEITRÄGE / TAG',
   'state.rate.title': 'Pause für Mahalle.',
   'state.rate.body':

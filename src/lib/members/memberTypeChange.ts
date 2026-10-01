@@ -19,10 +19,13 @@ export function planSelfTypeChange(stored: MemberType, requested: MemberType): S
   if (requested === 'person') {
     return { changed: true, set: {}, unset: ['memberType', 'dailyLimit'], ping: false };
   }
+  // Any change of type drops the admin's number: leaving organisation ends it,
+  // and (re-)choosing organisation always starts at 5 until the admin sets one
+  // — a stray stored number must never become effective by the member's choice.
   return {
     changed: true,
     set: { memberType: requested },
-    unset: stored === 'organisation' ? ['dailyLimit'] : [],
+    unset: ['dailyLimit'],
     ping: true,
   };
 }
@@ -64,6 +67,11 @@ export function planAdminPatch(
     else set.memberType = body.memberType;
   }
   if (after !== 'organisation') unset.add('dailyLimit');
+  // Becoming an organisation without a number in this call: drop any stray
+  // stored number (it was never decided for this member as an organisation).
+  if (after === 'organisation' && before !== 'organisation' && body.dailyLimit === undefined) {
+    unset.add('dailyLimit');
+  }
   if (body.dailyLimit === null) unset.add('dailyLimit');
   if (typeof body.dailyLimit === 'number') set.dailyLimit = body.dailyLimit;
 

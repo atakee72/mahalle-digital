@@ -120,7 +120,7 @@ server code and the standalone backfill script).
   handle rather than the one it generated but never wrote.
 
 ## Member type in the identity card (2026-10-01)
-`atoms/MemberTypeChoice.svelte` (Person / Initiative / Gewerbe, no `<style>`) sits in the edit mode of `PIdentityCard` and at signup. `POST /api/users/update` takes an optional `memberType`; the route pre-reads the stored type and `planSelfTypeChange()` (`src/lib/members/memberTypeChange.ts`) returns the `$set`/`$unset` — moving away from organisation also drops the admin's `dailyLimit`, re-saving the same type keeps it. Telegram: `member_type` (Telegram only) pings the admin when the change ends on Initiative or Gewerbe.
+`atoms/MemberTypeChoice.svelte` (Person / Initiative / Gewerbe, no `<style>`) sits in the edit mode of `PIdentityCard` and at signup. `POST /api/users/update` takes an optional `memberType`; the route pre-reads the stored type and `planSelfTypeChange()` (`src/lib/members/memberTypeChange.ts`) returns the `$set`/`$unset` — moving away from organisation also drops the admin's `dailyLimit`, re-saving the same type keeps it; ANY change of type drops it (it only ever exists by the admin's number on a current organisation). The form sends `memberType` only when the member changed it in this edit session (an open tab must not undo an admin correction). Telegram: `member_type` (Telegram only) pings the admin when the change ends on Initiative or Gewerbe. The ping is capped at 5 an hour per member (`membertype:<userId>` bucket); the change itself is never refused.
 
 ## Optimistic-save pattern (PIdentityCard)
 

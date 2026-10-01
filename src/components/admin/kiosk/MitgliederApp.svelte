@@ -100,6 +100,8 @@
     } catch {
       users = users.map((u) => (u.id === row.id ? prev : u));
       showError($t['admin.users.toast.fail']);
+      // Show the server's truth, not the admin's stale view of the row.
+      void fetchUsers();
     } finally {
       const s = new Set(busy);
       s.delete(row.id);
@@ -121,6 +123,13 @@
   }
 
   function setLimit(row: AdminUserRow, el: HTMLInputElement) {
+    // A number input holding garbage („1e", „-") reports value '' — that is
+    // bad input, NOT an emptied field: never clear a stored limit for it.
+    if (el.validity.badInput) {
+      showError($t['admin.users.toast.limit']);
+      el.value = String(row.dailyLimit ?? '');
+      return;
+    }
     const text = el.value.trim();
     if (text === '') {
       if (row.dailyLimit === null) return;

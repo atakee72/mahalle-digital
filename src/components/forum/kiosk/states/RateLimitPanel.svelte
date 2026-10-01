@@ -10,7 +10,7 @@
   //
   // `unlocksIn`:
   //   string ("04:47:12") → render the countdown clock (sandbox / design-fidelity)
-  //   null               → render the static "5 today, come back tomorrow" body
+  //   null               → render the static "{n} today, come back tomorrow" body
   //                        (live surface — the API doesn't expose a real
   //                        retry-after timestamp, so a clock would lie)
 

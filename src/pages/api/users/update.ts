@@ -11,6 +11,7 @@ import { isAdminLookalike } from '../../../lib/profile/protectedNamesStore';
 import { MEMBER_TYPES, storedMemberType } from '../../../lib/members/memberType';
 import { planSelfTypeChange } from '../../../lib/members/memberTypeChange';
 import { alertMemberType } from '../../../lib/adminAlerts';
+import { consumeRateLimit } from '../../../lib/auth/rateLimit';
 
 const BodySchema = z.object({
   // Cleaned first (whitespace collapsed, invisible characters stripped), then the shared rule.
@@ -131,11 +132,18 @@ export const POST: APIRoute = async ({ request }) => {
     // Operational ping (never-throw, no-op without env): only when the member's
     // own change ended on Initiative or Gewerbe. Admins never alert themselves.
     if (typePlan?.ping && typePlan.set.memberType && session.user.role !== 'admin') {
-      await alertMemberType({
-        name: String(result.name ?? ''),
-        handle: typeof result.handle === 'string' ? result.handle : null,
-        memberType: typePlan.set.memberType,
-      });
+      // At most 5 pings an hour per member: the type itself can be changed
+      // freely, the admin's Telegram must not be floodable by toggling it.
+      // (A bucket failure only skips the ping — the save is already written.)
+      const ping = await consumeRateLimit(`membertype:${session.user.id}`, 5, 60 * 60 * 1000)
+        .catch(() => ({ limited: true }));
+      if (!ping.limited) {
+        await alertMemberType({
+          name: String(result.name ?? ''),
+          handle: typeof result.handle === 'string' ? result.handle : null,
+          memberType: typePlan.set.memberType,
+        });
+      }
     }
 
     return new Response(JSON.stringify({

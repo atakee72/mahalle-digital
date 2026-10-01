@@ -255,11 +255,15 @@
   async function submit(payload: Editable, mySeq: number) {
     saveState = 'saving';
     saveError = null;
+    // memberType travels only when the member changed it in this edit session:
+    // a tab opened before an admin correction must not write the old type back.
+    const { memberType: chosenType, ...rest } = payload;
+    const requestBody = chosenType !== profile.memberType ? payload : rest;
     try {
       const res = await fetch('/api/users/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(requestBody),
       });
       if (!res.ok) {
         let msg: string | null = null;

@@ -3,9 +3,9 @@ import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
 import { checkDailyLimit } from '../../../lib/limits/dailyLimit';
 
-// User's topic-create count in the rolling 24h window (forum quota = 5/day).
-// Used to proactively show the "exhausted" state on the newsboard "discuss in
-// forum" CTA. Counts the `topics` collection by `author` (NOT news submissions).
+// Reports the member's FORUM bucket (discussions + announcements +
+// recommendations together, rolling 24h, the member's real limit). Used to
+// proactively show the "exhausted" state on the newsboard "discuss in forum" CTA.
 export const GET: APIRoute = async ({ request }) => {
   const session = await getSession(request);
   if (!session?.user) {
