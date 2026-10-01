@@ -1,35 +1,17 @@
 import { z } from 'zod';
 
 // Delta format schema (from typewriter-editor)
-export const DeltaOpSchema = z.object({
+const DeltaOpSchema = z.object({
   insert: z.union([z.string(), z.record(z.unknown())]),
   attributes: z.record(z.unknown()).optional()
 });
 
-export const DeltaSchema = z.object({
+const DeltaSchema = z.object({
   ops: z.array(DeltaOpSchema)
 });
 
 // A1: add 'gift' listing type
-export const ListingTypeSchema = z.enum(['sell', 'exchange', 'gift']);
-
-/**
- * @deprecated Legacy category enum — not for new code.
- * Kept so existing API route imports don't break until Task 8 sweeps them to KioskCategorySchema.
- * Legacy keys are passthrough on read (DB is permissive); all new writes use KioskCategorySchema.
- */
-export const ListingCategorySchema = z.enum([
-  'furniture',
-  'electronics',
-  'clothing',
-  'books',
-  'comics',
-  'toys',
-  'handmade',
-  'home-garden',
-  'sports',
-  'other'
-]);
+const ListingTypeSchema = z.enum(['sell', 'exchange', 'gift']);
 
 // A2: New write-path category enum (9 German keys)
 // Legacy keys documented below for archaeology — NOT validated, DB accepts on read (passthrough).
@@ -55,7 +37,7 @@ export const KioskCategorySchema = z.enum([
 ]);
 
 // i3: Condition — English keys, 5 values, unchanged
-export const ListingConditionSchema = z.enum([
+const ListingConditionSchema = z.enum([
   'like-new',
   'excellent',
   'very-good',
@@ -64,7 +46,7 @@ export const ListingConditionSchema = z.enum([
 ]);
 
 // A7: 'reserved' was already present — kept as-is
-export const ListingStatusSchema = z.enum([
+const ListingStatusSchema = z.enum([
   'draft',
   'available',
   'reserved',
@@ -76,7 +58,7 @@ export const ListingStatusSchema = z.enum([
 export const DeliverySchema = z.enum(['abholung', 'versand', 'abholungVersand']);
 
 // A4: specs — 5 German free-text fields, no 'condition' (flat top-level enum)
-export const SpecsSchema = z.object({
+const SpecsSchema = z.object({
   masse:    z.string().max(80).optional(),
   material: z.string().max(80).optional(),
   baujahr:  z.string().max(20).optional(), // string, not number — allows "ca. 1970", "60er"
@@ -221,56 +203,6 @@ export const ListingUpdateSchema = z.object({
       });
     }
   }
-});
-
-export const ListingFilterSchema = z.object({
-  category: z.string().or(z.literal('all')).optional(),
-  condition: ListingConditionSchema.or(z.literal('all')).optional(),
-  listingType: ListingTypeSchema.or(z.literal('all')).optional(),
-  priceMin: z.coerce.number().min(0).optional(),
-  priceMax: z.coerce.number().max(100000).optional(),
-  status: ListingStatusSchema.optional(),
-  search: z.string().optional(),
-  sortBy: z.enum(['newest', 'oldest', 'price-asc', 'price-desc']).default('newest'),
-  limit: z.coerce.number().min(1).max(50).default(12),
-  offset: z.coerce.number().min(0).default(0)
-});
-
-// Step-specific schemas for wizard validation
-export const ListingStep1Schema = z.object({
-  title: z
-    .string()
-    .min(5, 'Title must be at least 5 characters')
-    .max(100, 'Title must be less than 100 characters')
-    .trim(),
-  description: z
-    .string()
-    .min(20, 'Description must be at least 20 characters')
-    .max(2000, 'Description must be less than 2000 characters')
-    .trim(),
-  listingType: ListingTypeSchema.optional().default('sell'),
-  category: KioskCategorySchema,
-  condition: ListingConditionSchema
-});
-
-export const ListingStep2Schema = z.object({
-  images: z
-    .array(z.string().url('Each image must be a valid URL'))
-    .min(1, 'At least one image is required')
-    .max(5, 'Maximum 5 images allowed')
-});
-
-export const ListingStep3Schema = z.object({
-  price: z
-    .number()
-    .min(0.01, 'Price must be greater than 0')
-    .max(100000, 'Price must be less than 100,000'),
-  originalPrice: z
-    .number()
-    .min(0)
-    .max(100000)
-    .optional()
-    .nullable()
 });
 
 // Relaxed schema for saving drafts — only title required

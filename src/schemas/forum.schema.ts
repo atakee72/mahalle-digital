@@ -37,11 +37,6 @@ export const TopicCreateSchema = BasePostSchema.extend({
   type: z.literal('topic').optional()
 });
 
-export const TopicUpdateSchema = BasePostSchema.partial().refine(
-  data => Object.keys(data).length > 0,
-  { message: 'At least one field must be provided for update' }
-);
-
 // Announcement Schema
 export const AnnouncementCreateSchema = z.object({
   title: z.string()
@@ -179,30 +174,6 @@ export const EventUpdateSchema = EventBaseSchema.partial().refine(
   },
   { message: 'At least one field must be provided for update' }
 );
-
-// Like/Unlike Schema
-export const LikeActionSchema = z.object({
-  postId: ObjectIdSchema,
-  action: z.enum(['like', 'unlike'])
-});
-
-// View Count Schema
-export const ViewCountSchema = z.object({
-  postId: ObjectIdSchema
-});
-
-// Search/Filter Schema
-export const SearchFilterSchema = z.object({
-  query: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-  author: ObjectIdSchema.optional(),
-  dateFrom: z.coerce.date().optional(),
-  dateTo: z.coerce.date().optional(),
-  sortBy: z.enum(['date', 'likes', 'views', 'comments']).default('date'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-  limit: z.coerce.number().min(1).max(100).default(20),
-  offset: z.coerce.number().min(0).default(0)
-});
 
 // Forum draft (server-side, several per member — 2026-09-21). Same UPPER limits
 // as publishing, no lower limits: a draft may be unfinished. Emptiness is checked

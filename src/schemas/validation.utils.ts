@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Format Zod errors into a more user-friendly structure
  */
-export function formatZodError(error: z.ZodError): Record<string, string> {
+function formatZodError(error: z.ZodError): Record<string, string> {
   const formattedErrors: Record<string, string> = {};
 
   error.errors.forEach((err) => {
@@ -17,7 +17,7 @@ export function formatZodError(error: z.ZodError): Record<string, string> {
 /**
  * Create a standardized API error response from Zod validation errors
  */
-export function createValidationErrorResponse(error: z.ZodError) {
+function createValidationErrorResponse(error: z.ZodError) {
   return new Response(
     JSON.stringify({
       error: 'Validation failed',
@@ -33,25 +33,6 @@ export function createValidationErrorResponse(error: z.ZodError) {
       headers: { 'Content-Type': 'application/json' }
     }
   );
-}
-
-/**
- * Safe parse with custom error handling
- */
-export function safeParse<T>(
-  schema: z.ZodSchema<T>,
-  data: unknown
-): { success: true; data: T } | { success: false; error: Record<string, string> } {
-  const result = schema.safeParse(data);
-
-  if (result.success) {
-    return { success: true, data: result.data };
-  }
-
-  return {
-    success: false,
-    error: formatZodError(result.error)
-  };
 }
 
 /**
@@ -93,17 +74,4 @@ export async function parseRequestBody<T>(
  */
 export function isValidObjectId(id: string): boolean {
   return /^[0-9a-fA-F]{24}$/.test(id);
-}
-
-/**
- * Create a custom Zod error
- */
-export function createCustomError(field: string, message: string): z.ZodError {
-  return new z.ZodError([
-    {
-      code: z.ZodIssueCode.custom,
-      message,
-      path: field.split('.')
-    }
-  ]);
 }

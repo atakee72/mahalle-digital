@@ -24,24 +24,3 @@ export const CommentUpdateSchema = z.object({
     .trim()
 });
 
-// Comment Delete Schema
-export const CommentDeleteSchema = z.object({
-  commentId: ObjectIdSchema
-});
-
-// Comment Upvote Schema
-export const CommentUpvoteSchema = z.object({
-  commentId: ObjectIdSchema,
-  action: z.enum(['upvote', 'remove'])
-});
-
-// Comment Query Schema
-export const CommentQuerySchema = z.object({
-  postId: ObjectIdSchema.optional(),
-  author: ObjectIdSchema.optional(),
-  limit: z.coerce.number().min(1).max(100).default(50),
-  offset: z.coerce.number().min(0).default(0),
-  sortBy: z.enum(['date', 'upvotes']).default('date'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc')
-});
-

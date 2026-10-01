@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { TRANSLATABLE_TYPES } from '../lib/translation/translateContent';
 
 /** The six Mongo-backed types (ObjectId ids) plus the blog (repo MDX, slug ids). */
-export const TRANSLATE_REQUEST_TYPES = [...TRANSLATABLE_TYPES, 'blog'] as const;
+const TRANSLATE_REQUEST_TYPES = [...TRANSLATABLE_TYPES, 'blog'] as const;
 
 const OBJECT_ID = /^[0-9a-f]{24}$/i;
 const BLOG_SLUG = /^[a-z0-9][a-z0-9-]{0,119}$/; // astro:content ids of src/content/blog/*.mdx
