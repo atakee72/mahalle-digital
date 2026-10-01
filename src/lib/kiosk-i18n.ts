@@ -4103,7 +4103,7 @@ const en: Dict = {
   'tr.err.login': 'Please log in to translate',
 };
 
-export const dictionaries: Record<Locale, Dict> = { de, en };
+const dictionaries: Record<Locale, Dict> = { de, en };
 
 /**
  * Reactive dictionary — `$t['nav.forum']` in a Svelte template re-renders

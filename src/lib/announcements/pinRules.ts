@@ -10,7 +10,7 @@ interface Pinnable {
 }
 
 /** True when the item currently holds a pin. */
-export function isCurrentlyPinned(item: Pinnable, now = Date.now()): boolean {
+function isCurrentlyPinned(item: Pinnable, now = Date.now()): boolean {
   return !!item.pinnedUntil && new Date(item.pinnedUntil).getTime() > now;
 }
 

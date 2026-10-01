@@ -12,7 +12,7 @@ export interface TourState {
 }
 
 const LS_KEY = 'mahalle-tour-state';
-export const CHAPTER_KEYS: ChapterKey[] = ['forum', 'kalender', 'markt', 'kurier', 'kiezdaten', 'blog', 'profil'];
+const CHAPTER_KEYS: ChapterKey[] = ['forum', 'kalender', 'markt', 'kurier', 'kiezdaten', 'blog', 'profil'];
 
 export function getLocalState(): TourState {
   if (typeof localStorage === 'undefined') return { tours: {}, helloDismissedAt: null };

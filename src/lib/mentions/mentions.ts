@@ -7,7 +7,7 @@
 // importing island would never mount. The character BEFORE „@" is matched as
 // group 1 instead.
 
-export const MAX_MENTIONS = 10;
+const MAX_MENTIONS = 10;
 
 /** „@admin" (2026-09-26): an alias for whoever holds the admin role — resolved
  *  server-side in mentionsResolve.ts; the popup offers it as a synthetic row. */

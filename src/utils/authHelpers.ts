@@ -8,7 +8,7 @@
  * @param user - User object or ID string
  * @returns Extracted ID string or null
  */
-export function extractUserId(user: any): string | null {
+function extractUserId(user: any): string | null {
   if (!user) return null;
   if (typeof user === 'string') return user;
   if (user.id) return user.id;
@@ -26,15 +26,4 @@ export function isOwner(itemAuthor: any, currentUser: any): boolean {
   const authorId = extractUserId(itemAuthor);
   const userId = extractUserId(currentUser);
   return !!(userId && authorId && userId === authorId);
-}
-
-/**
- * Gets user display name from various user formats
- * @param user - User object
- * @returns Display name or 'Anonymous'
- */
-export function getUserDisplayName(user: any): string {
-  if (!user) return 'Anonymous';
-  if (typeof user === 'string') return 'User';
-  return user.name || user.userName || user.email?.split('@')[0] || 'Anonymous';
 }

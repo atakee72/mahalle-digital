@@ -1,7 +1,7 @@
 // src/lib/translation/deepl.ts
 // SERVER-ONLY: calls the DeepL REST API. Never import from client code.
 
-export const ALLOWED_TARGET_LANGS = [
+const ALLOWED_TARGET_LANGS = [
   'de', 'en', 'tr', 'pl', 'ru', 'uk', 'ar', 'fr', 'es', 'it', 'ro', 'bg', 'el', 'nl', 'pt',
 ] as const;
 

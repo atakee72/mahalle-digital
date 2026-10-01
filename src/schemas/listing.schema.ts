@@ -55,7 +55,7 @@ const ListingStatusSchema = z.enum([
 ]);
 
 // A3: delivery enum
-export const DeliverySchema = z.enum(['abholung', 'versand', 'abholungVersand']);
+const DeliverySchema = z.enum(['abholung', 'versand', 'abholungVersand']);
 
 // A4: specs — 5 German free-text fields, no 'condition' (flat top-level enum)
 const SpecsSchema = z.object({

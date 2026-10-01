@@ -25,7 +25,7 @@ export interface FetchEventsResult<T> {
 // never appeared. Used as the fallback below AND fed into the pagination
 // meta so `hasMore`/`totalPages` stay truthful; an explicit `?limit=` from
 // a caller still wins (parseInt below only falls back when it's absent).
-export const EVENTS_DEFAULT_LIMIT = 500;
+const EVENTS_DEFAULT_LIMIT = 500;
 
 /**
  * Standard events-collection fetch: parses query params, applies the

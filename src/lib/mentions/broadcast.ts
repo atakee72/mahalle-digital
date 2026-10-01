@@ -4,7 +4,7 @@
 // `broadcast: { token, excludedHandles }` on the document, so no renderer
 // ever shows it; the author's edit box restores it at the START of the text.
 // Same boundary rule as @handle mentions and NO lookbehind (Safari < 16.4).
-export const BROADCAST_HANDLE = 'alle';
+const BROADCAST_HANDLE = 'alle';
 
 export interface BroadcastRef {
   token: string;              // canonical „@alle -a -b" as stored

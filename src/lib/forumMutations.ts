@@ -19,12 +19,10 @@
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { writable } from 'svelte/store';
 
-const API_URL = '/api';
-
 // ─── Live-mode signal for FeedStatusFooter ─────────────────────────────
 // Set by createTopicMutation.onSuccess; reset 6 s later. The footer reads
 // `$lastSubmittedAt` and computes its mode accordingly.
-export const lastSubmittedAt = writable<number | null>(null);
+const lastSubmittedAt = writable<number | null>(null);
 
 const LIVE_WINDOW_MS = 6_000;
 
@@ -145,130 +143,5 @@ export function createTopicMutation(currentUser: { id: string; name?: string; im
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
     }
-  }));
-}
-
-// ─── Topic edit ────────────────────────────────────────────────────────
-
-type EditTopicInput = {
-  title: string;
-  body: string;
-  tags: string[];
-  images?: { url: string; publicId: string }[];
-};
-
-async function editTopicReq({ id, input }: { id: string; input: EditTopicInput }) {
-  const res = await fetch(`${API_URL}/topics/edit/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(input)
-  });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    const details = error.details ? Object.values(error.details).join(', ') : '';
-    throw new Error(details || error.error || 'Failed to update topic');
-  }
-  return res.json() as Promise<{
-    topic: any;
-    message: string;
-    moderationStatus?: 'pending' | 'approved' | 'rejected';
-  }>;
-}
-
-export function editTopicMutation() {
-  const queryClient = useQueryClient();
-  const queryKey = ['forum', 'all'];
-  return createMutation(() => ({
-    mutationFn: editTopicReq,
-    onMutate: async ({ id, input }) => {
-      await queryClient.cancelQueries({ queryKey });
-      const prev = queryClient.getQueryData<any[]>(queryKey);
-      queryClient.setQueryData<any[]>(queryKey, (old) =>
-        old?.map((t) => (t._id === id ? { ...t, ...input, isEdited: true } : t)) ?? old
-      );
-      return { prev };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.prev) queryClient.setQueryData(queryKey, context.prev);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
-    }
-  }));
-}
-
-// ─── Topic delete ──────────────────────────────────────────────────────
-
-async function deleteTopicReq(id: string) {
-  const res = await fetch(`${API_URL}/topics/delete/${id}`, {
-    method: 'DELETE',
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.error || 'Failed to delete topic');
-  }
-  return res.json();
-}
-
-export function deleteTopicMutation() {
-  const queryClient = useQueryClient();
-  const queryKey = ['forum', 'all'];
-  return createMutation(() => ({
-    mutationFn: deleteTopicReq,
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey });
-      const prev = queryClient.getQueryData<any[]>(queryKey);
-      queryClient.setQueryData<any[]>(queryKey, (old) =>
-        old?.filter((t) => t._id !== id) ?? old
-      );
-      return { prev };
-    },
-    onError: (_err, _id, context) => {
-      if (context?.prev) queryClient.setQueryData(queryKey, context.prev);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
-    }
-  }));
-}
-
-// ─── Comment create ────────────────────────────────────────────────────
-// Comments don't go through the Svelte topics cache (ForumPostDetail keeps
-// them as local state from SSR initialComments). The mutation here is
-// fire-and-forget on the cache side; the calling page is responsible for
-// optimistically inserting into its local list.
-
-type CreateCommentInput = {
-  body: string;
-  topicId: string;
-};
-
-async function createCommentReq(input: CreateCommentInput) {
-  const res = await fetch(`${API_URL}/comments/create`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({
-      body: input.body,
-      topicId: input.topicId,
-      collectionType: 'topics'
-    })
-  });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.error || 'Failed to post comment');
-  }
-  return res.json() as Promise<{
-    comment: any;
-    message: string;
-    moderationStatus?: 'pending' | 'approved' | 'rejected';
-  }>;
-}
-
-export function createCommentMutation() {
-  return createMutation(() => ({
-    mutationFn: createCommentReq
   }));
 }

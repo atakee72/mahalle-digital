@@ -28,7 +28,7 @@ const SOCIAL_PLR_GROUPS: { name: string; old: string; new: string[] }[] = [
   { name: 'Silbersteinstraße', old: '08010118', new: ['08100104', '08100105'] },
 ];
 
-export function periodLabel(period: string): string {
+function periodLabel(period: string): string {
   const m = period.match(/^(\d{4})h([12])$/);
   if (m) return `H${m[2]} '${m[1].slice(2)}`;
   return `'${period.slice(2)}`;

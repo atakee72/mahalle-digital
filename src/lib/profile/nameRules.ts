@@ -3,9 +3,6 @@
 // repeat — the handle is the identity; this file only keeps names readable
 // and honest.
 
-export const DISPLAY_NAME_MIN = 2;
-export const DISPLAY_NAME_MAX = 30;
-
 /** Whitespace → one space, control + format characters (zero-width, RTL
  *  override, …) removed, NFC, trimmed. Accepted cost: the zero-width
  *  non-joiner some Persian names use is dropped as well. */

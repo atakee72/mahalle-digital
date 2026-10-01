@@ -57,7 +57,7 @@ export function linkifySegments(text: string, mentions: readonly MentionRef[] = 
 // chars at the last "/" before the limit (falls back to a hard cut) and
 // append "…". The full URL belongs in the anchor's title attribute.
 
-export const DISPLAY_URL_MAX = 40;
+const DISPLAY_URL_MAX = 40;
 
 export function displayUrl(url: string, max = DISPLAY_URL_MAX): string {
   let s = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '');

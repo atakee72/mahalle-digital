@@ -11,8 +11,6 @@ import {
 } from './queryUtils';
 import { FORUM_QUERY_OPTIONS } from './forumQueryOptions';
 
-export { FORUM_QUERY_OPTIONS };
-
 export interface FetchCollectionResult<T> {
   items: T[];
   pagination: ReturnType<typeof buildPaginationMeta>;
@@ -167,7 +165,7 @@ export async function fetchCollectionWithAuthors<T extends Document>(
  * join like authors: never denormalized onto the post. Cards render it
  * next to likes/replies (user request, 2026-09-10).
  */
-export async function attachSavedCounts(items: Array<{ _id: any; savedCount?: number }>): Promise<void> {
+async function attachSavedCounts(items: Array<{ _id: any; savedCount?: number }>): Promise<void> {
   if (!items.length) return;
   const ids = items.map((it) => String(it._id));
   const db = await connectDB();
@@ -273,7 +271,7 @@ export async function fetchRelatedForDetail(
  * Feeds the forum title-block „diskutiert heute" counter (2026-09-11) —
  * before this the counter read comment IDS for dates and was always 0.
  */
-export async function attachLastCommentAt(items: Array<{ _id: any; lastCommentAt?: number | null }>): Promise<void> {
+async function attachLastCommentAt(items: Array<{ _id: any; lastCommentAt?: number | null }>): Promise<void> {
   if (!items.length) return;
   const ids = items
     .map((it) => (it._id instanceof ObjectId ? it._id : ObjectId.isValid(String(it._id)) ? new ObjectId(String(it._id)) : null))

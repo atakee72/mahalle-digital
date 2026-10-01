@@ -62,16 +62,6 @@ export const ADM_TYPES = [
   'marketplace',
 ] as const;
 
-export const ADM_REPORT_REASONS = [
-  'spam',
-  'harassment',
-  'hate_speech',
-  'violence',
-  'misinformation',
-  'inappropriate',
-  'other',
-] as const;
-
 // ─────────────────────────────────────────────────────────────────────────
 // FlaggedItem — client-shape mirror of FlaggedContent
 // ─────────────────────────────────────────────────────────────────────────

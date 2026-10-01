@@ -31,7 +31,7 @@ function trunc(s: string, n = 80): string {
   return str.length > n ? str.slice(0, n - 1) + '…' : str;
 }
 
-export async function sendAdminAlert(alert: { kind: AdminAlertKind; text: string }): Promise<void> {
+async function sendAdminAlert(alert: { kind: AdminAlertKind; text: string }): Promise<void> {
   try {
     // Telegram leg first (primary channel).
     const token = import.meta.env.TELEGRAM_BOT_TOKEN;

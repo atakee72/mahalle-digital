@@ -14,7 +14,7 @@ const API_URL = '/api';
 
 // ─── Create event ──────────────────────────────────────────────────────
 
-export type CreateEventInput = {
+type CreateEventInput = {
   title: string;
   body: string;
   startDate: string; // ISO datetime

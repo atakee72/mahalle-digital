@@ -26,7 +26,7 @@ function toIso(v: unknown): string | null {
 }
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 
-export async function searchEvents(db: Db, q: string, userId?: string): Promise<SiteHit[]> {
+async function searchEvents(db: Db, q: string, userId?: string): Promise<SiteHit[]> {
   const rx = buildSearchRegex(q);
   const filter: Record<string, any> = { $or: [{ title: rx }, { body: rx }, { location: rx }, { tags: rx }] };
   mergeModerationFilter(filter, buildModerationFilter(userId));
@@ -43,7 +43,7 @@ export async function searchEvents(db: Db, q: string, userId?: string): Promise<
   }));
 }
 
-export async function searchListings(db: Db, q: string, userId?: string): Promise<SiteHit[]> {
+async function searchListings(db: Db, q: string, userId?: string): Promise<SiteHit[]> {
   const rx = buildSearchRegex(q);
   const base = buildListingsFilter(userId ?? null) as { $and: Record<string, any>[] };
   const filter = { $and: [...base.$and, { $or: [{ title: rx }, { descriptionPlainText: rx }] }] };
@@ -63,7 +63,7 @@ export async function searchListings(db: Db, q: string, userId?: string): Promis
   });
 }
 
-export async function searchNews(db: Db, q: string, userId?: string): Promise<SiteHit[]> {
+async function searchNews(db: Db, q: string, userId?: string): Promise<SiteHit[]> {
   const rx = buildSearchRegex(q);
   const visible = {
     $or: [

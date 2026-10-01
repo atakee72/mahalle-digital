@@ -8,7 +8,7 @@ import type { BlumeComponent } from './blume';
 
 export const AIR_LOG_COLLECTION = 'schillerkiez_air_log';
 export const AIR_DAILY_COLLECTION = 'schillerkiez_air_daily';
-export const HOURLY_RETENTION_DAYS = 90;
+const HOURLY_RETENTION_DAYS = 90;
 
 const berlinDayFmt = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Europe/Berlin',
@@ -18,7 +18,7 @@ const berlinDayFmt = new Intl.DateTimeFormat('en-CA', {
 });
 
 /** "YYYY-MM-DD" of the Europe/Berlin calendar day containing `d`. */
-export function berlinDayKey(d: Date): string {
+function berlinDayKey(d: Date): string {
   return berlinDayFmt.format(d);
 }
 
@@ -28,7 +28,7 @@ export function berlinDayKey(d: Date): string {
  * is always well inside a Berlin day, so DST 23h/25h days can't skip or
  * duplicate a key.
  */
-export function lastBerlinDays(n: number, now: Date): string[] {
+function lastBerlinDays(n: number, now: Date): string[] {
   const [y, m, d] = berlinDayKey(now).split('-').map(Number);
   const anchor = Date.UTC(y, m - 1, d, 12);
   const days: string[] = [];
@@ -73,7 +73,7 @@ export function readingFromBlume(data: BlumeComponent[]): AirHistoryResponse['la
   return { ts: ts.toISOString(), lqi: lqi.grade, pm10: grade('pm10'), no2: grade('no2'), o3: grade('o3'), co: grade('co') };
 }
 
-export async function ensureAirIndexes(db: Db): Promise<void> {
+async function ensureAirIndexes(db: Db): Promise<void> {
   await db
     .collection(AIR_LOG_COLLECTION)
     .createIndex({ ts: 1 }, { unique: true, name: 'air_log_ts_unique' });

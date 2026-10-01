@@ -15,7 +15,7 @@ import * as Sentry from '@sentry/astro';
 // TYPES
 // ============================================================================
 
-export interface ModerationInput {
+interface ModerationInput {
   text?: string;
   imageUrls?: string[];
 }
@@ -397,7 +397,7 @@ export async function checkMottoProfanity(motto: string): Promise<{ clean: boole
  * Moderate content using OpenAI's moderation API
  * Returns decision: approved, pending_review, or urgent_review
  */
-export async function moderateContent(input: ModerationInput): Promise<ModerationResult> {
+async function moderateContent(input: ModerationInput): Promise<ModerationResult> {
   const apiKey = import.meta.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -667,13 +667,6 @@ function getAdminReason(flaggedCategories: string[], scores: Partial<ModerationS
  */
 export async function moderateText(text: string): Promise<ModerationResult> {
   return moderateContent({ text });
-}
-
-/**
- * Quick image-only moderation
- */
-export async function moderateImages(imageUrls: string[]): Promise<ModerationResult> {
-  return moderateContent({ imageUrls });
 }
 
 /**
@@ -1002,36 +995,4 @@ Return JSON only: {"classification": "...", "confidence": 0.0-1.0, "reason": "br
     console.error('[ImageCheck] Error:', errorMsg);
     return createFailSafeResult(`Image check error: ${errorMsg}`);
   }
-}
-
-/**
- * Get category display name for admin UI
- */
-export function getCategoryDisplayName(category: string): string {
-  const names: Record<string, string> = {
-    'harassment': 'Harassment',
-    'harassment/threatening': 'Threatening Harassment',
-    'hate': 'Hate Speech',
-    'hate/threatening': 'Threatening Hate Speech',
-    'illicit': 'Illegal Activity',
-    'illicit/violent': 'Violent Illegal Activity',
-    'self-harm': 'Self-Harm',
-    'self-harm/intent': 'Self-Harm Intent',
-    'self-harm/instructions': 'Self-Harm Instructions',
-    'sexual': 'Sexual Content',
-    'sexual/minors': 'Child Safety',
-    'violence': 'Violence',
-    'violence/graphic': 'Graphic Violence',
-  };
-  return names[category] || category;
-}
-
-/**
- * Get severity level for admin UI (for sorting/prioritizing)
- */
-export function getSeverityLevel(result: ModerationResult): 'low' | 'medium' | 'high' | 'critical' {
-  if (result.isUrgent) return 'critical';
-  if (result.maxScore >= 0.8) return 'high';
-  if (result.maxScore >= 0.5) return 'medium';
-  return 'low';
 }

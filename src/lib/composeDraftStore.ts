@@ -21,7 +21,7 @@
 
 import { writable } from 'svelte/store';
 
-export type DraftKind = 'topic';
+type DraftKind = 'topic';
 
 export type DraftValues = {
   title: string;
@@ -60,7 +60,7 @@ function readInitial(kind: DraftKind): DraftValues | null {
   }
 }
 
-export function createDraftStore(kind: DraftKind = 'topic') {
+function createDraftStore(kind: DraftKind = 'topic') {
   const store = writable<DraftValues | null>(readInitial(kind));
 
   function setDraft(values: DraftValues) {

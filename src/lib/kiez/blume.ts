@@ -1,6 +1,6 @@
 // Shared BLUME (luftdaten.berlin.de) fetch for station mc042 — used by the
 // public /api/kiez-air route and the air logger. Server-only.
-export const BLUME_LQI_URL = 'https://luftdaten.berlin.de/api/lqis/data';
+const BLUME_LQI_URL = 'https://luftdaten.berlin.de/api/lqis/data';
 export const BLUME_STATION_ID = 'mc042';
 
 /**

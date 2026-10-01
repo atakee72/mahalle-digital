@@ -10,7 +10,7 @@ import { randomBytes, createHash } from 'crypto';
 import { ObjectId } from 'mongodb';
 import { connectDB } from '../mongodb';
 
-export const TOKEN_TTL_MS = 30 * 60 * 1000;  // 30 minutes per design
+const TOKEN_TTL_MS = 30 * 60 * 1000;  // 30 minutes per design
 const RESEND_GUARD_MS = 60 * 1000;           // at most one new token per user per 60s
 
 function hashToken(raw: string): string {

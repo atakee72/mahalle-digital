@@ -10,7 +10,7 @@ export type SectionKey = 'forum' | 'calendar' | 'marketplace' | 'newsboard' | 's
 
 export const SECTION_ORDER: readonly SectionKey[] = ['forum', 'calendar', 'marketplace', 'newsboard', 'schillerkiez', 'blog'];
 
-export const SECTION_HREF: Record<SectionKey, string> = {
+const SECTION_HREF: Record<SectionKey, string> = {
   forum: '/forum',
   calendar: '/calendar',
   marketplace: '/marketplace',

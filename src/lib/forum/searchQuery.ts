@@ -3,9 +3,9 @@
 // characters, regex-escaped before it reaches Mongo, bodies never leave
 // the server whole — an excerpt around the first match does.
 
-export const SEARCH_MIN_LEN = 2;
+const SEARCH_MIN_LEN = 2;
 export const SEARCH_MAX_LEN = 80;
-export const EXCERPT_LEN = 160;
+const EXCERPT_LEN = 160;
 
 export type PostKind = 'discussion' | 'announcement' | 'recommendation';
 export type PostCollection = 'topics' | 'announcements' | 'recommendations';

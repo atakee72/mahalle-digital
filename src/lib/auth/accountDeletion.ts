@@ -34,7 +34,7 @@ cloudinary.config({
 // Same salt contact.ts hashes with — needed to match buyerEmailHash rows.
 const CONTACT_SALT = import.meta.env.CONTACT_IP_SALT || '';
 
-export const GRACE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const GRACE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function hashToken(raw: string): string {
   return createHash('sha256').update(raw).digest('hex');

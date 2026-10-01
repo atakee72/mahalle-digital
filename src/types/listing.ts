@@ -13,23 +13,6 @@ export interface Delta {
 // A1: 'gift' added
 export type ListingType = 'sell' | 'exchange' | 'gift';
 
-/**
- * @deprecated Legacy category union — kept for archival reference only.
- * New code should use `ListingCategory = string` (read-permissive).
- * Write-path uses KioskCategorySchema from listing.schema.ts.
- */
-export type LegacyListingCategory =
-  | 'furniture'
-  | 'electronics'
-  | 'clothing'
-  | 'books'
-  | 'comics'
-  | 'toys'
-  | 'handmade'
-  | 'home-garden'
-  | 'sports'
-  | 'other';
-
 // A2: Permissive read-path type — legacy values pass through, new kiosk keys accepted
 export type ListingCategory = string;
 

@@ -36,7 +36,7 @@ export function parseQueryParams(url: URL): QueryOptions {
 /**
  * Build MongoDB projection from field selection
  */
-export function buildProjection(fields?: string[]): Record<string, 0 | 1> | undefined {
+function buildProjection(fields?: string[]): Record<string, 0 | 1> | undefined {
   if (!fields || fields.length === 0) {
     return undefined;
   }
@@ -65,7 +65,7 @@ export function buildProjection(fields?: string[]): Record<string, 0 | 1> | unde
 /**
  * Build MongoDB sort options
  */
-export function buildSort(sortBy?: string, sortOrder: 'asc' | 'desc' = 'desc'): Record<string, 1 | -1> {
+function buildSort(sortBy?: string, sortOrder: 'asc' | 'desc' = 'desc'): Record<string, 1 | -1> {
   const sortValue = sortOrder === 'asc' ? 1 : -1;
 
   switch (sortBy) {

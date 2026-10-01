@@ -5,8 +5,6 @@
 import { ObjectId, type Db } from 'mongodb';
 import { pickDisplaced } from './pinRules';
 
-export { MAX_PINS } from './pinRules';
-
 export async function displaceForPin(db: Db, excludeId?: string): Promise<string | null> {
   const pinned = await db
     .collection('announcements')

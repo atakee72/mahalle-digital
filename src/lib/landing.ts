@@ -81,14 +81,14 @@ function berlinMidnightUTC(y: number, m: number, d: number): Date {
 }
 
 /** Monday 00:00 Europe/Berlin of the current ISO week. */
-export function isoWeekStart(now: Date): Date {
+function isoWeekStart(now: Date): Date {
   const { y, m, d, weekday } = berlinParts(now);
   const monday = new Date(Date.UTC(y, m - 1, d - (weekday - 1)));
   return berlinMidnightUTC(monday.getUTCFullYear(), monday.getUTCMonth() + 1, monday.getUTCDate());
 }
 
 /** [Fri 00:00, Mon 00:00) Europe/Berlin of the COMING weekend (Fri–Sun; during Fri–Sun = the current one). */
-export function weekendRange(now: Date): { from: Date; to: Date } {
+function weekendRange(now: Date): { from: Date; to: Date } {
   const { y, m, d, weekday } = berlinParts(now);
   // 5 - weekday: Mon–Thu → days AHEAD to Friday; Fri/Sat/Sun → 0/-1/-2,
   // i.e. the CURRENT weekend's Friday (spec: during the weekend, count it).

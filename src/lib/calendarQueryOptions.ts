@@ -15,11 +15,11 @@
  * the calendar defaults to the current-month window.
  */
 
-export function startOfMonthUTC(d: Date): Date {
+function startOfMonthUTC(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0, 0));
 }
 
-export function endOfMonthUTC(d: Date): Date {
+function endOfMonthUTC(d: Date): Date {
   // Last ms of the last day of the month in UTC
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0, 23, 59, 59, 999));
 }

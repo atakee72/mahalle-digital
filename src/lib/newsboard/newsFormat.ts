@@ -33,16 +33,6 @@ export function formatRelativeTime(input: Date | string | undefined, locale: Loc
   return d.toLocaleDateString(isDE ? 'de-DE' : 'en-GB', { day: 'numeric', month: 'short' });
 }
 
-// Long fetch/approval date for detail + meta: "24. Mai 2026".
-export function formatFetchDate(input: Date | string | undefined, locale: Locale): string {
-  if (!input) return '';
-  const d = typeof input === 'string' ? new Date(input) : input;
-  if (isNaN(d.getTime())) return typeof input === 'string' ? input : '';
-  return d.toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-GB', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  });
-}
-
 // Chrono bucket key for the date dividers (today / yesterday / older).
 export function chronoBucket(input: Date | string | undefined, now: Date = new Date()): 'today' | 'yesterday' | 'older' {
   if (!input) return 'older';

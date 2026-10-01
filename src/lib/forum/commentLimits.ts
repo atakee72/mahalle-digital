@@ -7,7 +7,7 @@
 export const COMMENT_MAX_LEN = 3000;
 
 /** The counter stays hidden until the draft passes this share of the limit. */
-export const COMMENT_COUNTER_FROM = 0.8;
+const COMMENT_COUNTER_FROM = 0.8;
 
 export function commentCounterVisible(length: number): boolean {
   return length >= COMMENT_MAX_LEN * COMMENT_COUNTER_FROM;

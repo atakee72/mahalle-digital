@@ -189,7 +189,7 @@ The „Seen elsewhere" column is a raw NAME match and includes mentions in comme
 
 | Line | Symbol | Pre-class | Seen elsewhere |
 |---|---|---|---|
-| 14 | `PLR_CODES` | KEEP-scripts | `scripts/sync-stats.ts` (8), `scripts/simplify-plr.js` (1) |
+| 14 | `PLR_CODES` | KEEP (used by scripts/sync-stats.ts, scripts/simplify-plr.js) | `scripts/sync-stats.ts` (8), `scripts/simplify-plr.js` (1) |
 
 
 ### `src/lib/adminAlerts.ts`
@@ -247,7 +247,7 @@ The „Seen elsewhere" column is a raw NAME match and includes mentions in comme
 
 | Line | Symbol | Pre-class | Seen elsewhere |
 |---|---|---|---|
-| 6 | `repairedAllDayBounds` | KEEP-scripts+test | `src/lib/calendar/allDayRepair.test.ts` (6), `scripts/repair-allday-event-bounds.ts` (2) |
+| 6 | `repairedAllDayBounds` | KEEP (used by allDayRepair.test.ts, scripts/repair-allday-event-bounds.ts) | `src/lib/calendar/allDayRepair.test.ts` (6), `scripts/repair-allday-event-bounds.ts` (2) |
 
 
 ### `src/lib/calendarQueryOptions.ts`
@@ -310,12 +310,12 @@ The „Seen elsewhere" column is a raw NAME match and includes mentions in comme
 
 | Line | Symbol | Pre-class | Seen elsewhere |
 |---|---|---|---|
-| 10 | `AIR_DAILY_COLLECTION` | KEEP-scratchpad | `scratchpad/repair-air-sentinel.mts` (4) |
+| 10 | `AIR_DAILY_COLLECTION` | KEEP (used by scratchpad/repair-air-sentinel.mts) | `scratchpad/repair-air-sentinel.mts` (4) |
 | 11 | `HOURLY_RETENTION_DAYS` | UNEXPORT | — |
 | 21 | `berlinDayKey` | UNEXPORT | — |
 | 31 | `lastBerlinDays` | UNEXPORT | — |
 | 76 | `ensureAirIndexes` | UNEXPORT | — |
-| 98 | `recomputeDailyRollup` | KEEP-scratchpad | `scratchpad/repair-air-sentinel.mts` (2) |
+| 98 | `recomputeDailyRollup` | KEEP (used by scratchpad/repair-air-sentinel.mts) | `scratchpad/repair-air-sentinel.mts` (2) |
 
 
 ### `src/lib/kiez/blume.ts`

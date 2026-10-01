@@ -97,7 +97,7 @@ export function resolveQuelle(sourceName?: string | null, source?: string | null
 // the day is ordered by publish time instead of the GPT score. ONE list, by
 // sourceName only — a member-submitted Tagesspiegel link is not Kiez. Edit
 // freely; lowercase substrings, umlaut variants spelled out.
-export const KIEZ_SOURCE_PATTERNS: readonly string[] = [
+const KIEZ_SOURCE_PATTERNS: readonly string[] = [
   'schillerkiez', 'schillerpromenade', 'facetten neukölln', 'facettenneukoelln', 'facetten neukoelln',
   'kiez und kneipe', 'kiezundkneipe', 'wochenkurier', 'neukoellner', 'neuköllner', 'nachbarschaftstreff', 'neukölln', 'neukoelln',
 ];

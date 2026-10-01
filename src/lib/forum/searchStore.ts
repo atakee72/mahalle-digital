@@ -13,9 +13,9 @@ import {
 } from './searchQuery';
 export type { SearchResult };
 
-export const SEARCH_PER_KIND = 20;
-export const SEARCH_POSTS_MAX = 30;
-export const SEARCH_COMMENTS_MAX = 20;
+const SEARCH_PER_KIND = 20;
+const SEARCH_POSTS_MAX = 30;
+const SEARCH_COMMENTS_MAX = 20;
 
 const COLLECTIONS: PostCollection[] = ['topics', 'announcements', 'recommendations'];
 

@@ -1,6 +1,6 @@
 // Hand-printed riso chart hand (Kiez-Daten "Mischung"). Deterministic: same
 // seed → same wobble, so SSR and client render identical markup.
-export const kzRnd = (i: number, seed: number): number => {
+const kzRnd = (i: number, seed: number): number => {
   const x = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
   return x - Math.floor(x);
 };

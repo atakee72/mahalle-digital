@@ -62,12 +62,3 @@ export const qk = {
   // Comments (keyed by postId)
   comments: (postId: string) => ['comments', postId] as const,
 } as const;
-
-/**
- * Polymorphic lookup for the three forum namespaces. Returns the same shape
- * as `qk.topics` / `qk.announcements` / `qk.recommendations` without the
- * union-indexing TS headaches.
- */
-export function forumQk(type: ForumNamespace) {
-  return forumKeys(type);
-}

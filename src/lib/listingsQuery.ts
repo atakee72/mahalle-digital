@@ -41,7 +41,7 @@ const SELLER_PROJECTION = { name: 1, image: 1, userPicture: 1, verified: 1, hand
  * Unresolvable sellers (hard-deleted user, malformed id) yield null, which
  * the cards render as "—".
  */
-export async function populateSellers<T extends Record<string, any>>(
+async function populateSellers<T extends Record<string, any>>(
   docs: T[],
 ): Promise<T[]> {
   if (docs.length === 0) return docs;

@@ -17,7 +17,7 @@ export const HIDE_AFTER = 24;
 /** px of continuous UPWARD travel before it returns (more than finger jitter). */
 export const SHOW_AFTER = 8;
 /** A single-step jump larger than this is programmatic (scroll restore, anchor), not a gesture. */
-export const TELEPORT = 600;
+const TELEPORT = 600;
 
 export interface MastState {
   hidden: boolean;
