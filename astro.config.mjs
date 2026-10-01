@@ -62,7 +62,6 @@ export default defineConfig({
       external: [
         'mongodb',
         'bcrypt',
-        'jsonwebtoken',
         '@mongodb-js/saslprep',
         'node-gyp-build',
         'kerberos',

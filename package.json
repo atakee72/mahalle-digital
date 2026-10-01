@@ -37,7 +37,6 @@
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.0.0",
     "date-fns": "^4.1.0",
-    "jsonwebtoken": "^9.0.3",
     "mongodb": "^6.3.0",
     "nodemailer": "^9.0.3",
     "qrcode": "^1.5.4",
@@ -53,7 +52,6 @@
   "devDependencies": {
     "@astrojs/ts-plugin": "^1.10.5",
     "@types/bcrypt": "^5.0.0",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.0.0",
     "@types/nodemailer": "^8.0.1",
     "@types/qrcode": "^1.5.6",
