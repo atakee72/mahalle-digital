@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../../lib/mongodb';
 import { requireAdminSession } from '../../../../lib/auth';
+import { storedMemberType } from '../../../../lib/members/memberType';
 
 // GET /api/admin/users — full members list for /admin/mitglieder.
 // ALLOWLIST projection only (never a full doc, never a {password:0}-style
@@ -20,7 +21,7 @@ export const GET: APIRoute = async ({ request }) => {
       .collection('users')
       .find(
         { anonymized: { $ne: true } },
-        { projection: { name: 1, handle: 1, createdAt: 1, emailVerified: 1, verified: 1, role: 1 } }
+        { projection: { name: 1, handle: 1, createdAt: 1, emailVerified: 1, verified: 1, role: 1, memberType: 1, dailyLimit: 1 } }
       )
       .sort({ createdAt: -1 })
       .limit(1000)
@@ -39,6 +40,10 @@ export const GET: APIRoute = async ({ request }) => {
       emailVerified: u.emailVerified === true,
       verified: u.verified === true,
       role: u.role === 'admin' ? ('admin' as const) : ('user' as const),
+      memberType: storedMemberType(u),
+      // The stored number, shown only for an organisation (it counts for no one else).
+      dailyLimit:
+        storedMemberType(u) === 'organisation' && typeof u.dailyLimit === 'number' ? u.dailyLimit : null,
     }));
 
     return new Response(JSON.stringify({ users }), {

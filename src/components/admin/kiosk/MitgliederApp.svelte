@@ -3,10 +3,13 @@
    * Members list — Kiez-verification v1 admin surface (/admin/mitglieder).
    * Lists ALL non-tombstoned users so every member is reachable even if
    * they never posted; per-row toggle writes users.verified via
-   * PATCH /api/admin/users/[id] (the flag's ONLY writer).
+   * PATCH /api/admin/users/[id] (the flag's ONLY writer); per-row type selector
+   * and, for organisations, a daily-limit field — both through the same PATCH.
    * Optimistic toggle with rollback + error toast. Client-side search
    * (name/@handle) — the list is capped at 1000 server-side, no pager v1.
    */
+  import { onDestroy } from 'svelte';
+  import { MEMBER_TYPES, MAX_DAILY_LIMIT, type MemberType } from '../../../lib/members/memberType';
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { showError } from '../../../utils/toast';
 
@@ -18,6 +21,8 @@
     emailVerified: boolean;
     verified: boolean;
     role: 'user' | 'admin';
+    memberType: MemberType;
+    dailyLimit: number | null;
   };
 
   let users = $state<AdminUserRow[]>([]);
@@ -58,29 +63,79 @@
     }
   }
 
-  async function toggleVerified(row: AdminUserRow) {
+  type RowPatch = { verified?: boolean; memberType?: MemberType; dailyLimit?: number | null };
+
+  // „✓ gespeichert" beside the controls for two seconds after a successful save.
+  let savedRow = $state<string | null>(null);
+  let savedTimer: ReturnType<typeof setTimeout> | undefined;
+  function flashSaved(id: string) {
+    savedRow = id;
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(() => { savedRow = null; }, 2000);
+  }
+  onDestroy(() => clearTimeout(savedTimer));
+
+  // Optimistic write with rollback. The server's echo is the truth afterwards
+  // (e.g. leaving „organisation" clears the limit server-side).
+  async function patchRow(row: AdminUserRow, patch: RowPatch, optimistic: Partial<AdminUserRow>) {
     if (busy.has(row.id)) return;
-    const next = !row.verified;
     busy = new Set(busy).add(row.id);
-    // Optimistic flip
-    users = users.map((u) => (u.id === row.id ? { ...u, verified: next } : u));
+    const prev = { ...row };
+    users = users.map((u) => (u.id === row.id ? { ...u, ...optimistic } : u));
     try {
       const res = await fetch(`/api/admin/users/${row.id}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verified: next })
+        body: JSON.stringify(patch)
       });
-      if (!res.ok) throw new Error(`toggle failed (${res.status})`);
+      if (!res.ok) throw new Error(`patch failed (${res.status})`);
+      const j = await res.json();
+      users = users.map((u) => (u.id === row.id
+        ? { ...u, verified: j.verified === true, memberType: j.memberType, dailyLimit: j.dailyLimit ?? null }
+        : u));
+      // The type selector and the limit field save without a button — say so.
+      // (The verify button already changes its own label; no mark for it.)
+      if (patch.memberType !== undefined || patch.dailyLimit !== undefined) flashSaved(row.id);
     } catch {
-      // Rollback
-      users = users.map((u) => (u.id === row.id ? { ...u, verified: !next } : u));
+      users = users.map((u) => (u.id === row.id ? prev : u));
       showError($t['admin.users.toast.fail']);
     } finally {
       const s = new Set(busy);
       s.delete(row.id);
       busy = s;
     }
+  }
+
+  function toggleVerified(row: AdminUserRow) {
+    const next = !row.verified;
+    return patchRow(row, { verified: next }, { verified: next });
+  }
+
+  function setType(row: AdminUserRow, next: MemberType) {
+    if (next === row.memberType) return;
+    return patchRow(row, { memberType: next }, {
+      memberType: next,
+      dailyLimit: next === 'organisation' ? row.dailyLimit : null,
+    });
+  }
+
+  function setLimit(row: AdminUserRow, el: HTMLInputElement) {
+    const text = el.value.trim();
+    if (text === '') {
+      if (row.dailyLimit === null) return;
+      return patchRow(row, { dailyLimit: null }, { dailyLimit: null });
+    }
+    const n = Number(text);
+    if (!Number.isInteger(n) || n < 1 || n > MAX_DAILY_LIMIT) {
+      showError($t['admin.users.toast.limit']);
+      // Put the stored value back by hand: Svelte skips the DOM write when the
+      // bound value did not change, so a re-render would leave the bad text.
+      el.value = String(row.dailyLimit ?? '');
+      return;
+    }
+    if (n === row.dailyLimit) return;
+    return patchRow(row, { dailyLimit: n }, { dailyLimit: n });
   }
 
   $effect(() => {
@@ -167,7 +222,50 @@
               </div>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+              <label class="font-dmmono" style="display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute);">
+                {$t['admin.users.type.label']}
+                <select
+                  class="font-bricolage"
+                  data-admin-type
+                  style="border: 1.5px solid var(--k-ink); border-radius: var(--k-radius-sm); background: var(--k-paper); color: var(--k-ink); font-size: 12px; padding: 5px 6px; min-height: 32px;"
+                  disabled={busy.has(row.id)}
+                  value={row.memberType}
+                  onchange={(e) => setType(row, (e.currentTarget as HTMLSelectElement).value as MemberType)}
+                >
+                  {#each MEMBER_TYPES as opt (opt)}
+                    <option value={opt}>{$t[`member.type.${opt}`]}</option>
+                  {/each}
+                </select>
+              </label>
+              {#if row.memberType === 'organisation'}
+                <label class="font-dmmono" style="display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute);">
+                  {$t['admin.users.limit.label']}
+                  <input
+                    type="number"
+                    inputmode="numeric"
+                    min="1"
+                    max={MAX_DAILY_LIMIT}
+                    step="1"
+                    data-admin-limit
+                    class="font-dmmono"
+                    style="width: 64px; border: 1.5px solid var(--k-ink); border-radius: var(--k-radius-sm); background: var(--k-paper); color: var(--k-ink); font-size: 12px; padding: 5px 6px; min-height: 32px;"
+                    placeholder="5"
+                    title={$t['admin.users.limit.hint']}
+                    disabled={busy.has(row.id)}
+                    value={row.dailyLimit ?? ''}
+                    onchange={(e) => setLimit(row, e.currentTarget as HTMLInputElement)}
+                  />
+                </label>
+              {/if}
+              {#if savedRow === row.id}
+                <span
+                  class="font-dmmono"
+                  role="status"
+                  data-admin-saved
+                  style="font-size: 10px; font-weight: 600; color: var(--k-moss); letter-spacing: 0.06em;"
+                >{$t['admin.users.saved']}</span>
+              {/if}
               {#if row.verified}
                 <span class="font-dmmono" style="font-size: 10px; font-weight: 600; background: var(--k-moss); color: var(--k-paper); padding: 2px 8px; border-radius: var(--k-radius-sm); border: 1px solid var(--k-ink); letter-spacing: 0.08em;">
                   {$t['admin.users.verifiedchip']}

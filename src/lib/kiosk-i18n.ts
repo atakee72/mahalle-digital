@@ -1642,6 +1642,11 @@ const de = {
   'admin.users.error': 'Liste konnte nicht geladen werden.',
   'admin.users.retry': '↻ neu laden',
   'admin.users.toast.fail': 'Änderung fehlgeschlagen — bitte erneut versuchen.',
+  'admin.users.type.label': 'TYP',
+  'admin.users.limit.label': 'LIMIT / TAG',
+  'admin.users.limit.hint': 'leer = 5', // DRAFT
+  'admin.users.toast.limit': 'Limit: ganze Zahl von 1 bis 50.', // DRAFT
+  'admin.users.saved': '✓ gespeichert',
 
   // ── Profile (Task 5 scaffold) — "Meldebogen" ────────────────────────────
   'profile.eyebrow.own': 'PROFIL · @{h} · IM KIEZ SEIT {y}',
@@ -3634,6 +3639,11 @@ const en: Dict = {
   'admin.users.error': 'Could not load the list.',
   'admin.users.retry': '↻ reload',
   'admin.users.toast.fail': 'Change failed — please try again.',
+  'admin.users.type.label': 'TYPE',
+  'admin.users.limit.label': 'LIMIT / DAY',
+  'admin.users.limit.hint': 'empty = 5', // DRAFT
+  'admin.users.toast.limit': 'Limit: a whole number from 1 to 50.', // DRAFT
+  'admin.users.saved': '✓ saved',
 
   // ── Profile (Task 5 scaffold) — "Meldebogen" ────────────────────────────
   'profile.eyebrow.own': 'PROFILE · @{h} · IN THE KIEZ SINCE {y}',
