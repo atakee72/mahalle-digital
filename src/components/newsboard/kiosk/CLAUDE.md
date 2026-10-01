@@ -43,7 +43,7 @@ island (client) import them. **NEVER add a server-only import to these** — it 
 bleed mongodb into the client bundle and silently break hydration (see root
 CLAUDE.md "Server-only modules bleeding into client bundles"). They hold: the
 taxonomy types/maps + resolvers, `computeIssueNumber`, `chronoBucket`,
-`formatRelativeTime`, `formatFetchDate`, and the read-decay/heat constants.
+`formatRelativeTime`, and the read-decay/heat constants.
 
 ## Taxonomy resolver strategy
 

@@ -37,7 +37,7 @@ unknown paths fall back to `auth.login.hintGeneric`. Runs through
 `safeInternalPath` first, so an escaped origin shows nothing. Hidden while the
 signed-out strap or the success banner is up.
 ({name,email,password}) then auto-login. Client validation reuses `LoginSchema` +
-a local password scorer mirroring `RegisterSchema` (min 8 + upper/lower/digit). No
+a local password scorer (the form's own checks: min 8 + upper/lower/digit). No
 changes to `auth.config.ts` or `register.ts`.
 
 ## Anti-enumeration

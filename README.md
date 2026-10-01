@@ -97,8 +97,8 @@ Semantic accents stay constant across all kiosk surfaces (never swapped per page
 - `OwnStatusBanner` — author-facing moderation banner (pending / reported / rejected, with optional rejection-reason blockquote)
 - Sonner toasts re-skinned via `unstyled: true` + `.kiosk-toast*` classes (paper-warm bg, ink-2 border, Bricolage font, Instrument italic descriptions, print-shadow per type)
 
-### Legacy dark-glass utilities (still in use on unmigrated pages)
-Utilities in `global.css`: `.dark-glass-bg`, `.dark-glass-gradient` (fixed background divs), `.carved-title` (beveled text with `--carved-accent` CSS var), `.glass-luxe`, `.glass-luxe-edge`, `.glass-smooth`, `.glass-smooth-edge`, `.glass-inner-glow`. Blog is fully migrated as of July 2026 and no longer uses these.
+### Legacy dark-glass utilities (removed)
+The legacy dark-glass and glass utility classes were removed from `global.css` on 2026-10-01; no surface had used them since the kiosk redesign.
 
 ### Original palette (used across both systems)
 - Teal: `#4b9aaa`

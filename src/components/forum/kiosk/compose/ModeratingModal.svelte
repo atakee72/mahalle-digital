@@ -11,8 +11,8 @@
   //
   // The component is presentational. The parent owns:
   //   • binding `open` to the mutation state (e.g. `submitting`)
-  //   • calling `onDismiss` on resolve so the parent can navigate / show
-  //     the optimistic card
+  //   • closing the modal on resolve (flipping `open` to false) so the
+  //     parent can navigate / show the optimistic card
   //
   // No keyboard cancel — see plan note "Cancel-mid-screening dropped".
 
@@ -43,7 +43,7 @@
   // 0 → only language running, 1 → language done + content running, …
   // 5 → all done. Pipeline pacing: each stage takes ~2.8 s; the whole
   // cycle runs ~14 s before parking at "all done" until the parent
-  // fires onDismiss.
+  // closes the modal by flipping `open`.
   let stageIdx = $state(0);
   const STAGE_MS = 2800;
 

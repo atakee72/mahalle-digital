@@ -68,8 +68,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         // request would permanently squat it and the next would get a
         // nonsensical "already exists" 409.
         //
-        // Deliberately NOT zod's .email() (nor RegisterSchema.shape.email,
-        // which wraps it): that regex is ASCII-only and rejects every
+        // Deliberately NOT zod's .email() (nor any schema that wraps it):
+        // that regex is ASCII-only and rejects every
         // internationalised address — `ali@müller.de` and `ümit@example.com`
         // both fail it, and only punycode (`xn--mller-kva.de`) passes.
         // Turning a Kiez resident away at registration over an umlaut domain

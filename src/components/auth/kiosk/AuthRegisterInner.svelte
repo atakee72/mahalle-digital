@@ -42,7 +42,7 @@
   // Preview of the automatic handle, shown as the placeholder (a number may be added on a clash).
   const autoHandle = $derived(isValidDisplayName(cleanDisplayName(name)) ? slugifyHandle(cleanDisplayName(name)) : '');
   const pwScore = $derived(scorePw(password));
-  // "valid enough" = min 8 + at least lower, upper, digit (mirrors RegisterSchema).
+  // "valid enough" = min 8 + at least lower, upper, digit (the form's own check).
   const pwOk = $derived(password.length >= 8 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password));
   const emailOk = $derived(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
 

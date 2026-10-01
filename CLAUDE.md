@@ -412,7 +412,7 @@ When migrating a surface into kiosk, swap kicker + italic-accent text to the pag
 - **Any element with `backdrop-filter: blur(*)` (or `filter`, `transform`, `will-change`, `perspective`, `contain: paint/layout/strict`) creates a containing block for its `position: fixed` descendants.** This means a modal with `position: fixed inset-0` inside a glass container with `backdrop-blur-*` will position relative to the container, not the viewport — rendering off-screen or partially visible.
 - Symptom: modal opens (DOM is there, hydration works, backdrop darkens the page) but the modal content renders at weird coordinates (`rect.top` way above or below viewport). Often looks like "the modal doesn't open" because content is invisible.
 - **Fix:** remove `backdrop-filter` from any ancestor of a fixed-positioned modal/overlay. On forum/blog/marketplace/etc., the outer glass container uses bg + borders only (no backdrop-blur). Cards inside can still have backdrop-blur on hover since they don't contain fixed descendants.
-- **Known offenders to watch:** `.dark-glass-gradient` (fine — it's a sibling, not ancestor), any `bg-*/[n] backdrop-blur-*` wrapper that has a modal-opening action inside. If you add a new glass wrapper, audit whether any descendant can open a fixed overlay.
+- **Known offenders to watch:** any `bg-*/[n] backdrop-blur-*` wrapper that has a modal-opening action inside. If you add a new glass wrapper, audit whether any descendant can open a fixed overlay.
 - **Unlike the sticky/overflow gotcha, this one was masked by working tests** — the modal works when opened from a non-glass-wrapped page, fails on forum/calendar/etc. First hit: forum ReadMoreModal in April 2026.
 
 ### Modal scroll-lock
