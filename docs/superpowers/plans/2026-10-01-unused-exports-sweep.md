@@ -432,7 +432,7 @@ Expected: gate exit 0 (svelte-check must not rise; it may drop); the fallow sect
 
 - [ ] **Step 6: Write the two callback findings into the task report**
 
-State plainly, for the owner: `AgendaRow` accepted `onRsvp` and never called it — an agenda row has no RSVP action today (the page passed its open-the-event handler `onPickEvent` under that name, so wiring it would have opened the event, not RSVPed). `ModeratingModal` accepted `onDismiss` and never called it — the moderation-progress modal cannot be dismissed by the member. Removing the props keeps exactly that behaviour; wiring them would be a feature and is not part of this plan.
+State plainly, for the owner: `AgendaRow` accepted `onRsvp` and never called it — the callback was dead, while the row's own RSVP (`rsvpMutation` / `toggleRsvp` inside `AgendaRow.svelte`) works and is untouched (the page had passed its open-the-event handler `onPickEvent` under that name, so it could never have been an RSVP hook). `ModeratingModal` accepted `onDismiss` and never called it — the moderation-progress modal cannot be dismissed by the member. Removing the props keeps exactly that behaviour; wiring them would be a feature and is not part of this plan.
 
 ---
 
