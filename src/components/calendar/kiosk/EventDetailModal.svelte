@@ -505,14 +505,9 @@
           </div>
         {/if}
 
-        <!-- Description -->
-        {#if displayEventBody}
-          <div
-            class="font-instrument text-[15px] leading-[1.6] text-ink pt-3 border-t border-dashed border-rule whitespace-pre-line"
-          >{#each linkifySegments(displayEventBody) as seg}{#if seg.type === 'link'}<a href={seg.value} title={seg.value} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 decoration-[1.5px] break-words hover:text-teal">{displayUrl(seg.value)}<span aria-hidden="true" class="text-[0.8em] ml-0.5">↗</span></a>{:else}{seg.value}{/if}{/each}</div>
-        {/if}
-
-        <div class="mt-2">
+        <!-- Translation control sits ABOVE the description (a reader who needs it
+             cannot read the text below). -->
+        <div class="mb-3">
           <!-- Keyed on eventId: this modal is a single long-lived instance
                reused across many events, so without a key, TranslateControl's
                OWN internal phase/cache (not just our `translation` state)
@@ -528,6 +523,13 @@
             />
           {/key}
         </div>
+
+        <!-- Description -->
+        {#if displayEventBody}
+          <div
+            class="font-instrument text-[15px] leading-[1.6] text-ink pt-3 border-t border-dashed border-rule whitespace-pre-line"
+          >{#each linkifySegments(displayEventBody) as seg}{#if seg.type === 'link'}<a href={seg.value} title={seg.value} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 decoration-[1.5px] break-words hover:text-teal">{displayUrl(seg.value)}<span aria-hidden="true" class="text-[0.8em] ml-0.5">↗</span></a>{:else}{seg.value}{/if}{/each}</div>
+        {/if}
 
         <!-- Practical info chips (rendered from event.tags). -->
         {#if practicalChips.length > 0}

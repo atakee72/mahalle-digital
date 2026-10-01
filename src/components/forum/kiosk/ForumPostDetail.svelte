@@ -865,6 +865,16 @@
         {/if}
       {:else}
         {#if topic.broadcast && isAuthor}<p class="font-dmmono text-[0.85em] text-ink-mute mb-1" data-admin-hint-token>{topic.broadcast.token}</p>{/if}
+        <!-- Above the text, not under it: whoever needs the translation cannot
+             read the body, and should not have to scroll past it to find this. -->
+        <div class="mb-3">
+          <TranslateControl
+            contentType={reportContentType}
+            contentId={String(topic._id)}
+            onTranslated={(t) => (translation = t)}
+            accent="var(--k-wine, #b23a5b)"
+          />
+        </div>
         <div class="space-y-3.5 mb-5 max-w-prose">
           {#each paragraphs as para, i (i)}
             {#if i === 0}
@@ -878,12 +888,6 @@
             {/if}
           {/each}
         </div>
-        <TranslateControl
-          contentType={reportContentType}
-          contentId={String(topic._id)}
-          onTranslated={(t) => (translation = t)}
-          accent="var(--k-wine, #b23a5b)"
-        />
       {/if}
 
       {#if !editing}
