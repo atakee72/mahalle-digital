@@ -14,6 +14,7 @@
   import PCard from './atoms/PCard.svelte';
   import PAvatar from './atoms/PAvatar.svelte';
   import PHobbyChip from './atoms/PHobbyChip.svelte';
+  import MemberTypeTag from '../../forum/kiosk/MemberTypeTag.svelte';
 
   let { profile }: { profile: PublicProfile } = $props();
 
@@ -31,10 +32,13 @@
       <PAvatar name={profile.name} image={profile.image} editable={false} size={68} />
     </div>
     <div style="min-width: 0;">
-      <h2
-        class="font-bricolage"
-        style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin: 0; line-height: 1.05;"
-      >{profile.name}</h2>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <h2
+          class="font-bricolage"
+          style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin: 0; line-height: 1.05;"
+        >{profile.name}</h2>
+        <MemberTypeTag type={profile.memberType} />
+      </div>
       <div class="font-dmmono" style="font-size: 11px; color: var(--k-ink-mute); margin-top: 4px;">{sinceLine}</div>
       {#if profile.verified}
         <div style="margin-top: 8px;">

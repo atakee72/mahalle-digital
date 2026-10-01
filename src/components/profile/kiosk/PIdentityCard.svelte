@@ -36,6 +36,7 @@
   import PBtn from './atoms/PBtn.svelte';
   import PAvatar from './atoms/PAvatar.svelte';
   import PHobbyChip from './atoms/PHobbyChip.svelte';
+  import MemberTypeTag from '../../forum/kiosk/MemberTypeTag.svelte';
   import PAvatarUploadPanel from './atoms/PAvatarUploadPanel.svelte';
 
   let {
@@ -336,6 +337,7 @@
             class="font-bricolage"
             style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin: 0; line-height: 1.05;"
           >{displayName}</h2>
+          <MemberTypeTag type={profile.memberType} />
           {#if saveState === 'saving' || saveState === 'saved'}
             <span
               class="prof-save-chip font-dmmono"

@@ -21,6 +21,7 @@
   import CapacityBar from './CapacityBar.svelte';
   import AttendeeStack from './AttendeeStack.svelte';
   import KioskAvatar from '../../forum/kiosk/KioskAvatar.svelte';
+  import MemberTypeTag from '../../forum/kiosk/MemberTypeTag.svelte';
   import KioskBtn from '../../forum/kiosk/KioskBtn.svelte';
   import StatusBadge from '../../forum/kiosk/StatusBadge.svelte';
   import OwnStatusBanner from '../../forum/kiosk/states/OwnStatusBanner.svelte';
@@ -185,6 +186,12 @@
     typeof event?.author === 'object' && event?.author !== null && 'name' in event.author
       ? ((event.author as any).name as string) ?? ''
       : ''
+  );
+
+  const authorType = $derived(
+    typeof event?.author === 'object' && event?.author !== null
+      ? (((event.author as any).memberType as string | undefined) ?? null)
+      : null
   );
 
   // @handle next to the name (2026-09-21) — names may repeat, the handle tells two apart.
@@ -463,15 +470,18 @@
             <div class="flex items-center gap-2">
               <KioskAvatar name={authorName} image={authorImage} size="sm" />
               <div>
-                {#if showAuthorLink}
-                  <a
-                    href={`/nachbarn/id/${authorId}`}
-                    class="font-bricolage font-semibold text-[13px] hover:underline underline-offset-2"
-                    aria-label={viewProfileLabel}
-                  >{authorName}</a>
-                {:else}
-                  <div class="font-bricolage font-semibold text-[13px]">{authorName}</div>
-                {/if}
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  {#if showAuthorLink}
+                    <a
+                      href={`/nachbarn/id/${authorId}`}
+                      class="font-bricolage font-semibold text-[13px] hover:underline underline-offset-2"
+                      aria-label={viewProfileLabel}
+                    >{authorName}</a>
+                  {:else}
+                    <div class="font-bricolage font-semibold text-[13px]">{authorName}</div>
+                  {/if}
+                  <MemberTypeTag type={authorType} />
+                </div>
                 {#if authorHandle}
                   <div class="font-dmmono text-[10px] text-ink-mute">@{authorHandle}</div>
                 {/if}

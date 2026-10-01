@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t, tStr } from '../../../../lib/kiosk-i18n';
   import KioskAvatar from '../../../forum/kiosk/KioskAvatar.svelte';
+  import MemberTypeTag from '../../../forum/kiosk/MemberTypeTag.svelte';
 
   let {
     sellerId,
@@ -10,6 +11,7 @@
     listingCount = 0,
     memberSince,
     isVerified = false,
+    sellerMemberType = null,
     onReport,
   }: {
     sellerId: string;
@@ -19,6 +21,7 @@
     listingCount?: number;
     memberSince?: string | null;
     isVerified?: boolean;
+    sellerMemberType?: string | null;
     onReport?: () => void;
   } = $props();
 
@@ -105,6 +108,7 @@
 
   <!-- Badges row -->
   <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+    <MemberTypeTag type={sellerMemberType} />
     {#if isVerified}
       <span
         style="

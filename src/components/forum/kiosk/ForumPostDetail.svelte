@@ -19,6 +19,7 @@
   import { restoreBroadcastText } from '../../../lib/mentions/broadcast';
   import { collectionForKind, type PostKind } from '../../../lib/forum/postKind';
   import KioskAvatar from './KioskAvatar.svelte';
+  import MemberTypeTag from './MemberTypeTag.svelte';
   import KioskBtn from './KioskBtn.svelte';
   import TranslateControl from './TranslateControl.svelte';
   import PostTypeChip from './PostTypeChip.svelte';
@@ -751,19 +752,22 @@
           size="md"
         />
         <div class="flex flex-col leading-tight">
-          {#if authorId}
-            <a
-              href={`/nachbarn/id/${authorId}`}
-              class="font-bricolage font-bold text-[13px] text-ink hover:underline underline-offset-2"
-              aria-label={viewProfileLabel}
-            >
-              {authorName}
-            </a>
-          {:else}
-            <span class="font-bricolage font-bold text-[13px] text-ink">
-              {authorName}
-            </span>
-          {/if}
+          <span class="flex items-center gap-1.5">
+            {#if authorId}
+              <a
+                href={`/nachbarn/id/${authorId}`}
+                class="font-bricolage font-bold text-[13px] text-ink hover:underline underline-offset-2"
+                aria-label={viewProfileLabel}
+              >
+                {authorName}
+              </a>
+            {:else}
+              <span class="font-bricolage font-bold text-[13px] text-ink">
+                {authorName}
+              </span>
+            {/if}
+            <MemberTypeTag type={topic.author?.memberType} />
+          </span>
           {#if authorHandle || memberSince}
             <!-- the handle is an identifier and must never be uppercased -->
             <span class="font-dmmono text-[10px] tracking-[0.05em] text-ink-mute">

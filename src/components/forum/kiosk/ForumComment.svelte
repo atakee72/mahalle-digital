@@ -20,6 +20,7 @@
   import { linkifySegments, displayUrl } from '../../../lib/linkify';
   import { restoreBroadcastText } from '../../../lib/mentions/broadcast';
   import KioskAvatar from './KioskAvatar.svelte';
+  import MemberTypeTag from './MemberTypeTag.svelte';
   import MentionPopup from './compose/MentionPopup.svelte';
   import TranslateControl from './TranslateControl.svelte';
   import KioskReportModal from './KioskReportModal.svelte';
@@ -38,7 +39,7 @@
       _id: string;
       body?: string;
       content?: string;
-      author?: { name?: string; image?: string | null; _id?: string; handle?: string | null } | string | null;
+      author?: { name?: string; image?: string | null; _id?: string; handle?: string | null; memberType?: string } | string | null;
       date?: string | number;
       likes?: number;
       editedAt?: string | Date | null;
@@ -105,6 +106,9 @@
   // Names may repeat — the handle tells two „Petra"s apart (2026-09-21).
   const commentAuthorHandle = $derived(
     typeof comment.author === 'object' ? (comment.author?.handle ?? null) : null
+  );
+  const commentAuthorType = $derived(
+    typeof comment.author === 'object' ? (comment.author?.memberType ?? null) : null
   );
   const inTimeWindow = $derived(
     Date.now() - commentDateMs(comment.date) < EDIT_WINDOW_MS
@@ -248,6 +252,7 @@
       {#if commentAuthorHandle}
         <span class="font-dmmono text-[10px] text-ink-mute">@{commentAuthorHandle}</span>
       {/if}
+      <MemberTypeTag type={commentAuthorType} />
       {#if comment.broadcast}<span class="ml-2 inline-block px-1.5 py-0.5 border border-[#6f2f59] text-[#6f2f59] font-dmmono text-[10px] uppercase tracking-wide align-middle" data-admin-hint>{$t['forum.adminHint.tag']}</span>{/if}
       {#if isOP}
         <span class="inline-flex items-center px-1.5 py-0.5 rounded font-dmmono text-[9px] uppercase tracking-[0.1em] bg-wine text-paper font-medium">

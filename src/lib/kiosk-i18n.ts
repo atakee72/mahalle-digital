@@ -246,6 +246,8 @@ const de = {
   'card.cta.read': 'lesen',
   'card.saved': 'saved',
   'role.team': 'MAHALLE-TEAM',
+  'member.tag.organisation': 'Initiative',
+  'member.tag.business': 'Gewerbe',
 
   // post type chips
   'chip.discussion': 'Diskussion',
@@ -2305,6 +2307,8 @@ const en: Dict = {
   'card.cta.read': 'read',
   'card.saved': 'saved',
   'role.team': 'MAHALLE TEAM',
+  'member.tag.organisation': 'Initiative',
+  'member.tag.business': 'Business',
 
   'chip.discussion': 'Discussion',
   'chip.recommendation': 'Recommendation',

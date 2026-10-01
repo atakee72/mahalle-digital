@@ -27,6 +27,7 @@
   //      the left, `→ lesen` on the right.
 
   import KioskAvatar from './KioskAvatar.svelte';
+  import MemberTypeTag from './MemberTypeTag.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import PostTypeChip from './PostTypeChip.svelte';
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
@@ -54,7 +55,7 @@
       title: string;
       body?: string;
       description?: string;
-      author?: { _id?: string; name?: string; image?: string | null; createdAt?: string } | null;
+      author?: { _id?: string; name?: string; image?: string | null; createdAt?: string; memberType?: string } | null;
       tags?: string[];
       images?: { url: string }[];
       comments?: any[];
@@ -286,6 +287,7 @@
                 {$t['role.team']}
               </span>
             {/if}
+            <MemberTypeTag type={topic.author?.memberType} tone={isInkCard ? 'ink' : 'paper'} />
           </div>
           <div class={`font-dmmono text-[9.5px] tracking-[0.05em] ${metaColor}`}>
             {relTime(topic.date)}

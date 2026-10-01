@@ -406,6 +406,7 @@
         sellerImage={listing.sellerImage}
         listingCount={0}
         isVerified={listing.sellerVerified === true}
+        sellerMemberType={listing.sellerMemberType}
         onReport={isOwner ? undefined : () => (reportOpen = true)}
       />
 
