@@ -23,7 +23,7 @@
 - i18n lives in ONE file, `src/lib/kiosk-i18n.ts`: the DE dictionary `const de = {` and the EN dictionary `const en: Dict = {`. Every new key goes into BOTH.
 - A Svelte component that is only imported by other islands must not use a scoped `<style>` block (it is orphaned in production builds): Tailwind classes or inline styles only.
 - Tests: `node:test` + `node:assert/strict`, first line `// Run: npx tsx --test <path>`, pure (no database).
-- CI budgets must not rise: `npx tsc --noEmit` ≤ 16 errors, `npx -y svelte-check@4` ≤ 81 errors.
+- CI budgets must not rise: `npx tsc --noEmit` ≤ 16 errors, `npx -y svelte-check@4` ≤ 81 errors. The branch starts at EXACTLY 16 and 81 — there is no headroom; one new error fails the gate. Never pass a typed-narrow object type where a MongoDB document goes: use `UserFields` (Task 1).
 - Find code by the quoted anchor text, not by line number; line numbers in this plan are hints.
 
 ## Review Focus
@@ -47,13 +47,14 @@
 - Produces (used by every later task):
   - `MEMBER_TYPES`, `type MemberType = 'person' | 'organisation' | 'business'`
   - `parseMemberType(raw: unknown): MemberType | null`
-  - `storedMemberType(doc: { memberType?: unknown } | null | undefined): MemberType`
+  - `type UserFields = { memberType?: unknown; dailyLimit?: unknown; [k: string]: unknown }` — the parameter type of every rule that reads a user document (a raw MongoDB document must be assignable to it)
+  - `storedMemberType(doc: UserFields | null | undefined): MemberType`
   - `memberTypeTagKey(t: unknown): 'member.tag.organisation' | 'member.tag.business' | null`
   - `DEFAULT_DAILY_LIMIT = 5`, `MAX_DAILY_LIMIT = 50`
-  - `effectiveDailyLimit(doc: { memberType?: unknown; dailyLimit?: unknown } | null | undefined): number`
+  - `effectiveDailyLimit(doc: UserFields | null | undefined): number`
   - `planSelfTypeChange(stored: MemberType, requested: MemberType): SelfTypePlan`
-  - `planAdminPatch(stored: { memberType?: unknown; dailyLimit?: unknown }, body: AdminPatchBody): AdminPatchPlan`
-  - `decideLimit(input: { count: number; role?: string | null; user: { memberType?: unknown; dailyLimit?: unknown } | null }): LimitResult` with `LimitResult = { count: number; limit: number; remaining: number; allowed: boolean }`
+  - `planAdminPatch(stored: UserFields, body: AdminPatchBody): AdminPatchPlan`
+  - `decideLimit(input: { count: number; role?: string | null; user: UserFields | null }): LimitResult` with `LimitResult = { count: number; limit: number; remaining: number; allowed: boolean }`
 
 - [ ] **Step 1: Write the three failing test files**
 
@@ -271,6 +272,13 @@ export type MemberType = (typeof MEMBER_TYPES)[number];
 export const DEFAULT_DAILY_LIMIT = 5;
 export const MAX_DAILY_LIMIT = 50;
 
+/**
+ * The two fields these rules read off a user document. The index signature is
+ * load-bearing: without it TypeScript's weak-type check refuses a MongoDB
+ * `WithId<Document>` (its `_id` shares no property with an all-optional type).
+ */
+export type UserFields = { memberType?: unknown; dailyLimit?: unknown; [k: string]: unknown };
+
 /** Client input → type. Exact match only; anything else is null (caller answers 400). */
 export function parseMemberType(raw: unknown): MemberType | null {
   return typeof raw === 'string' && (MEMBER_TYPES as readonly string[]).includes(raw)
@@ -279,7 +287,7 @@ export function parseMemberType(raw: unknown): MemberType | null {
 }
 
 /** A user document → type. Absent or unknown value reads as person. */
-export function storedMemberType(doc: { memberType?: unknown } | null | undefined): MemberType {
+export function storedMemberType(doc: UserFields | null | undefined): MemberType {
   const t = doc?.memberType;
   return t === 'organisation' || t === 'business' ? t : 'person';
 }
@@ -292,9 +300,7 @@ export function memberTypeTagKey(t: unknown): 'member.tag.organisation' | 'membe
 }
 
 /** The admin's number counts only for an organisation and only when it is an integer 1–50. */
-export function effectiveDailyLimit(
-  doc: { memberType?: unknown; dailyLimit?: unknown } | null | undefined,
-): number {
+export function effectiveDailyLimit(doc: UserFields | null | undefined): number {
   if (storedMemberType(doc) !== 'organisation') return DEFAULT_DAILY_LIMIT;
   const n = doc?.dailyLimit;
   return typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= MAX_DAILY_LIMIT
@@ -310,7 +316,7 @@ export function effectiveDailyLimit(
 // writers of users.memberType: the member (profile edit) and the admin
 // (/admin/mitglieder). `dailyLimit` belongs to an organisation: whoever moves
 // a member away from that type removes the number in the same update.
-import { storedMemberType, type MemberType } from './memberType';
+import { storedMemberType, type MemberType, type UserFields } from './memberType';
 
 type UnsetField = 'memberType' | 'dailyLimit';
 
@@ -352,7 +358,7 @@ export type AdminPatchPlan =
     };
 
 export function planAdminPatch(
-  stored: { memberType?: unknown; dailyLimit?: unknown },
+  stored: UserFields,
   body: AdminPatchBody,
 ): AdminPatchPlan {
   if (body.verified === undefined && body.memberType === undefined && body.dailyLimit === undefined) {
@@ -400,7 +406,7 @@ Note the order the tests expect in `unset`: `['memberType', 'dailyLimit']` — `
 // src/lib/limits/limitRules.ts — dependency-pure decision behind every daily limit.
 // Four buckets, each per rolling 24 hours. The three forum kinds share ONE bucket
 // (until 2026-10-01 each kind counted alone: 15 forum posts a day were possible).
-import { effectiveDailyLimit } from '../members/memberType';
+import { effectiveDailyLimit, type UserFields } from '../members/memberType';
 
 export type LimitBucket = 'forum' | 'events' | 'listings' | 'news';
 
@@ -414,7 +420,7 @@ export interface LimitResult {
 export function decideLimit(input: {
   count: number;
   role?: string | null;
-  user: { memberType?: unknown; dailyLimit?: unknown } | null;
+  user: UserFields | null;
 }): LimitResult {
   const limit = effectiveDailyLimit(input.user);
   // Admins post official content in bursts — exempt, and the count endpoints
@@ -453,7 +459,7 @@ git commit -m "feat: member type and daily-limit rules"
 
 **Interfaces:**
 - Consumes: `decideLimit`, `LimitBucket`, `LimitResult` from `src/lib/limits/limitRules.ts`.
-- Produces: `countToday(db, userId, bucket): Promise<number>`, `checkDailyLimit(db, who: { userId: string; role?: string | null }, bucket): Promise<LimitResult>`, `limitReachedResponse(bucket, r: LimitResult): Response`.
+- Produces: `countToday(db, userId, bucket): Promise<number>`, `checkDailyLimit(db, who: { userId: string; role?: string | null }, bucket): Promise<LimitResult>`, `limitReachedResponse(bucket, r: LimitResult, extra?: string): Response`.
 
 - [ ] **Step 1: Write the helper**
 
@@ -518,10 +524,10 @@ const NOUN: Record<LimitBucket, string> = {
 };
 
 /** The 429 every gate answers. Shape frozen: clients read dailyLimit + currentCount. */
-export function limitReachedResponse(bucket: LimitBucket, r: LimitResult): Response {
+export function limitReachedResponse(bucket: LimitBucket, r: LimitResult, extra = ''): Response {
   return new Response(JSON.stringify({
     error: 'Daily limit reached',
-    message: `You can publish up to ${r.limit} ${NOUN[bucket]} per day. Please try again tomorrow.`,
+    message: `You can publish up to ${r.limit} ${NOUN[bucket]} per day. Please try again tomorrow${extra}.`,
     dailyLimit: r.limit,
     currentCount: r.count,
   }), { status: 429, headers: { 'Content-Type': 'application/json' } });
@@ -563,7 +569,8 @@ Each of these three files declared its collection inside the removed block (`con
     const db = await connectDB();
     const listingsCollection = db.collection<Listing>('listings');
     const limit = await checkDailyLimit(db, { userId, role: session.user.role }, 'listings');
-    if (!limit.allowed) return limitReachedResponse('listings', limit);
+    // The marketplace composer shows this server message as it comes — keep the draft hint.
+    if (!limit.allowed) return limitReachedResponse('listings', limit, ' or save as a draft');
 ```
 
 `listings/draft/[id]/publish.ts` (import depth `'../../../../../lib/limits/dailyLimit'`; `db`, `listingsCollection`, `session`, `userId` already exist above the block — check the names and reuse them):
@@ -694,7 +701,7 @@ git commit -m "feat: one daily-limit helper; forum kinds share one bucket"
 ### Task 3: Limit copy and indicators follow the real number
 
 **Files:**
-- Modify: `src/lib/kiosk-i18n.ts` (DE + EN: `state.rate.kicker`, `state.rate.body`, `state.rate.body.short`, `news.forumcta.exhausted`, `news.submit.quotaReachedTitle`)
+- Modify: `src/lib/kiosk-i18n.ts` (DE + EN: `state.rate.kicker`, `state.rate.body`, `state.rate.body.short`, `news.forumcta.exhausted`, `news.submit.quotaReachedTitle`, `blog.foot.discuss.note`)
 - Modify: `src/components/forum/kiosk/states/RateLimitPanel.svelte`
 - Modify: `src/components/forum/kiosk/compose/ComposePageInner.svelte`, `src/components/calendar/kiosk/compose/EventComposePageInner.svelte`
 - Modify: `src/components/newsboard/kiosk/submit/QuotaIndicator.svelte`, `src/components/newsboard/kiosk/submit/NewsSubmitInner.svelte`
@@ -727,6 +734,8 @@ EN:
   'news.forumcta.exhausted': 'Daily limit for forum posts reached — back tomorrow.', // DRAFT
   'news.submit.quotaReachedTitle': '{used} / {max} submissions used today.',
 ```
+
+Also make `blog.foot.discuss.note` number-free in both dictionaries (it says „zählt zu deinen 5 Beiträgen/Tag" / "counts toward your 5 posts/day"): replace only the number phrase — DE „zählt zu deinem Tageslimit", EN "counts toward your daily limit" — and keep the rest of each sentence as it is. Mark both `// DRAFT`.
 
 - [ ] **Step 2: `RateLimitPanel.svelte` takes the number**
 
@@ -832,7 +841,7 @@ Leave the sandbox mount `<RateLimitPanel unlocksIn="04:47:12" client:load />` as
 - [ ] **Step 6: Check and commit**
 
 Run: `grep -n "'state.rate.kicker'\|'state.rate.body.short'\|'news.submit.quotaReachedTitle'\|'news.forumcta.exhausted'" src/lib/kiosk-i18n.ts`
-Expected: eight lines, none containing a bare „5".
+Expected: eight lines, none containing a bare „5". And `grep -n "5 Beiträgen/Tag\|5 posts/day" src/lib/kiosk-i18n.ts` → no output.
 
 Run: `npx -y svelte-check@4 --output machine 2>&1 | grep COMPLETED`
 Expected: the error count (5th field) is 81 or lower.
@@ -1105,27 +1114,46 @@ That row is `display: flex; gap: 6px; flex-wrap: wrap;` — it renders empty-and
   );
 ```
 
-and directly after the `{#if authorHandle} <div …>@{authorHandle}</div> {/if}` block:
+The tag goes BESIDE the name. Replace the `{#if showAuthorLink} <a …>{authorName}</a> {:else} <div …>{authorName}</div> {/if}` block with the same two elements wrapped in one row:
 
 ```svelte
-                <MemberTypeTag type={authorType} />
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  {#if showAuthorLink}
+                    <a
+                      href={`/nachbarn/id/${authorId}`}
+                      class="font-bricolage font-semibold text-[13px] hover:underline underline-offset-2"
+                      aria-label={viewProfileLabel}
+                    >{authorName}</a>
+                  {:else}
+                    <div class="font-bricolage font-semibold text-[13px]">{authorName}</div>
+                  {/if}
+                  <MemberTypeTag type={authorType} />
+                </div>
 ```
 
 - [ ] **Step 8: The two profile cards (read state)**
 
-`PPublicIdentityCard.svelte`: import `MemberTypeTag from '../../forum/kiosk/MemberTypeTag.svelte'`. After the `sinceLine` `<div>` add:
+The tag goes BESIDE the name on both cards.
+
+`PPublicIdentityCard.svelte`: import `MemberTypeTag from '../../forum/kiosk/MemberTypeTag.svelte'`. Wrap the `<h2 …>{profile.name}</h2>` in a row and put the tag after it (the `<h2>` itself stays unchanged):
 
 ```svelte
-      <div style="margin-top: 6px;"><MemberTypeTag type={profile.memberType} /></div>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <h2
+          class="font-bricolage"
+          style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin: 0; line-height: 1.05;"
+        >{profile.name}</h2>
+        <MemberTypeTag type={profile.memberType} />
+      </div>
 ```
 
-`PIdentityCard.svelte`: same import. In the READ state, after the `sinceLine` `<div>` (before the `{#if displayMotto}` block) add:
+`PIdentityCard.svelte`: same import. The READ state already has that row (`<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">` holding the `<h2>` and the save chip). Add directly after the `</h2>`, before the `{#if saveState === 'saving' …}` chip:
 
 ```svelte
-        <div style="margin-top: 6px;"><MemberTypeTag type={profile.memberType} /></div>
+          <MemberTypeTag type={profile.memberType} />
 ```
 
-(Task 6 changes `profile.memberType` here to the optimistic value.) For a person the wrapper `<div>` is empty and adds 6 px of margin; to avoid that, wrap both additions in `{#if profile.memberType !== 'person'} … {/if}`.
+(Task 6 changes `profile.memberType` here to the optimistic value.)
 
 - [ ] **Step 9: Check and commit**
 
@@ -1206,7 +1234,7 @@ EN:
         class="font-bricolage"
         data-member-choice={opt}
         style="
-          display: inline-flex; align-items: center; min-height: 36px; padding: 6px 12px;
+          position: relative; display: inline-flex; align-items: center; min-height: 36px; padding: 6px 12px;
           border: 1.5px solid var(--k-ink); border-radius: 999px; cursor: pointer;
           font-size: 13px; font-weight: 600;
           background: {value === opt ? 'var(--k-ink)' : 'var(--k-paper-soft)'};
@@ -1342,7 +1370,7 @@ import { alertMemberType } from '../../../lib/adminAlerts';
 }).refine((d) => d.name !== undefined || d.hobbies !== undefined || d.motto !== undefined || d.memberType !== undefined, { message: 'Nothing to update' });
 ```
 
-  If this Zod version rejects `{ message }` as the second argument of `z.enum`, use `z.enum(MEMBER_TYPES, { errorMap: () => ({ message: 'member_type_invalid' }) })`. The route already answers 400 with `issues[0].message`, so the client receives `member_type_invalid`.
+  (Verified against the installed Zod 3.25: `{ message }` is accepted and an unknown value yields exactly `member_type_invalid`.) The route already answers 400 with `issues[0].message`, so the client receives `member_type_invalid`.
 
 - destructure: `const { name, hobbies, motto, memberType } = parsed.data;`
 - after `const users = db.collection('users');` and before `setFields` is built, pre-read and plan:
@@ -1352,11 +1380,10 @@ import { alertMemberType } from '../../../lib/adminAlerts';
     // neither clear the admin's limit nor ping). Read-then-write is not
     // atomic: two parallel saves can ping twice — accepted.
     let typePlan: ReturnType<typeof planSelfTypeChange> | null = null;
-    let before: { name?: unknown; handle?: unknown; memberType?: unknown } | null = null;
     if (memberType !== undefined) {
-      before = await users.findOne(
+      const before = await users.findOne(
         { _id: new ObjectId(session.user.id) },
-        { projection: { name: 1, handle: 1, memberType: 1 } }
+        { projection: { memberType: 1 } }
       );
       if (!before) {
         return new Response(JSON.stringify({ error: 'User not found' }), {
@@ -1434,7 +1461,7 @@ import { alertMemberType } from '../../../lib/adminAlerts';
         memberType: json.memberType === 'organisation' || json.memberType === 'business' ? json.memberType : 'person',
 ```
 
-- read state: the tag line added in Task 5 reads `displayMemberType` instead of `profile.memberType` (both in the `{#if}` and in the `type=` attribute).
+- read state: the tag added in Task 5 reads `displayMemberType` instead of `profile.memberType`.
 - edit state markup: directly after the motto hint `<div … >{$t['profile.edit.motto.hint']}</div>`:
 
 ```svelte
@@ -1635,8 +1662,8 @@ Rename the `console.error` text in the `catch` to `'Admin user update error:'`.
     });
   }
 
-  function setLimit(row: AdminUserRow, raw: string) {
-    const text = raw.trim();
+  function setLimit(row: AdminUserRow, el: HTMLInputElement) {
+    const text = el.value.trim();
     if (text === '') {
       if (row.dailyLimit === null) return;
       return patchRow(row, { dailyLimit: null }, { dailyLimit: null });
@@ -1644,8 +1671,9 @@ Rename the `console.error` text in the `catch` to `'Admin user update error:'`.
     const n = Number(text);
     if (!Number.isInteger(n) || n < 1 || n > MAX_DAILY_LIMIT) {
       showError($t['admin.users.toast.limit']);
-      // Re-render the stored value into the field.
-      users = users.map((u) => (u.id === row.id ? { ...u } : u));
+      // Put the stored value back by hand: Svelte skips the DOM write when the
+      // bound value did not change, so a re-render would leave the bad text.
+      el.value = String(row.dailyLimit ?? '');
       return;
     }
     if (n === row.dailyLimit) return;
@@ -1687,7 +1715,7 @@ Rename the `console.error` text in the `catch` to `'Admin user update error:'`.
                     title={$t['admin.users.limit.hint']}
                     disabled={busy.has(row.id)}
                     value={row.dailyLimit ?? ''}
-                    onchange={(e) => setLimit(row, (e.currentTarget as HTMLInputElement).value)}
+                    onchange={(e) => setLimit(row, e.currentTarget as HTMLInputElement)}
                   />
                 </label>
               {/if}
@@ -1815,7 +1843,7 @@ Root `CLAUDE.md`:
 - „Admin alerts": add `member_type` (Telegram only) to the list of kinds; `member_new` names the type when it is not person.
 - Add a pointer line to the spec and this plan.
 
-`src/components/forum/kiosk/CLAUDE.md`: find the sentence stating that each kind has its own daily limit of 5 (grep `OWN daily limit`) and replace it with the forum-bucket rule; add a short „Member type tag" note naming `MemberTypeTag.svelte`, its `tone` prop, and that `/search` and `/bookmarks` show it because they render `ForumPostCard`.
+`src/components/forum/kiosk/CLAUDE.md`: find the sentence stating that each kind has its own daily limit of 5 (grep `OWN daily limit`) and replace it with the forum-bucket rule; add a short „Member type tag" note naming `MemberTypeTag.svelte`, its `tone` prop, and that it is NOT on `/search` (slim result rows) or `/bookmarks` (no author line).
 
 `src/components/admin/CLAUDE.md`: in the Mitglieder section add the type selector, the organisation-only limit field (empty = 5), `planAdminPatch()` and the error `limit_needs_organisation`.
 

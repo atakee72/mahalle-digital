@@ -114,6 +114,8 @@ change with it:
   `limit` prop from both compose pages).
 - `news.forumcta.exhausted` („Heute schon 5 Themen erstellt") becomes
   number-free forum-post wording.
+- `blog.foot.discuss.note` („zählt zu deinen 5 Beiträgen/Tag") becomes
+  number-free.
 - `news.submit.quotaReachedTitle` and `QuotaIndicator.svelte` (fixed
   `max = 5`) use `limit` from `news/daily-count`; above 10 the indicator
   prints „n / limit" instead of one slot per post.
@@ -160,8 +162,8 @@ change with it:
   5. `lib/profile/profileQuery.ts` (`ProfileMe`) → `PIdentityCard`.
 - Shown beside the name in: `ForumPostCard`, `ForumPostDetail`,
   `ForumComment`, `SellerCard`, `EventDetailModal` (author slab),
-  `PPublicIdentityCard`, `PIdentityCard`. Because bookmarks and the forum
-  results on `/search` render the same post card, the tag shows there too.
+  `PPublicIdentityCard`, `PIdentityCard`. `/search` (slim result rows) and
+  `/bookmarks` (no author line) do not render the post card and show no tag.
 - Independent of the Kiez-verified badge; both may show (post detail, event
   slab, seller card, profile cards — check the pair's layout at 390 px).
 
@@ -206,8 +208,8 @@ change with it:
 - No confirmation step before the tag shows; no raised limit for businesses;
   no per-bucket numbers.
 - No tag in notifications, the „@" popup, the calendar attendee list, News
-  submitter lines, the admin moderation queue, the landing page, or e-mails.
-  (Forum cards on `/search` and `/bookmarks` do show it — same component.)
+  submitter lines, the admin moderation queue, `/search`, `/bookmarks`, the
+  landing page, or e-mails.
 - No change to moderation for any type.
 
 ## Testing
