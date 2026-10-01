@@ -1,16 +1,8 @@
 // SERVER-ONLY: imports banGuard → mongodb. Never import from a client island
 // or a shared (page + component) module — see CLAUDE.md „Server-only modules".
-import jwt from 'jsonwebtoken';
 import { getSession } from 'auth-astro/server';
 import { rejectIfBanned } from './auth/banGuard';
 import { gateMember, type MemberGate } from './auth/memberGate';
-
-interface JWTPayload {
-  userId: string;
-  email: string;
-  iat?: number;
-  exp?: number;
-}
 
 /**
  * Admin guard for API endpoints. Returns either a usable session
@@ -69,31 +61,4 @@ export async function requireAdminSession(
  */
 export async function requireMemberSession(request: Request): Promise<MemberGate> {
   return gateMember(await getSession(request), rejectIfBanned);
-}
-
-const JWT_SECRET = import.meta.env.JWT_SECRET || 'default-secret-key';
-
-export function signToken(payload: { userId: string; email: string }): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
-}
-
-export function verifyToken(token: string): JWTPayload | null {
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
-    return decoded;
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    return null;
-  }
-}
-
-export function extractTokenFromHeader(authHeader: string | null): string | null {
-  if (!authHeader) return null;
-
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') {
-    return null;
-  }
-
-  return parts[1];
 }
