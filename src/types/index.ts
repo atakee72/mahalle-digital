@@ -1,6 +1,8 @@
 import { ObjectId } from 'mongodb';
 import type { MentionRef } from '../lib/mentions/mentions';
 import type { BroadcastRef } from '../lib/mentions/broadcast';
+import type { ModerationDecision } from '../lib/moderation';
+import type { ReportReason } from '../schemas/moderation.schema';
 
 // User Types
 export interface User {
@@ -259,11 +261,10 @@ export interface NewsItem {
 // MODERATION TYPES
 // ============================================================================
 
-export type ModerationDecision = 'approved' | 'pending_review' | 'urgent_review';
+export type { ModerationDecision, ReportReason };
 export type ModerationReviewStatus = 'pending' | 'approved' | 'rejected';
 export type ModeratedContentType = 'topic' | 'announcement' | 'recommendation' | 'comment' | 'event' | 'marketplace' | 'news';
 export type FlaggedContentSource = 'ai_moderation' | 'user_report';
-export type ReportReason = 'spam' | 'harassment' | 'hate_speech' | 'violence' | 'inappropriate' | 'misinformation' | 'other';
 
 export interface FlaggedContent {
   _id?: ObjectId | string;
