@@ -171,7 +171,10 @@ change with it:
 
 - `GET /api/admin/users` returns `memberType` and `dailyLimit` per row.
 - `MitgliederApp.svelte`: a type selector per row; for organisations a
-  number field 1–50 (empty = normal limit, placeholder 15). Optimistic
+  number field 1–50 (empty = normal limit, placeholder 5 — nothing is raised until the
+  admin types a number; owner decision 2026-10-01; no save button: the
+  selector saves on change, the field on Enter or on leaving it, and a
+  „✓ gespeichert" mark shows for two seconds after a successful save). Optimistic
   write with rollback, like the verified toggle.
 - `PATCH /api/admin/users/[id]`: the strict body accepts any of
   `verified: boolean`, `memberType: 'person' | 'organisation' | 'business'`,

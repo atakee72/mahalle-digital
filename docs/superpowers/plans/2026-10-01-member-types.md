@@ -1510,6 +1510,7 @@ DE, after `'admin.users.toast.fail'`:
   'admin.users.limit.label': 'LIMIT / TAG',
   'admin.users.limit.hint': 'leer = 5', // DRAFT
   'admin.users.toast.limit': 'Limit: ganze Zahl von 1 bis 50.', // DRAFT
+  'admin.users.saved': '✓ gespeichert',
 ```
 
 EN:
@@ -1519,6 +1520,7 @@ EN:
   'admin.users.limit.label': 'LIMIT / DAY',
   'admin.users.limit.hint': 'empty = 5', // DRAFT
   'admin.users.toast.limit': 'Limit: a whole number from 1 to 50.', // DRAFT
+  'admin.users.saved': '✓ saved',
 ```
 
 - [ ] **Step 2: List endpoint**
@@ -1611,6 +1613,7 @@ Rename the `console.error` text in the `catch` to `'Admin user update error:'`.
 - imports:
 
 ```ts
+  import { onDestroy } from 'svelte';
   import { MEMBER_TYPES, MAX_DAILY_LIMIT, type MemberType } from '../../../lib/members/memberType';
 ```
 
@@ -1619,6 +1622,16 @@ Rename the `console.error` text in the `catch` to `'Admin user update error:'`.
 
 ```ts
   type RowPatch = { verified?: boolean; memberType?: MemberType; dailyLimit?: number | null };
+
+  // „✓ gespeichert" beside the controls for two seconds after a successful save.
+  let savedRow = $state<string | null>(null);
+  let savedTimer: ReturnType<typeof setTimeout> | undefined;
+  function flashSaved(id: string) {
+    savedRow = id;
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(() => { savedRow = null; }, 2000);
+  }
+  onDestroy(() => clearTimeout(savedTimer));
 
   // Optimistic write with rollback. The server's echo is the truth afterwards
   // (e.g. leaving „organisation" clears the limit server-side).
@@ -1639,6 +1652,9 @@ Rename the `console.error` text in the `catch` to `'Admin user update error:'`.
       users = users.map((u) => (u.id === row.id
         ? { ...u, verified: j.verified === true, memberType: j.memberType, dailyLimit: j.dailyLimit ?? null }
         : u));
+      // The type selector and the limit field save without a button — say so.
+      // (The verify button already changes its own label; no mark for it.)
+      if (patch.memberType !== undefined || patch.dailyLimit !== undefined) flashSaved(row.id);
     } catch {
       users = users.map((u) => (u.id === row.id ? prev : u));
       showError($t['admin.users.toast.fail']);
@@ -1719,7 +1735,17 @@ Rename the `console.error` text in the `catch` to `'Admin user update error:'`.
                   />
                 </label>
               {/if}
+              {#if savedRow === row.id}
+                <span
+                  class="font-dmmono"
+                  role="status"
+                  data-admin-saved
+                  style="font-size: 10px; font-weight: 600; color: var(--k-moss); letter-spacing: 0.06em;"
+                >{$t['admin.users.saved']}</span>
+              {/if}
 ```
+
+  Saving has no button: the selector saves on change, the limit field when the admin presses Enter or leaves the field (the browser's `change` event). The mark above is the only success feedback — keep it.
 
   If `$t[\`member.type.${opt}\`]` fails the type-check, use the same `LABEL` map as described in Task 6 Step 2.
 
@@ -1833,7 +1859,7 @@ Run again: `npx tsx --env-file=.env scratchpad/member-types/limit-check.mts` —
 
 In `docs/superpowers/specs/2026-10-01-member-types-design.md`:
 - replace `` `src/components/ui/MemberTypeTag.svelte` `` with `` `src/components/forum/kiosk/MemberTypeTag.svelte` `` (the `ui` folder no longer exists; the tag lives beside `KioskAvatar`);
-- replace „(empty = normal limit, placeholder 15)" with „(empty = normal limit, placeholder 5 — the value that applies while the field is empty)".
+- the placeholder sentence is already corrected (placeholder 5, „✓ gespeichert" mark) — verify it reads so, change nothing.
 
 - [ ] **Step 5: Docs**
 
