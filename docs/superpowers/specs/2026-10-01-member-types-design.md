@@ -43,6 +43,9 @@ Rules:
   never brings a raised limit back without the admin.
 - An admin correction away from `organisation` also unsets `dailyLimit`.
 - Setting the type to person stores nothing: `$unset memberType`.
+- Re-saving the SAME type changes nothing: no unset of `dailyLimit`, no ping.
+- `dailyLimit` never enters any client-visible projection (author, seller,
+  public profile); it is returned only by the admin list endpoint.
 - The account-deletion tombstone adds `memberType` and `dailyLimit` to its
   `$unset` list.
 - The dormant `roleBadge` field is not touched and not reused.
@@ -93,18 +96,44 @@ Consumers, all replacing a hand-written count and a hard-coded 5:
 
 The 429 body keeps its shape (`error`, `message`, `dailyLimit`,
 `currentCount`); `dailyLimit` carries the member's real limit. The three
-forum routes share one message that names forum posts in general. The
-kind-change route (`posts/move`) needs no gate: a move stays inside the
-forum bucket.
+forum routes share one message that names forum posts in general. The count
+endpoints keep their field names (`count`, `limit`, `remaining`, and
+`canCreate` — `canSubmit` on news); `limit` carries the real limit. The
+kind-change route (`posts/move`) needs no gate: `buildMovedDoc` keeps
+`createdAt`, so a move stays inside the forum bucket. Drafts and the news
+„discuss in forum" link publish through the normal create routes; official
+announcements are admin posts and exempt. Counts include pending and
+rejected items, as today. A missing user document throws (500).
+
+Client copy and UI that hard-code the 5 (`src/lib/kiosk-i18n.ts`, DE + EN)
+change with it:
+
+- `state.rate.kicker` („LIMIT ERREICHT · 5 BEITRÄGE / TAG") and
+  `state.rate.body.short` take the number from the 429's `dailyLimit`
+  (`RateLimitError` already carries it; `RateLimitPanel.svelte` gains a
+  `limit` prop from both compose pages).
+- `news.forumcta.exhausted` („Heute schon 5 Themen erstellt") becomes
+  number-free forum-post wording.
+- `news.submit.quotaReachedTitle` and `QuotaIndicator.svelte` (fixed
+  `max = 5`) use `limit` from `news/daily-count`; above 10 the indicator
+  prints „n / limit" instead of one slot per post.
+- New wording is DRAFT until the owner confirms it.
 
 ### Choosing the type
 
 - **Signup** (`AuthRegisterInner.svelte`, `api/auth/register.ts`): a
   three-way choice under the name, person preselected. The route parses the
-  value; missing ⇒ person; unknown ⇒ 400 `member_type_invalid`.
-- **Profile edit** (own-profile identity card, `api/users/update.ts`): the
-  same choice. The body schema gains optional `memberType`; the update
-  applies the data rules above.
+  value with the cheap checks, BEFORE the paid name check; missing ⇒ person;
+  unknown ⇒ 400 `member_type_invalid`, which the form's hand-written error
+  map must know. The field joins the `insertOne` only when not person.
+- **Profile edit** (`PIdentityCard.svelte`, `api/users/update.ts`): the same
+  choice. The body schema gains optional `memberType` and its „nothing to
+  update" refine accepts a type-only save. The route pre-reads the stored
+  `memberType`, `handle` and `name` (it has no prior document today), then
+  applies the data rules; the response and the card's `onSaved` payload echo
+  `memberType`. The schema stays non-strict-stripping and never lists
+  `dailyLimit`, so a member cannot write it. The pre-read is not atomic with
+  the write: two parallel saves may ping twice — accepted.
 - Choice labels: Privatperson / Verein · Initiative / Gewerbe (EN: Private
   person / Association · initiative / Business). Keys in the kiosk i18n
   files, DE and EN.
@@ -115,14 +144,26 @@ forum bucket.
   for person. Styled with Tailwind classes only (no scoped `<style>`: it is
   reached through other islands, and nested-island styles are orphaned in
   production builds).
-- `PUBLIC_AUTHOR_PROJECTION` and `toPublicAuthor()` gain `memberType`
-  (normalised through `storedMemberType`, so the browser always receives one
-  of the three values). `SELLER_PROJECTION` / `populateSellers()` in
-  `listingsQuery.ts` gain the same.
-- Shown beside the name on: forum post cards, post detail, comments,
-  marketplace seller card, event author slab, public profile
-  (`/nachbarn/[handle]`), and the own profile's identity card.
-- Independent of the Kiez-verified badge; both may show.
+  The component itself treats `undefined` and unknown values as person, so
+  a raw or stale value can never print a wrong tag.
+- Five data paths carry the field, each normalised through
+  `storedMemberType`:
+  1. `PUBLIC_AUTHOR_PROJECTION` + `toPublicAuthor()` (create/edit responses,
+     comment list) — `publicAuthor.test.ts` pins the key list, update it;
+  2. `populateAuthors()` in `topicsQuery.ts`, which spreads the raw document
+     and does NOT call `toPublicAuthor` (forum cards, the three detail
+     pages and their comments, bookmarks, forum search, events);
+  3. `SELLER_PROJECTION` + `populateSellers()` → new flat field
+     `sellerMemberType` (`types/listing.ts`, `MarketDetailInner`,
+     `SellerCard`);
+  4. `lib/profile/publicProfile.ts` (own projection) → `PPublicIdentityCard`;
+  5. `lib/profile/profileQuery.ts` (`ProfileMe`) → `PIdentityCard`.
+- Shown beside the name in: `ForumPostCard`, `ForumPostDetail`,
+  `ForumComment`, `SellerCard`, `EventDetailModal` (author slab),
+  `PPublicIdentityCard`, `PIdentityCard`. Because bookmarks and the forum
+  results on `/search` render the same post card, the tag shows there too.
+- Independent of the Kiez-verified badge; both may show (post detail, event
+  slab, seller card, profile cards — check the pair's layout at 390 px).
 
 ### Admin (`/admin/mitglieder`)
 
@@ -132,13 +173,19 @@ forum bucket.
   write with rollback, like the verified toggle.
 - `PATCH /api/admin/users/[id]`: the strict body accepts any of
   `verified: boolean`, `memberType: 'person' | 'organisation' | 'business'`,
-  `dailyLimit: integer 1–50 | null`. A `dailyLimit` for a member who is not
-  (and is not being set to) organisation ⇒ 400 `limit_needs_organisation`.
-  It stays the only writer of `dailyLimit`.
+  `dailyLimit: integer 1–50 | null`; at least one key is required (400
+  `invalid_body` otherwise). The route reads the member first and decides
+  on the type AFTER this call (`memberType` in the body, else the stored
+  one): a numeric `dailyLimit` when that type is not organisation ⇒ 400
+  `limit_needs_organisation`; `dailyLimit: null` always just unsets; a type
+  leaving organisation unsets `dailyLimit` in the same update. The response
+  echoes `verified`, `memberType` and `dailyLimit`. It stays the only writer
+  of `dailyLimit`. The UI's empty number field sends `null`.
 
 ### Telegram
 
-- `member_new` text names the type when it is not person.
+- `member_new` text names the type when it is not person (it stays in the
+  e-mail mirror set, which is off in production).
 - New kind `member_type`: „<Name> (@handle) hat sich als Initiative/Gewerbe
   eingetragen", sent from `users/update` when the member's own change ends
   on organisation or business and differs from the stored value. Telegram
@@ -158,8 +205,9 @@ forum bucket.
 
 - No confirmation step before the tag shows; no raised limit for businesses;
   no per-bucket numbers.
-- No tag in notifications, the „@" popup, search results, the landing page,
-  or e-mails.
+- No tag in notifications, the „@" popup, the calendar attendee list, News
+  submitter lines, the admin moderation queue, the landing page, or e-mails.
+  (Forum cards on `/search` and `/bookmarks` do show it — same component.)
 - No change to moderation for any type.
 
 ## Testing
@@ -178,3 +226,10 @@ forum bucket.
   390 and 1440 px, `/admin/mitglieder` controls; production build with the
   logged-in smoke on a preview.
 - CI budgets stay at tsc ≤16 / svelte-check ≤81.
+
+## Docs to update when it lands
+
+Root `CLAUDE.md` („Daily posting limits", the `users` field list and its
+tombstone list), `src/components/forum/kiosk/CLAUDE.md` („each kind has its
+own daily limit"), the admin and profile area files, `design-system.astro`'s
+limit note.
