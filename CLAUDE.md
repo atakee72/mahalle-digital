@@ -302,19 +302,7 @@ See `src/components/blog/CLAUDE.md` — full notes load when working in that sub
 `src/components/ui/PageHeader.astro` (the animated title of the legacy pages) was removed on 2026-09-30 (dead since the kiosk migrations); kiosk pages build their own title blocks.
 
 ### Glass Utility System
-**No live surface uses these any more** (2026-09-30: only comments in `KioskLayout.astro` mention them); the CSS block in `global.css` stays until a separate decision removes it. Five opt-in CSS utilities in `global.css` layer the dark-glass look. Pair them as needed with standard Tailwind dark-glass classes (`bg-white/[0.06] backdrop-blur-sm border border-white/[0.15] ...`).
-
-- **`.glass-inner-glow`** — Apple-style `box-shadow: inset 0 0 22px -4px rgba(255,255,255,0.4)`. Zero cost. Drop-in on any glass surface for a subtle inner highlight.
-- **`.glass-luxe`** — full-area liquid glass: `::after` with `backdrop-filter: blur(8px)` + `#glass-distortion` SVG filter (wobble). Was used on the legacy profile hero card; no live user since 2026-09-30. Host must have **no** `bg-*` or `backdrop-blur-*` — the pseudo handles it.
-- **`.glass-luxe-edge`** — same wobble as luxe but masked to an edge frame via radial `mask-composite: exclude`. Host keeps its own bg color visible in the center. Used on forum cards so the tan `bg-[#c9c4b9]/75` remains the trademark center while edges show the glass refraction. Base uses `#glass-distortion-subtle` (gentler scale/blur settings).
-- **`.glass-smooth`** — same shape as `glass-luxe` but **no SVG filter**: flat blur + tint, no wobble. Use when the wobble looks too fragmented or the surface doesn't need refraction.
-- **`.glass-smooth-edge`** — flat blur + tint masked to an edge frame. Use when you want a glass frame without the SVG cost.
-
-**SVG filter host:** `GlassFilters.astro` (the three `#glass-distortion*` filters, mounted once in `BaseLayout`) was removed on 2026-09-30 (dead since the kiosk migrations), together with that layout; without it `.glass-luxe*` classes render as flat glass (SVG url() refs silently no-op).
-
-**Why `::after` instead of filtering the host:** `backdrop-filter` and `filter` create a containing block for `position: fixed` descendants (see Common Errors). Putting the filter on `::after` keeps the host a normal element, so modals inside still escape to the viewport. Also isolates `z-index` via `isolation: isolate`.
-
-**Reduced motion:** all `.glass-luxe*` variants drop the SVG filter under `prefers-reduced-motion: reduce` (flat glass fallback). Effect gracefully degrades — nothing disappears.
+Removed 2026-10-01: the five `.glass-*` utilities, the `.dark-glass-*` page background and the `.low-perf` override left `global.css` with the unused-exports sweep — no live surface had used them since the kiosk migrations. The reasoning that outlived them: put a heavy `filter`/`backdrop-filter` on a `::after`, never on a host that can contain a `position: fixed` overlay (see „`backdrop-filter` creates a containing block" below), and drop SVG filters under `prefers-reduced-motion`. The old rules are in git history before that date.
 
 ### Low-perf Device Detector
 The inline `<head>` script lived in `BaseLayout.astro` and was removed on 2026-09-30 (dead since the kiosk migrations) with it (the kiosk layouts carry no heavy filters). The recipe, for reference — it ran before first paint and tagged underpowered devices so heavy SVG filters degraded to flat glass:
@@ -326,7 +314,7 @@ if ((navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) ||
 }
 ```
 
-`.low-perf .glass-luxe-edge::after, .low-perf .glass-luxe::after { filter: none }` in `global.css` drops the filter on flagged devices. Old Android (2 cores, 2 GB) → flat; modern iPhone/flagship → full wobble. Safari/Firefox `deviceMemory` is undefined — falls back to core count only, fail-safe (unknown = assume capable). Brave/Tor spoof `hardwareConcurrency` to 2 → falls to flat; zero harm, they opt into minimalism. Pattern reusable for any "heavy effect on mid-tier mobile" concern.
+`.low-perf .glass-luxe-edge::after, .low-perf .glass-luxe::after { filter: none }` in `global.css` dropped the filter on flagged devices (rule removed 2026-10-01 with the glass block). Old Android (2 cores, 2 GB) → flat; modern iPhone/flagship → full wobble. Safari/Firefox `deviceMemory` is undefined — falls back to core count only, fail-safe (unknown = assume capable). Brave/Tor spoof `hardwareConcurrency` to 2 → falls to flat; zero harm, they opt into minimalism. Pattern reusable for any "heavy effect on mid-tier mobile" concern.
 
 ### `content-visibility: auto` for heavy card lists
 Forum cards wear `[content-visibility:auto] [contain-intrinsic-size:400px]`. Offscreen cards skip layout, paint, AND filter passes — browser treats them as the intrinsic size until they enter the viewport. On a 12-card page with only 4 visible, 8 cards' `backdrop-filter` + SVG wobble never run. Layout jumps avoided via `contain-intrinsic-size` matching the real `h-[400px]`. Apply to any list where items have expensive filters/shadows AND fixed/predictable height. Don't use on items with unpredictable height — `contain-intrinsic-size` will mis-estimate and cause scrollbar jitter.
