@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../lib/mongodb';
+import { checkDailyLimit, limitReachedResponse } from '../../../lib/limits/dailyLimit';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
 import type { Event, FlaggedContent } from '../../../types';
@@ -16,27 +17,11 @@ export const POST: APIRoute = async ({ request }) => {
     if (!gate.ok) return gate.response;
     const { session, userId } = gate;
 
-    // Check daily event limit (5 per rolling 24h) before validation to save API costs
+    // Daily limit (events bucket, rolling 24h) before validation to save API costs.
     const db = await connectDB();
     const eventsCollection = db.collection<any>('events');
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const todayCount = await eventsCollection.countDocuments({
-      author: userId,
-      createdAt: { $gte: dayAgo }
-    });
-
-    // Admins are exempt from the daily limit (they post official content in bursts).
-    if (session.user.role !== 'admin' && todayCount >= 5) {
-      return new Response(JSON.stringify({
-        error: 'Daily event limit reached',
-        message: 'You can create up to 5 events per day. Please try again tomorrow.',
-        dailyLimit: 5,
-        currentCount: todayCount
-      }), {
-        status: 429,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const limit = await checkDailyLimit(db, { userId, role: session.user.role }, 'events');
+    if (!limit.allowed) return limitReachedResponse('events', limit);
 
     // Validate request body with Zod
     const validation = await parseRequestBody(request, EventCreateSchema);

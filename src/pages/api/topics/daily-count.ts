@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
+import { checkDailyLimit } from '../../../lib/limits/dailyLimit';
 
 // User's topic-create count in the rolling 24h window (forum quota = 5/day).
 // Used to proactively show the "exhausted" state on the newsboard "discuss in
@@ -12,14 +13,9 @@ export const GET: APIRoute = async ({ request }) => {
   }
   try {
     const db = await connectDB();
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const count = await db.collection('topics').countDocuments({
-      author: session.user.id,
-      createdAt: { $gte: dayAgo },
-    });
-    // Admins are exempt from the daily limit — mirror the create endpoint's gate.
-    const isAdmin = session.user.role === 'admin';
-    return new Response(JSON.stringify({ count, limit: 5, remaining: isAdmin ? 5 : Math.max(0, 5 - count), canCreate: isAdmin || count < 5 }), {
+    // The forum bucket.
+    const r = await checkDailyLimit(db, { userId: session.user.id, role: session.user.role }, 'forum');
+    return new Response(JSON.stringify({ count: r.count, limit: r.limit, remaining: r.remaining, canCreate: r.allowed }), {
       status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });
   } catch {

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../../../lib/mongodb';
+import { checkDailyLimit, limitReachedResponse } from '../../../../../lib/limits/dailyLimit';
 import { ObjectId } from 'mongodb';
 import type { Listing } from '../../../../../types/listing';
 import type { FlaggedContent } from '../../../../../types';
@@ -73,26 +74,9 @@ export const POST: APIRoute = async ({ request, params }) => {
       });
     }
 
-    // Check daily limit (publishing counts toward limit)
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const todayCount = await listingsCollection.countDocuments({
-      sellerId: userId,
-      createdAt: { $gte: dayAgo },
-      status: { $ne: 'draft' }
-    });
-
-    // Admins are exempt from the daily limit (they post official content in bursts).
-    if (session.user.role !== 'admin' && todayCount >= 5) {
-      return new Response(JSON.stringify({
-        error: 'Daily listing limit reached',
-        message: 'You can publish up to 5 listings per day. Please try again tomorrow.',
-        dailyLimit: 5,
-        currentCount: todayCount
-      }), {
-        status: 429,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // Daily limit (publishing counts toward the listings bucket).
+    const limit = await checkDailyLimit(db, { userId, role: session.user.role }, 'listings');
+    if (!limit.allowed) return limitReachedResponse('listings', limit);
 
     // Admins are exempt from AI moderation (their content is auto-approved —
     // they run the review queue). Skips the OpenAI calls entirely.

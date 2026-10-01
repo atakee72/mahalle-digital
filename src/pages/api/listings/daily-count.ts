@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
-import type { Listing } from '../../../types/listing';
+import { checkDailyLimit } from '../../../lib/limits/dailyLimit';
 
 export const GET: APIRoute = async ({ request }) => {
   try {
@@ -15,25 +15,10 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     const db = await connectDB();
-    const listingsCollection = db.collection<Listing>('listings');
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    const todayCount = await listingsCollection.countDocuments({
-      sellerId: session.user.id,
-      createdAt: { $gte: dayAgo },
-      status: { $ne: 'draft' }
-    });
-
-    // Admins are exempt from the daily limit — mirror the create endpoint's gate.
-    const isAdmin = session.user.role === 'admin';
-    return new Response(JSON.stringify({
-      count: todayCount,
-      limit: 5,
-      remaining: isAdmin ? 5 : Math.max(0, 5 - todayCount),
-      canCreate: isAdmin || todayCount < 5
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
+    // The listings bucket.
+    const r = await checkDailyLimit(db, { userId: session.user.id, role: session.user.role }, 'listings');
+    return new Response(JSON.stringify({ count: r.count, limit: r.limit, remaining: r.remaining, canCreate: r.allowed }), {
+      status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });
   } catch (error) {
     console.error('Daily count error:', error);

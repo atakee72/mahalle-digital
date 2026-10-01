@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../lib/mongodb';
+import { checkDailyLimit, limitReachedResponse } from '../../../lib/limits/dailyLimit';
 import type { NewsItem, FlaggedContent } from '../../../types';
 import { NewsSubmitSchema } from '../../../schemas/news.schema';
 import { parseRequestBody } from '../../../schemas/validation.utils';
@@ -15,23 +16,10 @@ export const POST: APIRoute = async ({ request }) => {
     if (!gate.ok) return gate.response;
     const { session, userId } = gate;
 
-    // Daily submit limit (5 per rolling 24h) — mirrors topics/events/listings.
+    // Daily limit (news bucket: the member's own submissions, rolling 24h).
     const dbEarly = await connectDB();
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const todayCount = await dbEarly.collection('news').countDocuments({
-      submittedBy: userId,
-      source: 'user_submitted',
-      createdAt: { $gte: dayAgo },
-    });
-    // Admins are exempt from the daily limit (they post official content in bursts).
-    if (session.user.role !== 'admin' && todayCount >= 5) {
-      return new Response(JSON.stringify({
-        error: 'Daily submission limit reached',
-        message: 'You can submit up to 5 news items per day. Please try again tomorrow.',
-        dailyLimit: 5,
-        currentCount: todayCount,
-      }), { status: 429, headers: { 'Content-Type': 'application/json' } });
-    }
+    const limit = await checkDailyLimit(dbEarly, { userId, role: session.user.role }, 'news');
+    if (!limit.allowed) return limitReachedResponse('news', limit);
 
     // Validate request body
     const validation = await parseRequestBody(request, NewsSubmitSchema);

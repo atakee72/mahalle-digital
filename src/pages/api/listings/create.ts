@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../lib/mongodb';
+import { checkDailyLimit, limitReachedResponse } from '../../../lib/limits/dailyLimit';
 import type { Listing } from '../../../types/listing';
 import type { FlaggedContent } from '../../../types';
 import { ListingCreateSchema } from '../../../schemas/listing.schema';
@@ -15,28 +16,12 @@ export const POST: APIRoute = async ({ request }) => {
     if (!gate.ok) return gate.response;
     const { session, userId } = gate;
 
-    // Check daily listing limit (5 per rolling 24h)
+    // Daily limit (listings bucket, rolling 24h; drafts do not count).
     const db = await connectDB();
     const listingsCollection = db.collection<Listing>('listings');
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const todayCount = await listingsCollection.countDocuments({
-      sellerId: userId,
-      createdAt: { $gte: dayAgo },
-      status: { $ne: 'draft' }
-    });
-
-    // Admins are exempt from the daily limit (they post official content in bursts).
-    if (session.user.role !== 'admin' && todayCount >= 5) {
-      return new Response(JSON.stringify({
-        error: 'Daily listing limit reached',
-        message: 'You can create up to 5 listings per day. Please try again tomorrow or save as a draft.',
-        dailyLimit: 5,
-        currentCount: todayCount
-      }), {
-        status: 429,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const limit = await checkDailyLimit(db, { userId, role: session.user.role }, 'listings');
+    // The marketplace composer shows this server message as it comes — keep the draft hint.
+    if (!limit.allowed) return limitReachedResponse('listings', limit, ' or save as a draft');
 
     // Validate request body with Zod
     const validation = await parseRequestBody(request, ListingCreateSchema);

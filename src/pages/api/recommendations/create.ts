@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../lib/mongodb';
+import { checkDailyLimit, limitReachedResponse } from '../../../lib/limits/dailyLimit';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../lib/publicAuthor';
 import { resolveMentions, notifyMentions, applyBroadcast, notifyAdminHint } from '../../../lib/mentions/mentionsStore';
 import { moderationTarget } from '../../../lib/notifications';
@@ -18,27 +19,12 @@ export const POST: APIRoute = async ({ request }) => {
     if (!gate.ok) return gate.response;
     const { session, userId } = gate;
 
-    // Check daily recommendation limit (5 per rolling 24h) before validation to save API costs
+    // Daily limit (forum bucket: discussions + announcements + recommendations
+    // together, rolling 24h) before validation to save API costs.
     const db = await connectDB();
+    const limit = await checkDailyLimit(db, { userId, role: session.user.role }, 'forum');
+    if (!limit.allowed) return limitReachedResponse('forum', limit);
     const recommendationsCollection = db.collection<Recommendation>('recommendations');
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const todayCount = await recommendationsCollection.countDocuments({
-      author: userId,
-      createdAt: { $gte: dayAgo }
-    });
-
-    // Admins are exempt from the daily limit (they post official content in bursts).
-    if (session.user.role !== 'admin' && todayCount >= 5) {
-      return new Response(JSON.stringify({
-        error: 'Daily recommendation limit reached',
-        message: 'You can create up to 5 recommendations per day. Please try again tomorrow.',
-        dailyLimit: 5,
-        currentCount: todayCount
-      }), {
-        status: 429,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
 
     // Validate request body with Zod
     const validation = await parseRequestBody(request, RecommendationCreateSchema);
