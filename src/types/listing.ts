@@ -1,4 +1,5 @@
 import type { ObjectId } from 'mongodb';
+import type { MemberType } from '../lib/members/memberType';
 
 // Delta format from typewriter-editor
 export interface DeltaOp {
@@ -55,6 +56,7 @@ export interface Listing {
   sellerHandle?: string | null;
   sellerImage?: string | null;
   sellerVerified?: boolean;
+  sellerMemberType?: MemberType;
   status: ListingStatus;
   moderationStatus?: 'approved' | 'pending' | 'rejected';
   isUserReported?: boolean;

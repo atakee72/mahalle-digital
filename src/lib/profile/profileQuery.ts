@@ -2,6 +2,7 @@
 import { ObjectId } from 'mongodb';
 import { connectDB } from '../mongodb';
 import { slugifyHandle, chosenHandleProblem, HANDLE_FALLBACK } from './handle';
+import { storedMemberType } from '../members/memberType';
 import type { ProfileMe } from './profileShared';
 
 /** Lazy self-heal: users registered by old prod code lack a handle. */
@@ -41,7 +42,7 @@ export async function getProfileMe(userId: string): Promise<ProfileMe | null> {
   const _id = new ObjectId(userId);
   const user = await db.collection('users').findOne(
     { _id },
-    { projection: { name: 1, handle: 1, email: 1, userPicture: 1, image: 1, hobbies: 1, verified: 1, createdAt: 1, isBanned: 1, motto: 1, pendingEmail: 1, deletionScheduledAt: 1 } }
+    { projection: { name: 1, handle: 1, email: 1, userPicture: 1, image: 1, hobbies: 1, verified: 1, memberType: 1, createdAt: 1, isBanned: 1, motto: 1, pendingEmail: 1, deletionScheduledAt: 1 } }
   );
   if (!user) return null;
   const handle = typeof user.handle === 'string' ? user.handle : await ensureHandle(userId);
@@ -74,6 +75,7 @@ export async function getProfileMe(userId: string): Promise<ProfileMe | null> {
     // Strict since the Kiez-verification pipeline (Aug 2026): the badge is
     // earned (admin toggle on /admin/mitglieder), absent/undefined = NOT verified.
     verified: user.verified === true,
+    memberType: storedMemberType(user),
     memberSince: Number.isNaN(created.getTime()) ? new Date().getFullYear() : created.getFullYear(),
     isBanned: user.isBanned === true,
     stats: { posts: posts + ann + rec, listings, events, danke },

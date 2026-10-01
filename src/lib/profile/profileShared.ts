@@ -3,6 +3,8 @@
 // and client bundles (see CLAUDE.md "Server-only modules bleeding into
 // client bundles").
 
+import type { MemberType } from '../members/memberType';
+
 export interface ProfileMe {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ export interface ProfileMe {
   image: string | null;
   hobbies: string[];
   verified: boolean;
+  memberType: MemberType; // self-chosen; 'person' when the user doc has no field (2026-10-01)
   memberSince: number; // year, from users.createdAt (ISO string OR Date — handle both)
   isBanned: boolean;
   stats: { posts: number; listings: number; events: number; danke: number };
@@ -31,6 +34,7 @@ export interface PublicProfile {
   image: string | null; // userPicture || image || null — the public avatar
   hobbies: string[];
   verified: boolean;
+  memberType: MemberType; // self-chosen; 'person' when the user doc has no field (2026-10-01)
   memberSince: number; // year, from users.createdAt (ISO string OR Date — handle both)
   stats: { posts: number; listings: number; events: number; danke: number };
 }

@@ -5,8 +5,13 @@
 // (found 2026-09-21: the comments list did exactly that, proven on dev).
 // Widen only after checking every consumer of `.author.<field>`.
 
+import { storedMemberType, type MemberType } from './members/memberType';
+
 export const PUBLIC_AUTHOR_PROJECTION = {
   name: 1, image: 1, userPicture: 1, createdAt: 1, verified: 1, role: 1, handle: 1,
+  // 2026-10-01: the self-chosen member type (tag beside the name). NEVER add
+  // `dailyLimit` here — it is the admin's number and stays server-side.
+  memberType: 1,
 } as const;
 
 export interface PublicAuthor {
@@ -17,6 +22,7 @@ export interface PublicAuthor {
   verified: boolean;
   role: string | null;
   handle: string | null;
+  memberType: MemberType;
 }
 
 export function toPublicAuthor(u: Record<string, any>): PublicAuthor {
@@ -28,5 +34,6 @@ export function toPublicAuthor(u: Record<string, any>): PublicAuthor {
     verified: u.verified === true,
     role: typeof u.role === 'string' ? u.role : null,
     handle: typeof u.handle === 'string' ? u.handle : null,
+    memberType: storedMemberType(u),
   };
 }

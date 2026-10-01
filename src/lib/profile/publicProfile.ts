@@ -12,6 +12,7 @@
 import { ObjectId } from 'mongodb';
 import { connectDB } from '../mongodb';
 import { ensureHandle } from './profileQuery';
+import { storedMemberType } from '../members/memberType';
 import type { PublicProfile } from './profileShared';
 
 const TWENTY_ONE_DAYS_MS = 21 * 24 * 60 * 60 * 1000;
@@ -71,6 +72,7 @@ export async function getPublicProfile(handle: string): Promise<PublicProfile | 
         image: 1,
         hobbies: 1,
         verified: 1,
+        memberType: 1,
         createdAt: 1,
         anonymized: 1,
       },
@@ -126,6 +128,7 @@ export async function getPublicProfile(handle: string): Promise<PublicProfile | 
     // Strict since the Kiez-verification pipeline (Aug 2026): earned via
     // admin toggle on /admin/mitglieder, absent/undefined = NOT verified.
     verified: user.verified === true,
+    memberType: storedMemberType(user),
     memberSince: Number.isNaN(created.getTime()) ? new Date().getFullYear() : created.getFullYear(),
     stats: { posts, listings, events, danke },
   };

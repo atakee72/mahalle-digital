@@ -437,6 +437,8 @@ export async function runDeletionPipeline(
           verified: '',
           emailVerified: '',
           roleBadge: '',
+          memberType: '',
+          dailyLimit: '',
           role: '',
           motto: '',
           pendingEmail: '',

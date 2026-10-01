@@ -1,3 +1,4 @@
+import { storedMemberType } from './members/memberType';
 import type { Collection, Document, Filter } from 'mongodb';
 import { ObjectId } from 'mongodb';
 import { connectDB } from './mongodb';
@@ -108,7 +109,14 @@ export async function populateAuthors<T extends { author?: any }>(docs: T[]): Pr
   // `image || userPicture` the session callback does, so cards, comments and
   // the „Wer mitredet" discs show the photo instead of initials (2026-09-11).
   const userMap = new Map<string, any>();
-  for (const u of users) userMap.set(u._id.toString(), { ...u, image: u.image || u.userPicture || null });
+  // memberType is normalised here as well: this join spreads the raw document
+  // (it does not go through toPublicAuthor), and a browser must only ever
+  // receive one of the three values.
+  for (const u of users) userMap.set(u._id.toString(), {
+    ...u,
+    image: u.image || u.userPicture || null,
+    memberType: storedMemberType(u),
+  });
 
   return docs.map((doc) => {
     const a = doc.author;
