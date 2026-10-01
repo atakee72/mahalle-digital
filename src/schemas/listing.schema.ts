@@ -311,10 +311,3 @@ export const ListingDraftSchema = z.object({
   draftId: z.string().optional() // For updating an existing draft
 });
 
-export type ListingCreateInput = z.infer<typeof ListingCreateSchema>;
-export type ListingUpdateInput = z.infer<typeof ListingUpdateSchema>;
-export type ListingFilterInput = z.infer<typeof ListingFilterSchema>;
-export type ListingStep1Input = z.infer<typeof ListingStep1Schema>;
-export type ListingStep2Input = z.infer<typeof ListingStep2Schema>;
-export type ListingStep3Input = z.infer<typeof ListingStep3Schema>;
-export type ListingDraftInput = z.infer<typeof ListingDraftSchema>;

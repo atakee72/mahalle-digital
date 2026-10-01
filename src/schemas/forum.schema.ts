@@ -204,19 +204,6 @@ export const SearchFilterSchema = z.object({
   offset: z.coerce.number().min(0).default(0)
 });
 
-// Type exports
-export type TopicCreate = z.infer<typeof TopicCreateSchema>;
-export type TopicUpdate = z.infer<typeof TopicUpdateSchema>;
-export type AnnouncementCreate = z.infer<typeof AnnouncementCreateSchema>;
-export type AnnouncementUpdate = z.infer<typeof AnnouncementUpdateSchema>;
-export type AdminAnnouncementUpdate = z.infer<typeof AdminAnnouncementUpdateSchema>;
-export type RecommendationCreate = z.infer<typeof RecommendationCreateSchema>;
-export type RecommendationUpdate = z.infer<typeof RecommendationUpdateSchema>;
-export type EventCreate = z.infer<typeof EventCreateSchema>;
-export type EventUpdate = z.infer<typeof EventUpdateSchema>;
-export type LikeAction = z.infer<typeof LikeActionSchema>;
-export type ViewCount = z.infer<typeof ViewCountSchema>;
-export type SearchFilter = z.infer<typeof SearchFilterSchema>;
 // Forum draft (server-side, several per member — 2026-09-21). Same UPPER limits
 // as publishing, no lower limits: a draft may be unfinished. Emptiness is checked
 // by draftIsEmpty() in the endpoint, not here.

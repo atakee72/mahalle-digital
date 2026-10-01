@@ -23,6 +23,3 @@ export const NewsQuerySchema = z.object({
   dateTo: z.string().optional(), // ISO date string, e.g. '2025-03-01' (for archive: older than)
 });
 
-// Type exports
-export type NewsSubmit = z.infer<typeof NewsSubmitSchema>;
-export type NewsQuery = z.infer<typeof NewsQuerySchema>;

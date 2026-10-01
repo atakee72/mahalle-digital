@@ -45,9 +45,3 @@ export const CommentQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc')
 });
 
-// Type exports
-export type CommentCreate = z.infer<typeof CommentCreateSchema>;
-export type CommentUpdate = z.infer<typeof CommentUpdateSchema>;
-export type CommentDelete = z.infer<typeof CommentDeleteSchema>;
-export type CommentUpvote = z.infer<typeof CommentUpvoteSchema>;
-export type CommentQuery = z.infer<typeof CommentQuerySchema>;

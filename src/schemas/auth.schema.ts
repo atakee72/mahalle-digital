@@ -95,12 +95,4 @@ export const ResetPasswordSchema = z.object({
   path: ['confirmPassword']
 });
 
-export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 
-// Type exports
-export type LoginInput = z.infer<typeof LoginSchema>;
-export type RegisterInput = z.infer<typeof RegisterSchema>;
-export type ProfileUpdateInput = z.infer<typeof ProfileUpdateSchema>;
-export type JWTPayload = z.infer<typeof JWTPayloadSchema>;
-export type PasswordResetInput = z.infer<typeof PasswordResetSchema>;
-export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;

@@ -140,9 +140,4 @@ export const ReportContentSchema = z.object({
 });
 
 // Type exports
-export type FlaggedContentCreate = z.infer<typeof FlaggedContentSchema>;
-export type ReviewAction = z.infer<typeof ReviewActionSchema>;
-export type BulkReviewAction = z.infer<typeof BulkReviewActionSchema>;
-export type FlaggedContentQuery = z.infer<typeof FlaggedContentQuerySchema>;
-export type ReportContent = z.infer<typeof ReportContentSchema>;
 export type ReportReason = z.infer<typeof ReportReasonSchema>;
