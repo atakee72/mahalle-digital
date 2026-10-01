@@ -10,10 +10,11 @@ import { slugifyHandle, normalizeChosenHandle, chosenHandleProblem, HANDLE_FALLB
 import { cleanDisplayName, isValidDisplayName, isProtectedName } from "../../../lib/profile/nameRules";
 import { isAdminLookalike } from "../../../lib/profile/protectedNamesStore";
 import { alertNewMember } from "../../../lib/adminAlerts";
+import { parseMemberType } from "../../../lib/members/memberType";
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
     try {
-        const { name: rawName, email, password, handle: rawHandle } = await request.json();
+        const { name: rawName, email, password, handle: rawHandle, memberType: rawMemberType } = await request.json();
         // Whitespace collapsed, invisible characters stripped — a name of only
         // spaces / zero-width characters ends up '' and is refused right below.
         const name = cleanDisplayName(rawName);
@@ -39,6 +40,17 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         if (password.length < 6) {
             return new Response(
                 JSON.stringify({ error: 'Password must be at least 6 characters' }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
+        // Member type (2026-10-01): missing → person; anything unknown is refused.
+        const memberType = rawMemberType === undefined || rawMemberType === null
+            ? 'person'
+            : parseMemberType(rawMemberType);
+        if (!memberType) {
+            return new Response(
+                JSON.stringify({ error: 'member_type_invalid' }),
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
@@ -210,6 +222,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
                     hobbies: [],
                     handle,
                     ...(chosenHandle ? { handleChosen: true } : {}),
+                    // person stores nothing — the absent field IS „person".
+                    ...(memberType !== 'person' ? { memberType } : {}),
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                 });
@@ -261,7 +275,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         // verification mail so a slow Telegram can't delay the user's own
         // signup email. finalHandle is captured in the retry loop above — no
         // extra DB read (a failing read would 500 a succeeded registration).
-        await alertNewMember({ name, handle: finalHandle });
+        await alertNewMember({ name, handle: finalHandle, memberType });
 
         return new Response(
             JSON.stringify({

@@ -36,6 +36,8 @@
   import PBtn from './atoms/PBtn.svelte';
   import PAvatar from './atoms/PAvatar.svelte';
   import PHobbyChip from './atoms/PHobbyChip.svelte';
+  import MemberTypeChoice from './atoms/MemberTypeChoice.svelte';
+  import type { MemberType } from '../../../lib/members/memberType';
   import MemberTypeTag from '../../forum/kiosk/MemberTypeTag.svelte';
   import PAvatarUploadPanel from './atoms/PAvatarUploadPanel.svelte';
 
@@ -46,20 +48,22 @@
   }: {
     profile: ProfileMe;
     banned: boolean;
-    onSaved: (p: { name: string; hobbies: string[]; motto: string | null }) => void;
+    onSaved: (p: { name: string; hobbies: string[]; motto: string | null; memberType: MemberType }) => void;
   } = $props();
 
   // ─── Read-state display value (real profile, unless a save is in flight) ──
-  type Editable = { name: string; hobbies: string[]; motto: string | null };
+  type Editable = { name: string; hobbies: string[]; motto: string | null; memberType: MemberType };
   let optimisticOverride = $state<Editable | null>(null);
   const displayName = $derived(optimisticOverride?.name ?? profile.name);
   const displayHobbies = $derived(optimisticOverride?.hobbies ?? profile.hobbies);
   const displayMotto = $derived(optimisticOverride ? optimisticOverride.motto : profile.motto);
+  const displayMemberType = $derived(optimisticOverride?.memberType ?? profile.memberType);
 
   // ─── Edit state ────────────────────────────────────────────────────────
   let editing = $state(false);
   let editName = $state('');
   let editMotto = $state('');
+  let editMemberType = $state<MemberType>('person');
   let editHobbies = $state<string[]>([]);
   let newHobby = $state('');
   let newlyAdded = $state<string[]>([]); // hobbies added THIS edit session — chip-pop-in once
@@ -207,6 +211,7 @@
     if (banned) return;
     editName = displayName;
     editMotto = displayMotto ?? '';
+    editMemberType = displayMemberType;
     editHobbies = [...displayHobbies];
     newHobby = '';
     newlyAdded = [];
@@ -273,6 +278,7 @@
         saveError =
           msg === 'name_protected' ? $t['auth.err.nameProtected']
           : msg === 'name_invalid' ? $t['profile.edit.name.hint']
+          : msg === 'member_type_invalid' ? $t['auth.err.memberType']
           : msg;
         return;
       }
@@ -281,6 +287,7 @@
         name: typeof json.name === 'string' ? json.name : payload.name,
         hobbies: Array.isArray(json.hobbies) ? json.hobbies : payload.hobbies,
         motto: typeof json.motto === 'string' ? json.motto : null,
+        memberType: json.memberType === 'organisation' || json.memberType === 'business' ? json.memberType : 'person',
       };
       if (mySeq !== saveSeq) return; // stale
       onSaved(echo);
@@ -309,7 +316,7 @@
     // Empty trimmed motto is sent as '' (not omitted) — the server treats an
     // explicit '' as "clear it" ($unset) vs. an absent field ("leave as is").
     const trimmedMotto = editMotto.trim().slice(0, MOTTO_MAX_LEN);
-    const payload: Editable = { name: trimmed, hobbies: [...editHobbies], motto: trimmedMotto || '' };
+    const payload: Editable = { name: trimmed, hobbies: [...editHobbies], motto: trimmedMotto || '', memberType: editMemberType };
     const mySeq = ++saveSeq;
     optimisticOverride = { ...payload, motto: trimmedMotto || null };
     editing = false;
@@ -337,7 +344,7 @@
             class="font-bricolage"
             style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin: 0; line-height: 1.05;"
           >{displayName}</h2>
-          <MemberTypeTag type={profile.memberType} />
+          <MemberTypeTag type={displayMemberType} />
           {#if saveState === 'saving' || saveState === 'saved'}
             <span
               class="prof-save-chip font-dmmono"
@@ -438,6 +445,9 @@
           style="width: 100%; box-sizing: border-box; padding: 10px 13px; background: var(--k-paper-soft); border: 1.5px solid {mottoFocused ? 'var(--k-ink)' : 'var(--k-rule)'}; border-radius: 8px; font-size: 14px; font-style: italic; color: var(--k-ink); outline: none;"
         />
         <div class="font-dmmono" style="font-size: 10px; color: var(--k-ink-mute); margin-top: 4px;">{$t['profile.edit.motto.hint']}</div>
+        <div style="margin-top: 12px;">
+          <MemberTypeChoice value={editMemberType} onchange={(v) => (editMemberType = v)} name="profileMemberType" />
+        </div>
       </div>
     </div>
 

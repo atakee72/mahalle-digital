@@ -341,7 +341,7 @@
           banned={banned}
           onSaved={(p) => {
             if (!profile) return;
-            profile = { ...profile, name: p.name, hobbies: p.hobbies, motto: p.motto };
+            profile = { ...profile, name: p.name, hobbies: p.hobbies, motto: p.motto, memberType: p.memberType };
           }}
         />
       </div>

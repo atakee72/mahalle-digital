@@ -3,6 +3,8 @@
   import { t, tStr } from '../../../lib/kiosk-i18n';
   import { cleanDisplayName, isValidDisplayName } from '../../../lib/profile/nameRules';
   import { slugifyHandle, normalizeChosenHandle, chosenHandleProblem } from '../../../lib/profile/handle';
+  import MemberTypeChoice from '../../profile/kiosk/atoms/MemberTypeChoice.svelte';
+  import type { MemberType } from '../../../lib/members/memberType';
   import AuthField from './primitives/AuthField.svelte';
   import AuthPrimaryBtn from './primitives/AuthPrimaryBtn.svelte';
   import AuthBanner from './primitives/AuthBanner.svelte';
@@ -12,6 +14,8 @@
   // Optional one-time handle choice; empty → the server assigns the automatic one.
   let handle = $state('');
   let handleErr = $state<string | null>(null);
+  let memberType = $state<MemberType>('person');
+  let memberTypeErr = $state<string | null>(null);
   let email = $state('');
   let password = $state('');
   let password2 = $state('');
@@ -48,7 +52,7 @@
 
   async function submit(e: Event) {
     e.preventDefault();
-    nameErr = null; handleErr = null; emailErr = null; pwErr = null; pw2Err = null; termsErr = false; emailTaken = false;
+    nameErr = null; handleErr = null; memberTypeErr = null; emailErr = null; pwErr = null; pw2Err = null; termsErr = false; emailTaken = false;
 
     let bad = false;
     const cleanName = cleanDisplayName(name);
@@ -70,13 +74,14 @@
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: cleanName, email: email.trim(), password, ...(chosen ? { handle: chosen } : {}) }),
+        body: JSON.stringify({ name: cleanName, email: email.trim(), password, ...(chosen ? { handle: chosen } : {}), memberType }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const code = String(data?.error ?? '');
         if (code === 'name_invalid') { nameErr = $t['auth.err.nameInvalid']; status = 'idle'; return; }
         if (code === 'name_protected') { nameErr = $t['auth.err.nameProtected']; status = 'idle'; return; }
+        if (code === 'member_type_invalid') { memberTypeErr = $t['auth.err.memberType']; status = 'idle'; return; }
         // 409 is ALSO the e-mail-taken status — the handle codes must be read first.
         if (code === 'handle_taken') { handleErr = $t['auth.err.handleTaken']; status = 'idle'; return; }
         if (code === 'handle_invalid') { handleErr = $t['auth.err.handleInvalid']; status = 'idle'; return; }
@@ -133,6 +138,12 @@
       name="handle" autocomplete="off" value={handle} error={handleErr}
       hint={$t['auth.register.handleHint']}
       success={!!chosen && !chosenHandleProblem(chosen)} oninput={(v) => { handle = v; handleErr = null; }} />
+    <div>
+      <MemberTypeChoice value={memberType} onchange={(v) => { memberType = v; memberTypeErr = null; }} />
+      {#if memberTypeErr}
+        <div class="font-dmmono" role="alert" style="font-size: 10px; color: var(--k-danger); margin-top: 4px;">{memberTypeErr}</div>
+      {/if}
+    </div>
     <AuthField label={$t['auth.register.email']} placeholder={$t['auth.register.emailPh']}
       type="email" name="email" autocomplete="email" value={email}
       error={emailErr} success={emailOk && !emailTaken} oninput={(v) => { email = v; emailErr = null; }} />

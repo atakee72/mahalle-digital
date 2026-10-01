@@ -7,6 +7,7 @@ import { isMailerConfigured, sendMail } from './email/mailer';
 
 type AdminAlertKind =
   | 'member_new'
+  | 'member_type'
   | 'moderation_flagged'
   | 'report_new'
   | 'content_new'
@@ -91,10 +92,28 @@ async function sendAdminAlert(alert: { kind: AdminAlertKind; text: string }): Pr
 
 // --- Per-kind builders: call sites stay one-liners. Terse German copy. ---
 
-export function alertNewMember(p: { name: string; handle: string }): Promise<void> {
+// Tag wording for the alert text — same words the member sees beside a name.
+const MEMBER_TYPE_WORD: Record<'organisation' | 'business', string> = {
+  organisation: 'Initiative',
+  business: 'Gewerbe',
+};
+
+export function alertNewMember(p: { name: string; handle: string; memberType?: 'person' | 'organisation' | 'business' }): Promise<void> {
+  const typ = p.memberType === 'organisation' || p.memberType === 'business'
+    ? ` — als ${MEMBER_TYPE_WORD[p.memberType]}`
+    : '';
   return sendAdminAlert({
     kind: 'member_new',
-    text: `🆕 Neues Mitglied: ${trunc(p.name)} (@${p.handle})`,
+    text: `🆕 Neues Mitglied: ${trunc(p.name)} (@${p.handle})${typ}`,
+  });
+}
+
+/** A member chose Initiative or Gewerbe in profile edit. Never sent for a change to person. */
+export function alertMemberType(p: { name: string; handle: string | null; memberType: 'organisation' | 'business' }): Promise<void> {
+  const at = p.handle ? ` (@${p.handle})` : '';
+  return sendAdminAlert({
+    kind: 'member_type',
+    text: `🏷️ ${trunc(p.name)}${at} hat sich als ${MEMBER_TYPE_WORD[p.memberType]} eingetragen\n→ ${ALERT_BASE_URL}/admin/mitglieder`,
   });
 }
 
