@@ -142,7 +142,7 @@ change with it:
 
 ### The tag
 
-- `src/components/ui/MemberTypeTag.svelte` — props `type`, renders nothing
+- `src/components/forum/kiosk/MemberTypeTag.svelte` — props `type`, renders nothing
   for person. Styled with Tailwind classes only (no scoped `<style>`: it is
   reached through other islands, and nested-island styles are orphaned in
   production builds).

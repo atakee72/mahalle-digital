@@ -119,6 +119,9 @@ server code and the standalone backfill script).
   clobbered — on `matchedCount === 0` it re-reads and returns the ACTUAL
   handle rather than the one it generated but never wrote.
 
+## Member type in the identity card (2026-10-01)
+`atoms/MemberTypeChoice.svelte` (Person / Initiative / Gewerbe, no `<style>`) sits in the edit mode of `PIdentityCard` and at signup. `POST /api/users/update` takes an optional `memberType`; the route pre-reads the stored type and `planSelfTypeChange()` (`src/lib/members/memberTypeChange.ts`) returns the `$set`/`$unset` — moving away from organisation also drops the admin's `dailyLimit`, re-saving the same type keeps it. Telegram: `member_type` (Telegram only) pings the admin when the change ends on Initiative or Gewerbe.
+
 ## Optimistic-save pattern (PIdentityCard)
 
 Same shape as the rest of the kiosk system (forum/marketplace mutations):
