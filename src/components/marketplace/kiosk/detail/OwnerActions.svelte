@@ -5,13 +5,11 @@
 
   let {
     listing,
-    currentUserId,
     onBump,
     onStatusChange,
     onDelete,
   }: {
     listing: Listing;
-    currentUserId: string;
     onBump: () => Promise<void>;
     onStatusChange: (status: 'available' | 'reserved' | 'sold') => Promise<void>;
     onDelete: () => Promise<void>;

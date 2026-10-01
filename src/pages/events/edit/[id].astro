@@ -52,12 +52,6 @@ if (event.moderationStatus !== 'approved' || event.hasWarningLabel) {
 // Date/ObjectId → string across the SSR boundary.
 const initialEvent = JSON.parse(JSON.stringify(event));
 
-const currentUser = {
-  id: session.user.id,
-  name: session.user.name ?? undefined,
-  image: session.user.image ?? null
-};
-
 const pageTitle = event.title
   ? `${event.title} · bearbeiten · Mahalle`
   : 'Termin bearbeiten · Mahalle';
@@ -66,7 +60,6 @@ const pageTitle = event.title
 <KioskLayout title={pageTitle} description="Bearbeite deinen Termin im Mahalle-Kalender." page="calendar">
   <EventComposePage
     client:only="svelte"
-    currentUser={currentUser}
     mode="edit"
     initialEvent={initialEvent}
   />

@@ -20,11 +20,9 @@
 
   let {
     open = false,
-    onDismiss,
     embedded = false
   } = $props<{
     open: boolean;
-    onDismiss: () => void;
     // Sandbox-only escape hatch: render with `absolute inset-0` instead
     // of `fixed inset-0` so the modal stays inside its parent box on
     // /design-system. Live consumers leave this false (default) so the

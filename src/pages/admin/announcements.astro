@@ -17,7 +17,6 @@ if (!session?.user) {
 if (session.user.role !== 'admin') {
   return Astro.redirect('/');
 }
-const adminName = session.user.name ?? '';
 
 let initialItems: any[] = [];
 try {
@@ -41,5 +40,5 @@ try {
   wordmark="amtliches"
   ribbonEcho="requireAdminSession()"
 >
-  <AnnounceApp client:only="svelte" initialItems={initialItems} adminName={adminName} />
+  <AnnounceApp client:only="svelte" initialItems={initialItems} />
 </AdminLayout>

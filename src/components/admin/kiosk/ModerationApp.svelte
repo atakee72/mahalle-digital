@@ -29,8 +29,6 @@
   import AdmColumnMenu from './AdmColumnMenu.svelte';
   import AdmTriageCard from './AdmTriageCard.svelte';
 
-  let { adminName }: { adminName: string } = $props();
-
   // ── State contract ──────────────────────────────────────────────────────
   let view = $state<'queue' | 'history'>('queue');
   let filterType = $state<'all' | (typeof ADM_TYPES)[number] | 'reported'>('all');

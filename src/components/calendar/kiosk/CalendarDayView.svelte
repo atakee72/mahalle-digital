@@ -20,7 +20,6 @@
   let {
     events = [],
     onPickEvent,
-    onRsvp,
     savedIds = new Set<string>(),
     onToggleSave,
     currentUserId = null,
@@ -29,7 +28,6 @@
   } = $props<{
     events?: EventDoc[];
     onPickEvent?: (ev: EventDoc) => void;
-    onRsvp?: (ev: EventDoc) => void;
     savedIds?: Set<string>;
     onToggleSave?: (eventId: string) => void;
     currentUserId?: string | null;
@@ -111,7 +109,6 @@
               <AgendaRow
                 {ev}
                 onPick={onPickEvent}
-                {onRsvp}
                 today
                 {currentUserId}
                 isSaved={savedIds.has(eventId)}
@@ -139,7 +136,6 @@
                 <AgendaRow
                   {ev}
                   onPick={onPickEvent}
-                  {onRsvp}
                   {currentUserId}
                   isSaved={savedIds.has(eventId)}
                   onToggleSave={onToggleSave ? () => onToggleSave(eventId) : undefined}

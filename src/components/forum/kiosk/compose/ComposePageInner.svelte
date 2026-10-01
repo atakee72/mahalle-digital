@@ -406,5 +406,5 @@
 
   <ComposeStickyPublish onPublish={onPublish} submitting={submitting} />
 
-  <ModeratingModal open={modalOpen} onDismiss={() => (modalOpen = false)} />
+  <ModeratingModal open={modalOpen} />
 {/if}

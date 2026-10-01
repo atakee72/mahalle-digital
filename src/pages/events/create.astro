@@ -26,13 +26,8 @@ if (await isUserBanned(session.user.id)) {
   return Astro.redirect('/', 302);
 }
 
-const currentUser = {
-  id: session.user.id,
-  name: session.user.name ?? undefined,
-  image: session.user.image ?? null
-};
 ---
 
 <KioskLayout title="Mahalle · neuer Termin" description="Erstelle einen neuen Termin im Mahalle-Kalender." page="calendar">
-  <EventComposePage client:only="svelte" currentUser={currentUser} />
+  <EventComposePage client:only="svelte" />
 </KioskLayout>

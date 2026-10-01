@@ -7,8 +7,7 @@
   import EventComposePageInner from './EventComposePageInner.svelte';
   import type { Event as EventDoc } from '../../../../types';
 
-  let { currentUser, mode = 'create', initialEvent } = $props<{
-    currentUser: { id: string; name?: string; image?: string | null };
+  let { mode = 'create', initialEvent } = $props<{
     mode?: 'create' | 'edit';
     initialEvent?: EventDoc;
   }>();
@@ -21,5 +20,5 @@
 </script>
 
 <QueryClientProvider {client}>
-  <EventComposePageInner {currentUser} {mode} {initialEvent} />
+  <EventComposePageInner {mode} {initialEvent} />
 </QueryClientProvider>

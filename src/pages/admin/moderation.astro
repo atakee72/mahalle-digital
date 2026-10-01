@@ -8,12 +8,11 @@ if (!session?.user) {
   return Astro.redirect('/login?redirect=/admin/moderation', 302);
 }
 const isAdmin = session.user.role === 'admin';
-const adminName = session.user.name ?? '';
 ---
 
 <AdminLayout title="Mahalle · Moderation" user={session.user}>
   {isAdmin ? (
-    <ModerationApp client:only="svelte" adminName={adminName} />
+    <ModerationApp client:only="svelte" />
   ) : (
     /* §09 Kein Zugriff — kiosk-admin-states.jsx §09, DE-only */
     <div class="mx-auto text-center" style="max-width:420px; padding:80px 24px;">

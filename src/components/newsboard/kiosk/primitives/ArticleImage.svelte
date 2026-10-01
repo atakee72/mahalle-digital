@@ -1,19 +1,17 @@
 <script lang="ts">
   import { t } from '../../../../lib/kiosk-i18n';
-  import { QUELLE_META, type QuelleKey, type SektionKey } from '../../../../lib/newsboard/newsTaxonomy';
+  import { QUELLE_META, type QuelleKey } from '../../../../lib/newsboard/newsTaxonomy';
   import { optimizeCloudinary } from '../../../../utils/cloudinary';
 
   let {
     imageUrl = '',
     quelle,
-    sektion,
     ratio = '16/9',
     lead = false,
     alt = '',
   }: {
     imageUrl?: string;
     quelle: QuelleKey;
-    sektion: SektionKey;
     ratio?: string;
     lead?: boolean;
     alt?: string;

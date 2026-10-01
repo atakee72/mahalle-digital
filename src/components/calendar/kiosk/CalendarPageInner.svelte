@@ -493,7 +493,6 @@
       events={displayedEvents}
       {visibleMonth}
       onPickEvent={onPickEvent}
-      onRsvp={onPickEvent}
       savedIds={savedIds.ids}
       onToggleSave={currentUserId ? onToggleSave : undefined}
       {currentUserId}
@@ -503,7 +502,6 @@
       <CalendarDayView
         events={displayedEvents}
         onPickEvent={onPickEvent}
-        onRsvp={onPickEvent}
         savedIds={savedIds.ids}
         onToggleSave={currentUserId ? onToggleSave : undefined}
         {currentUserId}

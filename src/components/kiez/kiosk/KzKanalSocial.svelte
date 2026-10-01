@@ -17,10 +17,9 @@
   import KzKanal from './KzKanal.svelte';
   import KzBar from './primitives/KzBar.svelte';
 
-  let { area, vm, plr, kontext = null, children }: {
+  let { area, vm, kontext = null, children }: {
     area: KzAreaVM;
     vm: KiezVM;
-    plr: string;
     kontext?: KiezKontext | null;
     children?: Snippet;
   } = $props();

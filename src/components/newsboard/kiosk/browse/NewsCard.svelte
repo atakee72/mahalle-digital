@@ -42,7 +42,7 @@
 >
   {#if hasImage}
     <a href={`/newsboard/${article.id}`} class="block" tabindex="-1" aria-hidden="true">
-      <ArticleImage imageUrl={article.imageUrl} quelle={article.quelle} sektion={article.sektion} ratio="16/9" alt="" />
+      <ArticleImage imageUrl={article.imageUrl} quelle={article.quelle} ratio="16/9" alt="" />
     </a>
   {/if}
 

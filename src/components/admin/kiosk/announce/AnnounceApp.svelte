@@ -17,7 +17,7 @@
   import AdmModalShell from '../AdmModalShell.svelte';
   import AdmActionBtn from '../AdmActionBtn.svelte';
 
-  let { initialItems = [], adminName = '' }: { initialItems?: any[]; adminName?: string } = $props();
+  let { initialItems = [] }: { initialItems?: any[] } = $props();
 
   // ── State contract ──────────────────────────────────────────────────────
   // svelte-ignore state_referenced_locally

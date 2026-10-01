@@ -40,11 +40,9 @@
   import type { EventCategory, Event as EventDoc } from '../../../../types';
 
   let {
-    currentUser,
     mode = 'create',
     initialEvent
   } = $props<{
-    currentUser: { id: string; name?: string; image?: string | null };
     mode?: 'create' | 'edit';
     initialEvent?: EventDoc;
   }>();
@@ -389,5 +387,5 @@
 
   <EventComposeStickyPublish {onPublish} {submitting} editing={isEditing} />
 
-  <ModeratingModal open={modalOpen} onDismiss={() => (modalOpen = false)} />
+  <ModeratingModal open={modalOpen} />
 {/if}

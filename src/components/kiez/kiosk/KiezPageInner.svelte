@@ -118,7 +118,7 @@
         <KzKanalPop area={selectedArea} {vm} />
         <KzKanalAge area={selectedArea} {vm} />
         <KzKanalMig area={selectedArea} {vm} />
-        <KzKanalSocial area={selectedArea} {vm} {plr} {kontext}>
+        <KzKanalSocial area={selectedArea} {vm} {kontext}>
           <!-- Berlin-Vergleich (novel §02) — Gesamt only, and only when a
                reference row exists for the latest MSS period with at least
                one non-null scope. Otherwise quietly absent, like the air

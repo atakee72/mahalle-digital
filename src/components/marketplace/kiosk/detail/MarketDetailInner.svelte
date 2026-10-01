@@ -387,7 +387,6 @@
       {#if isOwner}
         <OwnerActions
           {listing}
-          currentUserId={currentUserId!}
           onBump={handleBump}
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}

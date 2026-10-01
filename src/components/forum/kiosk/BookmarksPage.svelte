@@ -10,9 +10,8 @@
   import { locale } from '../../../lib/kiosk-i18n';
   import { hrefForPost, isPostCollection, kindForCollection } from '../../../lib/forum/postKind';
 
-  let { initialItems = [], currentUserId = null } = $props<{
+  let { initialItems = [] } = $props<{
     initialItems?: (any & { savedAt?: string | null })[];
-    currentUserId?: string | null;
   }>();
 
   const items = $derived(initialItems as any[]);

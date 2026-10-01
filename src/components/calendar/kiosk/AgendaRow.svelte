@@ -18,7 +18,6 @@
   let {
     ev,
     onPick,
-    onRsvp,
     today = false,
     isSaved = false,
     onToggleSave,
@@ -26,7 +25,6 @@
   } = $props<{
     ev: EventDoc;
     onPick?: (ev: EventDoc) => void;
-    onRsvp?: (ev: EventDoc) => void;
     today?: boolean;
     isSaved?: boolean;
     onToggleSave?: () => void;
