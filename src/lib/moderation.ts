@@ -748,7 +748,7 @@ export function mergeModerationResults(...results: ModerationResult[]): Moderati
 // GPT-4o SPAM / RELEVANCE CHECK
 // ============================================================================
 
-export type SpamClassification = 'legitimate' | 'spam' | 'ad_promotional' | 'scam' | 'irrelevant_nonsense' | 'hate_speech' | 'harassment';
+type SpamClassification = 'legitimate' | 'spam' | 'ad_promotional' | 'scam' | 'irrelevant_nonsense' | 'hate_speech' | 'harassment';
 
 /**
  * Check content for spam, ads, scams, hate speech, harassment, or irrelevant nonsense using GPT-4o.
@@ -865,7 +865,7 @@ Return JSON only: {"classification": "...", "confidence": 0.0-1.0, "reason": "br
 // GPT-4o VISION IMAGE SAFETY CHECK
 // ============================================================================
 
-export type ImageSafetyClassification = 'safe' | 'sexual' | 'violence' | 'hate' | 'other_violation';
+type ImageSafetyClassification = 'safe' | 'sexual' | 'violence' | 'hate' | 'other_violation';
 
 /**
  * Check images for unsafe content using GPT-4o vision.

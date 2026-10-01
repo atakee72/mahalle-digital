@@ -255,40 +255,6 @@ export interface NewsItem {
   updatedAt?: Date;
 }
 
-// Saved Items (cross-feature bookmarks)
-export interface SavedItem {
-  _id?: ObjectId | string;
-  userId: string;
-  itemId: string;
-  itemType: 'news' | 'listing' | 'topic' | 'event';
-  savedAt: Date;
-}
-
-// Auth Types
-export interface AuthState {
-  user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  error: string | null;
-}
-
-// API Response Types
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
-// JWT Payload Type
-export interface JWTPayload {
-  userId: string;
-  email: string;
-  iat?: number;
-  exp?: number;
-}
-
 // ============================================================================
 // MODERATION TYPES
 // ============================================================================

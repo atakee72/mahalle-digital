@@ -72,7 +72,7 @@ export function createEventMutation() {
 
 // ─── Edit event ────────────────────────────────────────────────────────
 
-export type EditEventInput = CreateEventInput;
+type EditEventInput = CreateEventInput;
 
 async function editEventReq({ id, input }: { id: string; input: EditEventInput }) {
   const res = await fetch(`${API_URL}/events/edit/${id}`, {
@@ -108,7 +108,7 @@ export function editEventMutation() {
 
 // ─── RSVP ──────────────────────────────────────────────────────────────
 
-export type RsvpInput = {
+type RsvpInput = {
   eventId: string;
   status: 'going' | 'maybe' | 'cancel';
 };

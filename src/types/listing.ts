@@ -128,19 +128,6 @@ export interface Listing {
   bundleId?: string | null;
 }
 
-export interface ListingFilters {
-  category?: ListingCategory | 'all';
-  condition?: ListingCondition | 'all';
-  listingType?: ListingType | 'all';
-  priceMin?: number;
-  priceMax?: number;
-  status?: ListingStatus;
-  search?: string;
-  sortBy?: 'newest' | 'oldest' | 'price-asc' | 'price-desc';
-  limit?: number;
-  offset?: number;
-}
-
 export interface ListingStats {
   totalListings: number;
   activeListings: number;

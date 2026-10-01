@@ -44,7 +44,7 @@ import { createEndpointForKind, createdDocKeyForKind, type PostKind } from './fo
 
 // ─── Topic create ──────────────────────────────────────────────────────
 
-export type CreateTopicInput = {
+type CreateTopicInput = {
   title: string;
   body: string;
   tags?: string[];
@@ -150,7 +150,7 @@ export function createTopicMutation(currentUser: { id: string; name?: string; im
 
 // ─── Topic edit ────────────────────────────────────────────────────────
 
-export type EditTopicInput = {
+type EditTopicInput = {
   title: string;
   body: string;
   tags: string[];
@@ -240,7 +240,7 @@ export function deleteTopicMutation() {
 // fire-and-forget on the cache side; the calling page is responsible for
 // optimistically inserting into its local list.
 
-export type CreateCommentInput = {
+type CreateCommentInput = {
   body: string;
   topicId: string;
 };

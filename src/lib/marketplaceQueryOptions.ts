@@ -44,5 +44,3 @@ export const LISTINGS_QUERY_OPTIONS = {
   sortOrder: 'desc' as const,
   defaultLimit: 24,
 } as const;
-
-export type ListingsQueryOptions = typeof LISTINGS_QUERY_OPTIONS;

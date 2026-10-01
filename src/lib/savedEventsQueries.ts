@@ -38,7 +38,7 @@ export function createSavedEventsQuery(enabled: () => boolean) {
 
 // ─── Mutation ─────────────────────────────────────────────────────────
 
-export type SaveEventInput = {
+type SaveEventInput = {
   eventId: string;
   action: 'save' | 'unsave';
 };

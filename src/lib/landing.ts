@@ -21,7 +21,7 @@ import type { AirHistoryResponse } from '../types/kiezStats';
 import { resolveSektion } from './newsboard/newsTaxonomy';
 import { computeIssueNumber } from './newsboard/newsFormat';
 import { formatStand, KZ_PLR_SHORT } from './kiez/kiezViewModel';
-export type { SchaufensterData, ForumPeek, ListingPeek, KurierPeek } from './landing/frames';
+export type { SchaufensterData, KurierPeek } from './landing/frames';
 
 export interface HeartbeatRow {
   kind: 'air' | 'forum' | 'events' | 'kurier';

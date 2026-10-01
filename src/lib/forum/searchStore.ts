@@ -11,7 +11,7 @@ import {
   KIND_BY_COLLECTION, PATH_BY_KIND, type PostCollection, type PostKind,
   type SearchPost, type SearchComment, type SearchResult,
 } from './searchQuery';
-export type { SearchPost, SearchComment, SearchResult };
+export type { SearchResult };
 
 export const SEARCH_PER_KIND = 20;
 export const SEARCH_POSTS_MAX = 30;

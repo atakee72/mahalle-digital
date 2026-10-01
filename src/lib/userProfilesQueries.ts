@@ -12,7 +12,7 @@
 
 import { createQuery } from '@tanstack/svelte-query';
 
-export type UserProfile = {
+type UserProfile = {
   id: string;
   name: string;
   handle: string | null;
