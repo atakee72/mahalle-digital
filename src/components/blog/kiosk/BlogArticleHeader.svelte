@@ -66,26 +66,20 @@
 
 {#if variant === 'hero'}
   {#if post.cover}
-    <div class="relative">
-      <img
-        src={post.cover}
-        alt={post.coverAlt ?? ''}
-        width={post.coverWidth}
-        height={post.coverHeight}
-        class="w-full object-cover h-[260px] lg:h-[420px]"
-        style="border-bottom: 2px solid var(--k-ink);"
-      />
-      <div class="absolute left-0 right-0 flex justify-center" style="bottom: -74px;">
-        {@render heroBand()}
-      </div>
-    </div>
-  {:else}
-    <!-- coverless hero: no band overlap — render the ink title band in flow -->
-    <div class="flex justify-center px-5" style="padding-top: 24px;">
-      {@render heroBand()}
-    </div>
+    <!-- cover sits clear of the read bar; the title band follows BELOW it, never on top of the picture -->
+    <img
+      src={post.cover}
+      alt={post.coverAlt ?? ''}
+      width={post.coverWidth}
+      height={post.coverHeight}
+      class="block w-[calc(100%-32px)] max-w-[1200px] mx-auto object-cover aspect-[2/1] h-auto lg:aspect-auto lg:h-[400px]"
+      style="margin-top: 24px; border: 2px solid var(--k-ink); border-radius: var(--k-radius-lg); box-shadow: 3px 3px 0 var(--k-ink);"
+    />
   {/if}
-  <div class="text-center" style="padding-top: {post.cover ? '98px' : '24px'};">
+  <div class="flex justify-center px-5" style="padding-top: 24px;">
+    {@render heroBand()}
+  </div>
+  <div class="text-center" style="padding-top: 24px;">
     <div class="font-instrument italic" style="font-size: 19px; line-height: 1.45; color: var(--k-ink-soft); max-width: 780px; margin: 0 auto;">{description}</div>
     <div class="flex justify-center" style="margin-top: 10px;"><BlPostMeta {post} /></div>
     <div style="width: 56px; height: 3px; background: var(--k-rust); margin: 16px auto 0;"></div>
