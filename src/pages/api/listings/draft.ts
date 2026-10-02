@@ -11,7 +11,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Session + live ban check (401 / 403 pre-shaped) — see requireMemberSession.
     const gate = await requireMemberSession(request);
     if (!gate.ok) return gate.response;
-    const { session, userId } = gate;
+    const { userId } = gate;
 
     // Validate with relaxed draft schema (only title required)
     const validation = await parseRequestBody(request, ListingDraftSchema);

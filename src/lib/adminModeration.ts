@@ -17,8 +17,8 @@
  *
  * Category taxonomy, report reasons, and content types transcribed from
  * design/handoffs/design_handoff_admin/jsx/kiosk-admin.jsx:16-54.
- * `ADM_REPORT_REASONS` is expanded from the JSX's 5 entries to the real
- * `ReportReason` schema's 7 (adds `hate_speech` + `violence`).
+ * `AdmReportReason` lists the real `ReportReason` schema's 7 values (the JSX
+ * had 5; `hate_speech` + `violence` were added).
  */
 
 // ─────────────────────────────────────────────────────────────────────────

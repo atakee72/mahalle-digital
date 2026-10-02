@@ -11,27 +11,9 @@
  * Rate-limit branching: createTopic throws a typed RateLimitError on
  * 429 so the compose page can swap the form for the RateLimitPanel
  * without introspecting the error message.
- *
- * lastSubmittedAt: a tiny writable that flips for 6 s after a successful
- * topic create. FeedStatusFooter reads it to switch into 'live' mode.
  */
 
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
-import { writable } from 'svelte/store';
-
-// ─── Live-mode signal for FeedStatusFooter ─────────────────────────────
-// Set by createTopicMutation.onSuccess; reset 6 s later. The footer reads
-// `$lastSubmittedAt` and computes its mode accordingly.
-const lastSubmittedAt = writable<number | null>(null);
-
-const LIVE_WINDOW_MS = 6_000;
-
-function flagLive() {
-  lastSubmittedAt.set(Date.now());
-  if (typeof window !== 'undefined') {
-    setTimeout(() => lastSubmittedAt.set(null), LIVE_WINDOW_MS);
-  }
-}
 
 // ─── Typed errors ──────────────────────────────────────────────────────
 // Re-exported from the shared module so existing import sites
@@ -138,7 +120,6 @@ export function createTopicMutation(currentUser: { id: string; name?: string; im
         if (!old) return [response.topic];
         return old.map((t) => (t._id === context?.tempId ? response.topic : t));
       });
-      flagLive();
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });

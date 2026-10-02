@@ -15,8 +15,7 @@
   //
   // The `?just_posted=1` query param is read by ForumIndexInner to
   // trigger the live-mode footer + slide-in for the new card on the
-  // home page (handles the cross-page navigation case the
-  // forumMutations.ts in-memory `lastSubmittedAt` writable can't span).
+  // home page (compose leaves by a hard navigation, so the signal travels in the URL).
   //
   // `?prefill_tags` (comma-separated) seeds the tag field — consumed by
   // the blog „Die Beilage" Aufruf CTA (opens compose pre-tagged #blogidee).
