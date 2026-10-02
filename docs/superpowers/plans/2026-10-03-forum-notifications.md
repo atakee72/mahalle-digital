@@ -297,6 +297,7 @@ index d2b81993..ee24f69f 100644
 +  /** blog + forum digest: how many posts this one notification stands for (set only when > 1). */
    count?: number;
  }
+ 
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -563,26 +564,55 @@ index 7bf2425c..65c08328 100644
 
 - [ ] **Step 7: Panel glyph + row text, and the two row keys**
 
-In `src/components/forum/kiosk/NotificationPanel.svelte` add to `GLYPH`:
-```ts
-    forum: { g: '✦', c: 'var(--k-wine, #b23a5b)' },
+```diff
+diff --git a/src/components/forum/kiosk/NotificationPanel.svelte b/src/components/forum/kiosk/NotificationPanel.svelte
+index a90508b9..c1d8dd9a 100644
+--- a/src/components/forum/kiosk/NotificationPanel.svelte
++++ b/src/components/forum/kiosk/NotificationPanel.svelte
+@@ -182,6 +182,7 @@
+     moderation: { g: '§', c: 'var(--k-plum, #6f2f59)' },
+     official: { g: '◉', c: 'var(--k-teal, #3f8f9f)' },
+     blog: { g: '¶', c: 'var(--k-rust, #a3552e)' },
++    forum: { g: '✦', c: 'var(--k-wine, #b23a5b)' },
+     admin_hint: { g: '!', c: 'var(--k-plum, #6f2f59)' },
+   };
+ 
+@@ -206,6 +207,10 @@
+         const n = it.meta?.count ?? 1;
+         return n > 1 ? tStr($t['nc.blog.many'], { n: String(n) }) : tStr($t['nc.blog.one'], { title });
+       }
++      case 'forum': {
++        const n = it.meta?.count ?? 1;
++        return n > 1 ? tStr($t['nc.forum.many'], { n: String(n) }) : tStr($t['nc.forum.one'], { title });
++      }
+       case 'market_contact':
+         return tStr($t['nc.market'], { title });
+       case 'moderation': {
 ```
-and to `rowText()` before `case 'market_contact':`:
-```ts
-      case 'forum': {
-        const n = it.meta?.count ?? 1;
-        return n > 1 ? tStr($t['nc.forum.many'], { n: String(n) }) : tStr($t['nc.forum.one'], { title });
-      }
-```
-In `src/lib/kiosk-i18n.ts` add right before `'nc.push.enable'` — DE:
-```ts
-  'nc.forum.one': 'Neu im Forum: ‚{title}‘',
-  'nc.forum.many': '{n} neue Beiträge im Forum',
-```
-EN:
-```ts
-  'nc.forum.one': 'New in the forum: ‘{title}’',
-  'nc.forum.many': '{n} new posts in the forum',
+
+```diff
+diff --git a/src/lib/kiosk-i18n.ts b/src/lib/kiosk-i18n.ts
+index 7ccb94a7..d7a612e0 100644
+--- a/src/lib/kiosk-i18n.ts
++++ b/src/lib/kiosk-i18n.ts
+@@ -140,6 +140,8 @@ const de = {
+   'nc.time.m': 'vor {n} Min.',
+   'nc.time.h': 'vor {n} Std.',
+   'nc.time.d': 'vor {n} Tg.',
++  'nc.forum.one': 'Neu im Forum: ‚{title}‘',
++  'nc.forum.many': '{n} neue Beiträge im Forum',
+   'nc.push.enable': 'Push-Mitteilungen aktivieren',
+   'nc.push.active': 'Push aktiv auf diesem Gerät',
+   'nc.push.disable': 'deaktivieren',
+@@ -2240,6 +2242,8 @@ const en: Dict = {
+   'nc.time.m': '{n} min ago',
+   'nc.time.h': '{n} h ago',
+   'nc.time.d': '{n} d ago',
++  'nc.forum.one': 'New in the forum: ‘{title}’',
++  'nc.forum.many': '{n} new posts in the forum',
+   'nc.push.enable': 'Enable push notifications',
+   'nc.push.active': 'Push active on this device',
+   'nc.push.disable': 'disable',
 ```
 
 - [ ] **Step 8: Budgets** → tsc 16, svelte-check 81.
@@ -834,13 +864,24 @@ index 5bcb6236..c99efd06 100644
 +
      const openaiKey = import.meta.env.OPENAI_API_KEY;
      const newsDataKey = import.meta.env.NEWSDATA_API_KEY;
+ 
 ```
 
 - [ ] **Step 5: Tombstone unsets the preference**
 
-Under the `lastVisit: ''` line plan 1 added in `src/lib/auth/accountDeletion.ts`:
-```ts
-          forumNotify: '',
+```diff
+diff --git a/src/lib/auth/accountDeletion.ts b/src/lib/auth/accountDeletion.ts
+index d3497417..019bcd5a 100644
+--- a/src/lib/auth/accountDeletion.ts
++++ b/src/lib/auth/accountDeletion.ts
+@@ -447,6 +447,7 @@ export async function runDeletionPipeline(
+           tours: '',
+           tourHelloDismissedAt: '',
+           lastVisit: '',
++          forumNotify: '',
+           deletionClaimedAt: '',
+         },
+       }
 ```
 
 - [ ] **Step 6: Budgets + tests** → tsc 16 (the pre-existing `reviewAction.ts(159)` `$pull` error stays, it is one of the 16), svelte-check 81, `pnpm test` green.
@@ -917,11 +958,9 @@ export const POST: APIRoute = async ({ request }) => {
 
 - [ ] **Step 2: The switch, directly under the panel head (always in view, before the scrolling list)**
 
-Full diff of the panel for this plan (the glyph + row text hunks are Task 2's, the rest is this task):
-
 ```diff
 diff --git a/src/components/forum/kiosk/NotificationPanel.svelte b/src/components/forum/kiosk/NotificationPanel.svelte
-index a90508b9..bdb75505 100644
+index c1d8dd9a..bdb75505 100644
 --- a/src/components/forum/kiosk/NotificationPanel.svelte
 +++ b/src/components/forum/kiosk/NotificationPanel.svelte
 @@ -7,6 +7,7 @@
@@ -972,26 +1011,7 @@ index a90508b9..bdb75505 100644
    let items = $state<NotificationItem[] | null>(null);
    let failed = $state(false);
    // Ids that were unread at fetch time — POST /read marks them server-side,
-@@ -182,6 +216,7 @@
-     moderation: { g: '§', c: 'var(--k-plum, #6f2f59)' },
-     official: { g: '◉', c: 'var(--k-teal, #3f8f9f)' },
-     blog: { g: '¶', c: 'var(--k-rust, #a3552e)' },
-+    forum: { g: '✦', c: 'var(--k-wine, #b23a5b)' },
-     admin_hint: { g: '!', c: 'var(--k-plum, #6f2f59)' },
-   };
- 
-@@ -206,6 +241,10 @@
-         const n = it.meta?.count ?? 1;
-         return n > 1 ? tStr($t['nc.blog.many'], { n: String(n) }) : tStr($t['nc.blog.one'], { title });
-       }
-+      case 'forum': {
-+        const n = it.meta?.count ?? 1;
-+        return n > 1 ? tStr($t['nc.forum.many'], { n: String(n) }) : tStr($t['nc.forum.one'], { title });
-+      }
-       case 'market_contact':
-         return tStr($t['nc.market'], { title });
-       case 'moderation': {
-@@ -246,6 +285,23 @@
+@@ -251,6 +285,23 @@
          <span class="nc-head-neu font-dmmono">{freshIds.size} {$t['nc.neu']}</span>
        {/if}
      </div>
@@ -1048,19 +1068,17 @@ index 6197e5f0..7bb34bc4 100644
  .nc-foot--live {
 ```
 
-- [ ] **Step 4: Copy (DE + EN, right before `'nc.push.enable'`; the `nc.forum.*` rows are Task 2's)**
+- [ ] **Step 4: Copy (DE + EN, right before `'nc.push.enable'`)**
 
 ```diff
 diff --git a/src/lib/kiosk-i18n.ts b/src/lib/kiosk-i18n.ts
-index 7ccb94a7..336c0a0e 100644
+index d7a612e0..336c0a0e 100644
 --- a/src/lib/kiosk-i18n.ts
 +++ b/src/lib/kiosk-i18n.ts
-@@ -140,6 +140,13 @@ const de = {
-   'nc.time.m': 'vor {n} Min.',
-   'nc.time.h': 'vor {n} Std.',
+@@ -142,6 +142,11 @@ const de = {
    'nc.time.d': 'vor {n} Tg.',
-+  'nc.forum.one': 'Neu im Forum: ‚{title}‘',
-+  'nc.forum.many': '{n} neue Beiträge im Forum',
+   'nc.forum.one': 'Neu im Forum: ‚{title}‘',
+   'nc.forum.many': '{n} neue Beiträge im Forum',
 +  'nc.forumNotify.label': 'Neue Forumsbeiträge',
 +  'nc.forumNotify.digest': 'täglich',
 +  'nc.forumNotify.each': 'jeden',
@@ -1069,12 +1087,10 @@ index 7ccb94a7..336c0a0e 100644
    'nc.push.enable': 'Push-Mitteilungen aktivieren',
    'nc.push.active': 'Push aktiv auf diesem Gerät',
    'nc.push.disable': 'deaktivieren',
-@@ -2240,6 +2247,13 @@ const en: Dict = {
-   'nc.time.m': '{n} min ago',
-   'nc.time.h': '{n} h ago',
+@@ -2244,6 +2249,11 @@ const en: Dict = {
    'nc.time.d': '{n} d ago',
-+  'nc.forum.one': 'New in the forum: ‘{title}’',
-+  'nc.forum.many': '{n} new posts in the forum',
+   'nc.forum.one': 'New in the forum: ‘{title}’',
+   'nc.forum.many': '{n} new posts in the forum',
 +  'nc.forumNotify.label': 'New forum posts',
 +  'nc.forumNotify.digest': 'daily',
 +  'nc.forumNotify.each': 'each one',

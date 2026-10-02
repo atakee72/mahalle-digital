@@ -23,7 +23,7 @@
 
 ## Review Focus
 
-1. A logged-out blog reader: `POST /api/profile/visit` answers 401 and the island must stay silent (no toast, no markers) — pinned by `markVisit()` returning on `!res.ok` (Task 3) and the probe's logged-out step is not needed: the blog island passes `me = null` and the route refuses without a session.
+1. A logged-out blog reader: `POST /api/profile/visit` answers 401 and the island must stay silent (no toast, no markers) — `markVisit()` returns on `!res.ok` (Task 3); the blog island passes `me = null` and the route refuses without a session.
 2. Astro's dev server preloads `client:only` pages in a hidden iframe — that must not count as a visit (`window.top !== window.self` guard in `markVisit()` and in the nav fetch, Task 3/4).
 3. A member's own post must never show a chip or raise a dot — `isNewItem()` test „own content is never new" (Task 1) and the `author: { $ne: me }` / `sellerId: { $ne: me }` filters (Task 1 test „the dot filters…").
 4. A reload inside a visit must keep the chips (otherwise they vanish before the member read the page) — `pickBaseline()` test „a reload inside the visit keeps the baseline" (Task 1), probe step „a reload keeps the markers" (Task 5).
@@ -414,7 +414,9 @@ Expected: `ℹ tests 5` / `ℹ pass 5`.
 
 - [ ] **Step 5: Write the visit route**
 
-`src/pages/api/profile/visit.ts` (sibling of `tour.ts`, same session check, deliberately not ban-gated — reading is allowed while banned):
+A sibling of `tour.ts` with the same session check, deliberately not ban-gated — reading is allowed while banned.
+
+`src/pages/api/profile/visit.ts`:
 
 ```ts
 import type { APIRoute } from 'astro';
@@ -582,7 +584,9 @@ export async function markVisit(section: VisitSection, me: string | null): Promi
 
 - [ ] **Step 2: Write the chip**
 
-`src/components/forum/kiosk/NewMark.svelte` (note the `let {...}: {...} = $props()` form — the `$props<{...}>()` generic form made svelte-check type the store index as `any`, +1 error):
+Note the `let {...}: {...} = $props()` form — the `$props<{...}>()` generic form made svelte-check type the store index as `any`, +1 error.
+
+`src/components/forum/kiosk/NewMark.svelte`:
 
 ```svelte
 <script lang="ts">
@@ -639,6 +643,7 @@ index 6a9637e4..7ccb94a7 100644
 +  'nav.newDot': 'New since your last visit',
    'nav.menu.abmelden': 'Sign out',
    'nav.menu.seit': 'IN THE KIEZ SINCE',
+ 
 ```
 
 (The `nav.newDot` keys are read by Task 4; add them now so the dict is complete.)
@@ -697,7 +702,7 @@ index cc78c36e..b7072106 100644
 
 ```diff
 diff --git a/src/components/marketplace/kiosk/browse/MarketplaceBrowseInner.svelte b/src/components/marketplace/kiosk/browse/MarketplaceBrowseInner.svelte
-index afa62f24..43cb1713 100644
+index 8c0fa64f..43cb1713 100644
 --- a/src/components/marketplace/kiosk/browse/MarketplaceBrowseInner.svelte
 +++ b/src/components/marketplace/kiosk/browse/MarketplaceBrowseInner.svelte
 @@ -30,6 +30,7 @@
@@ -708,7 +713,40 @@ index afa62f24..43cb1713 100644
  
    // ── Props ────────────────────────────────────────────────────────────
    let { initialData, currentUserId }: {
-@@ -282,6 +283,7 @@
+@@ -220,7 +221,7 @@
+     };
+   }
+ 
+-  function writeFiltersToUrl(f: ListingsQueryFilters, replace = false) {
++  function writeFiltersToUrl(f: ListingsQueryFilters) {
+     const url = new URL(window.location.href);
+     const railKind = API_TO_RAIL[f.kind ?? 'all'] ?? 'all';
+ 
+@@ -241,8 +242,7 @@
+     else url.searchParams.delete('page');
+ 
+     // Copy the current entry's state: Astro's ClientRouter reads state.index on popstate.
+-    if (replace) history.replaceState(history.state, '', url.toString());
+-    else history.pushState(history.state, '', url.toString());
++    history.pushState(history.state, '', url.toString());
+   }
+ 
+   // ── Fetch ────────────────────────────────────────────────────────────
+@@ -268,12 +268,8 @@
+   }
+ 
+   function updateFilters(patch: Partial<ListingsQueryFilters>) {
+-    // Typing in the search field rewrites the current history entry; only the first
+-    // letter adds one, so „back" clears the search instead of undoing it letter by letter.
+-    const keys = Object.keys(patch);
+-    const typing = keys.length === 1 && keys[0] === 'search' && !!filters.search;
+     filters = { ...filters, ...patch, offset: 0 }; // reset to page 1 on filter change
+-    writeFiltersToUrl(filters, typing);
++    writeFiltersToUrl(filters);
+     void refetch();
+   }
+ 
+@@ -287,6 +283,7 @@
  
    // ── Mount: hydrate from URL if not default + consume flash params ───
    onMount(() => {
