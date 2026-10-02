@@ -304,6 +304,9 @@ Concretely: search for `moderationStatus === 'pending'`, `hasWarningLabel`, `all
 
 ---
 
+## Detail toasts are localized (2026-10-02, `dbea8b9b`)
+Every toast in `MarketDetailInner.svelte`'s four handlers (`handleShare`, `handleBump`, `handleStatusChange`, `handleDelete`) reads a key under `market.detail.toast.*` (DE/EN, draft copy). Before, all were German literals, and bump/status failures printed the raw API code behind the text. `account_banned` → one shared `market.detail.toast.banned`; any other failure → the handler's generic key; `handleDelete` now catches a network error. The bump rate-limit sentence takes `{date}` through `tStr()`, formatted with `$locale` (English pages get US-style dates). Probe: `scratchpad/raw-errors/probe.cjs` (failures simulated by route interception; delete seen in a browser, bump/status/copy-link by code reading only).
+
 ## Bundles (deferred to follow-up PR)
 
 Spec: `design/handoffs/design_handoff_marketplace/jsx/kiosk-marketplace-novel.jsx:166-213` (block-commented as `// DEFERRED` per Task 1.0). Scoping: `MARKETPLACE_SCOPING.md` §03.

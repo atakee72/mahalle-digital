@@ -347,6 +347,9 @@ Plan: `docs/superpowers/plans/2026-06-20-newsboard-kiosk-redesign-phase2.md`.
   `fetchNewsForSSR` filter duplicates the `/api/news` visibility filter — keep them
   in sync (Phase-3 could extract a shared `buildNewsFilter`).
 
+## Submit failures show a sentence (2026-10-02, `dbea8b9b`)
+`submit()` in `submit/NewsSubmitInner.svelte` no longer toasts the API's `error` text: 409 → `news.submit.duplicate`, `account_banned` → `news.submit.banned`, anything else → `news.submit.error`; the 429 quota branch is unchanged.
+
 ## Deferred
 
 Not bugs or tech-debt — parked by design. Build when the phase lands:
