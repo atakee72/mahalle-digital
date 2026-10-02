@@ -32,7 +32,7 @@
 1. **Two requests detect the same new post at the same moment** (two visitors, or visitor + cron): exactly one broadcast. → Task 2 test „a slug claimed by someone else is not announced".
 2. **First run in production with twelve posts on disk**: only posts dated ≥ 2026-10-02 are announced, the older eleven are never claimed and never sent. → Task 1 test „posts before the start date never qualify".
 3. **Three posts published in one deploy**: one notification with the count, linking to `/blog`, not three. → Task 1 test „several posts fold into one".
-4. **Mongo is down or the insert throws something other than a duplicate key**: the blog page still renders, nothing is sent, the error is captured. → Task 2 test „a non-duplicate insert error announces nothing and does not throw".
+4. **Mongo is down or the insert throws something other than a duplicate key**: the blog page still renders, nothing is sent, the error is captured. → Task 2 test „a non-duplicate insert error is rethrown and nothing is returned" (the never-throw wrapper in `blogNotify.ts` catches it; that wrapper imports `astro:content` and has no unit test — covered by the controller's end-to-end check).
 5. **A draft post** (`draft: true`) never notifies, and notifies once when it is later published. → Task 2: the caller passes only `!data.draft` entries; Task 1 test „an already announced slug is skipped".
 
 ---
@@ -489,3 +489,12 @@ On the local production build against the dev database (`mahalle-dev`; the check
 2. Open `/blog` once → exactly one `blog` notification per non-admin, non-anonymized member, none for an admin, one row `mahalle-installieren` in `blogAnnouncements`, none for the eleven older slugs.
 3. Open `/blog` again after 61 s and restart the server once → counts unchanged.
 4. Log in as a dev member at 390 px → the bell panel shows „Neu in der Beilage: ‚Mahalle aufs Handy holen — und keine Antwort mehr verpassen‘" and the row opens the post.
+
+---
+
+## After the final review (2026-10-02, controller fixes)
+
+- `BLOG_NOTIFY_FROM_ISO` is `'2026-10-01T22:00:00.000Z'` (2 October, midnight in Berlin), not the UTC midnight the code blocks above show; a test pins a `+02:00` timestamp.
+- The newest-first sort moved into the pure, tested `newestFirst()` in `blogNotifyRules.ts`.
+- `blogNotify.ts` gives the database CONNECT a 2.5 s budget (nothing is claimed yet at that point). Claim + send still run to the end.
+- Accepted, not changed: the first visitor after a new post waits for the broadcast; banned members and accounts scheduled for deletion receive it (same as official announcements); renaming a published post's file announces it again.

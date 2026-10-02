@@ -1,12 +1,24 @@
 // Run directly:  npx tsx --test src/lib/blog/blogNotifyRules.test.ts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BLOG_NOTIFY_FROM_ISO, pickUnannounced, blogNotification, type BlogPostRef } from './blogNotifyRules';
+import { BLOG_NOTIFY_FROM_ISO, pickUnannounced, blogNotification, newestFirst, type BlogPostRef } from './blogNotifyRules';
 
 const post = (id: string, day: string, title = `Titel ${id}`): BlogPostRef => ({ id, title, pubDateISO: `${day}T00:00:00.000Z` });
 
-test('the start date is 2 October 2026', () => {
-  assert.equal(BLOG_NOTIFY_FROM_ISO, '2026-10-02T00:00:00.000Z');
+test('the start date is 2 October 2026, midnight in Berlin', () => {
+  assert.equal(BLOG_NOTIFY_FROM_ISO, '2026-10-01T22:00:00.000Z');
+});
+
+test('a Berlin timestamp early on the start day qualifies, the evening before does not', () => {
+  const early = { id: 'frueh', title: 'F', pubDateISO: new Date('2026-10-02T00:30:00+02:00').toISOString() };
+  const before = { id: 'vorabend', title: 'V', pubDateISO: new Date('2026-10-01T23:30:00+02:00').toISOString() };
+  assert.deepEqual(pickUnannounced([early, before], new Set()).map((p) => p.id), ['frueh']);
+});
+
+test('newestFirst orders by date, then slug, and leaves its input alone', () => {
+  const input = [post('b', '2026-10-03'), post('z', '2026-10-05'), post('a', '2026-10-03')];
+  assert.deepEqual(newestFirst(input).map((p) => p.id), ['z', 'a', 'b']);
+  assert.deepEqual(input.map((p) => p.id), ['b', 'z', 'a']);
 });
 
 test('posts before the start date never qualify', () => {
