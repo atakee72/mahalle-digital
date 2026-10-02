@@ -82,6 +82,7 @@
         if (code === 'name_invalid') { nameErr = $t['auth.err.nameInvalid']; status = 'idle'; return; }
         if (code === 'name_protected') { nameErr = $t['auth.err.nameProtected']; status = 'idle'; return; }
         if (code === 'member_type_invalid') { memberTypeErr = $t['auth.err.memberType']; status = 'idle'; return; }
+        if (code === 'password_weak') { pwErr = $t['auth.err.pwWeak']; status = 'idle'; return; }
         // 409 is ALSO the e-mail-taken status — the handle codes must be read first.
         if (code === 'handle_taken') { handleErr = $t['auth.err.handleTaken']; status = 'idle'; return; }
         if (code === 'handle_invalid') { handleErr = $t['auth.err.handleInvalid']; status = 'idle'; return; }

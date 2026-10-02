@@ -11,6 +11,7 @@ import { cleanDisplayName, isValidDisplayName, isProtectedName } from "../../../
 import { isAdminLookalike } from "../../../lib/profile/protectedNamesStore";
 import { alertNewMember } from "../../../lib/adminAlerts";
 import { parseMemberType } from "../../../lib/members/memberType";
+import { isAcceptablePassword } from "../../../lib/auth/passwordRule";
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
     try {
@@ -37,9 +38,11 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
             );
         }
 
-        if (password.length < 6) {
+        // Same rule as the signup form (8–100 characters, lower + upper + digit).
+        // Until 2026-10-02 the server accepted 6 characters of anything.
+        if (!isAcceptablePassword(password)) {
             return new Response(
-                JSON.stringify({ error: 'Password must be at least 6 characters' }),
+                JSON.stringify({ error: 'password_weak' }),
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
