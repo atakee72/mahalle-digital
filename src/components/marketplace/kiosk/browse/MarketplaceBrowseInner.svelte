@@ -220,7 +220,7 @@
     };
   }
 
-  function writeFiltersToUrl(f: ListingsQueryFilters) {
+  function writeFiltersToUrl(f: ListingsQueryFilters, replace = false) {
     const url = new URL(window.location.href);
     const railKind = API_TO_RAIL[f.kind ?? 'all'] ?? 'all';
 
@@ -241,7 +241,8 @@
     else url.searchParams.delete('page');
 
     // Copy the current entry's state: Astro's ClientRouter reads state.index on popstate.
-    history.pushState(history.state, '', url.toString());
+    if (replace) history.replaceState(history.state, '', url.toString());
+    else history.pushState(history.state, '', url.toString());
   }
 
   // ── Fetch ────────────────────────────────────────────────────────────
@@ -267,8 +268,12 @@
   }
 
   function updateFilters(patch: Partial<ListingsQueryFilters>) {
+    // Typing in the search field rewrites the current history entry; only the first
+    // letter adds one, so „back" clears the search instead of undoing it letter by letter.
+    const keys = Object.keys(patch);
+    const typing = keys.length === 1 && keys[0] === 'search' && !!filters.search;
     filters = { ...filters, ...patch, offset: 0 }; // reset to page 1 on filter change
-    writeFiltersToUrl(filters);
+    writeFiltersToUrl(filters, typing);
     void refetch();
   }
 
