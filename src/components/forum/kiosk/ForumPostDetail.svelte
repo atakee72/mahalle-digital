@@ -461,12 +461,15 @@
         credentials: 'include'
       });
       if (!res.ok) {
+        // Never print the API's machine code (a banned member used to read "account_banned").
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Löschen fehlgeschlagen.');
+        editError = err?.error === 'account_banned' ? $t['detail.delete.banned'] : $t['detail.delete.error'];
+        deleting = false;
+        return;
       }
       if (typeof window !== 'undefined') window.location.href = '/forum';
-    } catch (err) {
-      editError = err instanceof Error ? err.message : 'Löschen fehlgeschlagen.';
+    } catch {
+      editError = $t['detail.delete.error'];
       deleting = false;
     }
   }
