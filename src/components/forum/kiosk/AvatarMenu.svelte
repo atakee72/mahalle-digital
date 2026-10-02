@@ -13,10 +13,12 @@
   // (AdmAvatar in the admin masthead). Admin context adds a „Bereiche" group
   // so the admin can jump to any member surface from the back-office, and
   // drops the „Admin-Bereich" row (you're already there).
-  let { user, onClose, context = 'app' } = $props<{
+  let { user, onClose, context = 'app', blogNew = false } = $props<{
     user: { name?: string | null; role?: string };
     onClose: (restoreFocus: boolean) => void;
     context?: 'app' | 'admin';
+    /** phones have no Blog tab — the menu row carries the „new" dot there */
+    blogNew?: boolean;
   }>();
 
   const isAdmin = $derived(user?.role === 'admin');
@@ -140,7 +142,7 @@
       <a role="menuitem" href="/entwuerfe" class="am-row font-bricolage">{$t['nav.menu.entwuerfe']}</a>
       <a role="menuitem" href="/profile?filter=gespeichert" class="am-row font-bricolage">{$t['nav.menu.gespeichert']}<span class="am-icon font-dmmono">◈</span></a>
       <button role="menuitem" class="am-row font-bricolage" onclick={() => { close(); (window as any).__mahalleTourStart?.(); }}>{$t['nav.menu.tour']}<span class="am-icon font-dmmono">◎</span></button>
-      <a role="menuitem" href="/blog" class="am-row font-bricolage">{$t['nav.menu.beilage']}<span class="am-icon font-dmmono">❡</span></a>
+      <a role="menuitem" href="/blog" class="am-row font-bricolage">{$t['nav.menu.beilage']}{#if blogNew}<span data-nav-dot class="inline-block w-[7px] h-[7px] ml-2 rounded-full bg-ink align-middle" aria-hidden="true"></span><span class="sr-only">{$t['nav.newDot']}</span>{/if}<span class="am-icon font-dmmono">❡</span></a>
     </div>
     {#if isAdmin && context !== 'admin'}
       <div class="am-group am-admin">

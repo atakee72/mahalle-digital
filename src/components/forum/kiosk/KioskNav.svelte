@@ -15,13 +15,25 @@
   import MastSearch from './MastSearch.svelte';
   import SearchModal from '../../search/SearchModal.svelte';
   import { navigate } from 'astro:transitions/client';
-  import { untrack } from 'svelte';
+  import { untrack, onMount } from 'svelte';
+  import { NO_NEWS, type SectionNews, type VisitSection } from '../../../lib/visits/visitRules';
   import { initialMastState, nextMastState, MAST_HIDE_QUERY } from '../../../lib/nav/hideOnScroll';
 
   let { currentPath = '/', user = null } = $props<{
     currentPath?: string;
     user?: { name?: string; image?: string | null; role?: string } | null;
   }>();
+
+  // „New since your last visit" dots (one read per page load, members only). The
+  // tab of the section that is open never shows one — opening it is the visit.
+  let news = $state<SectionNews>(NO_NEWS);
+  onMount(() => {
+    if (!user || window.top !== window.self) return;
+    fetch('/api/profile/section-news')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) news = { ...NO_NEWS, ...d }; })
+      .catch(() => {});
+  });
 
   let menuOpen = $state(false);
   let bellOpen = $state(false);
@@ -207,21 +219,25 @@
   const CALENDAR_MATCH = ['/calendar', '/events'];
 
   const topNav = $derived([
-    { href: '/forum',        label: $t['nav.forum'],       match: FORUM_MATCH },
-    { href: '/calendar',     label: $t['nav.calendar'],    match: CALENDAR_MATCH },
-    { href: '/newsboard',    label: $t['nav.news'],        match: ['/newsboard'] },
-    { href: '/marketplace',  label: $t['nav.marketplace'], match: ['/marketplace'] },
-    { href: '/schillerkiez', label: $t['nav.kiez'],        match: ['/schillerkiez'] },
-    { href: '/blog',         label: $t['nav.blog'],        match: ['/blog'] }
-  ]);
+    { href: '/forum',        label: $t['nav.forum'],       match: FORUM_MATCH,       section: 'forum' },
+    { href: '/calendar',     label: $t['nav.calendar'],    match: CALENDAR_MATCH,    section: 'kalender' },
+    { href: '/newsboard',    label: $t['nav.news'],        match: ['/newsboard'],    section: null },
+    { href: '/marketplace',  label: $t['nav.marketplace'], match: ['/marketplace'],  section: 'markt' },
+    { href: '/schillerkiez', label: $t['nav.kiez'],        match: ['/schillerkiez'], section: null },
+    { href: '/blog',         label: $t['nav.blog'],        match: ['/blog'],         section: 'blog' }
+  ] as { href: string; label: string; match: string[]; section: VisitSection | null }[]);
 
   const bottomNav = $derived([
-    { href: '/forum',        label: $t['nav.short.forum'],       match: FORUM_MATCH },
-    { href: '/calendar',     label: $t['nav.short.calendar'],    match: CALENDAR_MATCH },
-    { href: '/newsboard',    label: $t['nav.short.news'],        match: ['/newsboard'] },
-    { href: '/marketplace',  label: $t['nav.short.marketplace'], match: ['/marketplace'] },
-    { href: '/schillerkiez', label: $t['nav.short.kiez'],        match: ['/schillerkiez'] }
-  ]);
+    { href: '/forum',        label: $t['nav.short.forum'],       match: FORUM_MATCH,       section: 'forum' },
+    { href: '/calendar',     label: $t['nav.short.calendar'],    match: CALENDAR_MATCH,    section: 'kalender' },
+    { href: '/newsboard',    label: $t['nav.short.news'],        match: ['/newsboard'],    section: null },
+    { href: '/marketplace',  label: $t['nav.short.marketplace'], match: ['/marketplace'],  section: 'markt' },
+    { href: '/schillerkiez', label: $t['nav.short.kiez'],        match: ['/schillerkiez'], section: null }
+  ] as { href: string; label: string; match: string[]; section: VisitSection | null }[]);
+
+  function hasDot(item: { match: string[]; section: VisitSection | null }): boolean {
+    return item.section !== null && news[item.section] && !isActive(item.match);
+  }
 
   function isActive(matches: string[]): boolean {
     return matches.some((m) => currentPath === m || (m !== '/' && currentPath.startsWith(m + '/')));
@@ -290,7 +306,7 @@
           }"
           aria-current={isActive(item.match) ? 'page' : undefined}
         >
-          {item.label}
+          {item.label}{#if hasDot(item)}<span data-nav-dot class="inline-block w-[7px] h-[7px] ml-1.5 rounded-full bg-[color:var(--k-bar-fg)] align-middle" aria-hidden="true"></span><span class="sr-only">{$t['nav.newDot']}</span>{/if}
         </a>
       {/each}
     </nav>
@@ -358,7 +374,7 @@
             ></span>
           </a>
           {#if menuOpen}
-            <AvatarMenu {user} onClose={closeMenu} />
+            <AvatarMenu {user} onClose={closeMenu} blogNew={news.blog && !isActive(['/blog'])} />
           {/if}
         </div>
       {:else}
@@ -398,7 +414,7 @@
         }"
         aria-current={isActive(item.match) ? 'page' : undefined}
       >
-        {item.label}
+        {item.label}{#if hasDot(item)}<span data-nav-dot class="inline-block w-[6px] h-[6px] ml-1 rounded-full bg-[color:var(--k-bar-fg)] align-middle" aria-hidden="true"></span><span class="sr-only">{$t['nav.newDot']}</span>{/if}
       </a>
     {/each}
   </div>

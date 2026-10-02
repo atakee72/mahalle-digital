@@ -104,6 +104,10 @@ export const POST: APIRoute = async ({ request, params }) => {
         $set: {
           status: 'available',
           moderationStatus,
+          // The listing becomes public NOW: the 21-day freshness clock and „new since
+          // your last visit" both read createdAt — a draft kept for weeks must not
+          // arrive already stale.
+          createdAt: new Date(),
           updatedAt: new Date()
         }
       }
