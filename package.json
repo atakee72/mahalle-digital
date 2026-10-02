@@ -11,6 +11,7 @@
     "astro": "astro",
     "type-check": "tsc --noEmit",
     "check:svelte": "svelte-check",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "prepare": "husky"
   },
   "packageManager": "pnpm@10.19.0",

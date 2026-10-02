@@ -25,6 +25,7 @@ pnpm dev          # Start dev server
 pnpm build        # Production build
 pnpm preview      # Preview production build
 pnpm type-check   # TypeScript validation
+pnpm test         # all lib tests (src/**/*.test.ts, node:test via tsx) — also a step in checks.yml since 2026-10-02
 npx -y svelte-check@4  # Svelte diagnostics sweep — dev-only warnings (e.g. state_referenced_locally) never appear in `pnpm build` output
 # CI (checks.yml) runs on Node 24 — its `node-version` (and `schillerkiez-stats.yml`'s) must follow `engines.node` in package.json: after the 2026-10-01 bump to >=24 both workflows still installed Node 20, `pnpm install` refused (ERR_PNPM_UNSUPPORTED_ENGINE) and every checks run failed for a day while Vercel kept deploying; fixed `f36dca6d`. After a push that touches package.json or a workflow, look at the run: `gh run list --workflow=checks.yml --limit 1`.
 # CI (checks.yml) gates PRs on ratchet-only error budgets: tsc ≤16, svelte-check ≤81 (27/94→26/93 on 09-06 when the contact-form i18n fix cleared an untyped record, 93→92 on 09-10 with the shared initialsOf helper, 26/92→23/89 on 09-21 when the three unused legacy `/api/*/all` routes were deleted, 23/89→16/81 on 09-30 when the dead legacy React/dark-glass cluster was deleted — lower them when errors get fixed, never raise them)

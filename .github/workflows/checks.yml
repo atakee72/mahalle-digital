@@ -20,9 +20,9 @@ jobs:
       TSC_ERROR_BUDGET: "16"
       SVELTE_CHECK_ERROR_BUDGET: "81"
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -54,3 +54,8 @@ jobs:
             grep ' ERROR ' svelte-check.log | tail -30
             exit 1
           fi
+
+      # Every src/**/*.test.ts (node:test via tsx). Pure tests, no secrets.
+      # No "|| true": one failing test fails the job.
+      - name: lib tests
+        run: pnpm test
