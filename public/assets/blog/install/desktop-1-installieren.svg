@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 360" width="560" height="360" role="img" stroke-linecap="round" stroke-linejoin="round" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
-<title>Im Browser am Computer klickst du rechts in der Adressleiste auf das Installieren-Symbol – oder öffnest das Menü und wählst „Seite als App installieren…“.</title>
+<title>Im Browser am Computer klickst du rechts in der Adressleiste auf das Installieren-Symbol – oder öffnest das Menü und wählst „Mahalle installieren…“.</title>
 <defs><clipPath id="c"><rect x="8" y="8" width="540" height="340" rx="18"/></clipPath></defs><rect x="12" y="12" width="540" height="340" rx="18" fill="#a3552e"/><rect x="8" y="8" width="540" height="340" rx="18" fill="#f7f0de" stroke="#1b1a17" stroke-width="2"/><g clip-path="url(#c)">
 <rect x="62" y="26" width="436" height="274" rx="14" fill="#f3ead8" stroke="#1b1a17" stroke-width="2"/>
 <rect x="72" y="36" width="416" height="254" rx="6" fill="#f3ead8" stroke="#1b1a17" stroke-width="2"/>
@@ -15,7 +15,7 @@
 <rect x="286" y="118" width="186" height="140" rx="10" fill="#ebe1c7"/>
 <rect x="236" y="110" width="244" height="118" rx="12" fill="#f7f0de" stroke="#1b1a17" stroke-width="2"/>
 <rect x="282" y="126" width="90" height="8" rx="4" fill="#ebe1c7"/><path d="M276 148H472" stroke="#c9bea3" stroke-width="2"/>
-<rect x="242" y="154" width="232" height="32" rx="8" fill="#f3ead8"/><text x="254" y="175" font-size="14" fill="#1b1a17">Seite als App installieren…</text>
+<rect x="242" y="154" width="232" height="32" rx="8" fill="#f3ead8"/><text x="254" y="175" font-size="14" fill="#1b1a17">Mahalle installieren…</text>
 <rect x="242" y="154" width="232" height="32" rx="8" fill="none" stroke="#b23a5b" stroke-width="2"/><circle cx="474" cy="154" r="11" fill="#b23a5b"/><text x="474" y="159" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">2</text>
 <path d="M276 196H472" stroke="#c9bea3" stroke-width="2"/><rect x="282" y="208" width="110" height="8" rx="4" fill="#ebe1c7"/>
 <path d="M36 300H524Q524 318 506 318H54Q36 318 36 300Z" fill="#ebe1c7" stroke="#1b1a17" stroke-width="2"/>
