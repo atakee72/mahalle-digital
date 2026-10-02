@@ -468,7 +468,8 @@ See `src/components/forum/kiosk/CLAUDE.md` — full notes load when working in t
 
 ## Secret Scanning
 - **Pre-commit**: `.husky/pre-commit` runs `gitleaks protect --staged` on every commit. Falls back to a warning (exit 0) if gitleaks isn't installed locally, so collaborators without it aren't blocked.
-- **CI safety net**: `.github/workflows/gitleaks.yml` runs `gitleaks/gitleaks-action@v2` on push to `main` and on PRs — catches anything that bypassed the local hook.
+- **CI safety net**: `.github/workflows/gitleaks.yml` runs `gitleaks/gitleaks-action@v3` on push to `main` and on PRs — catches anything that bypassed the local hook.
+- **GitGuardian mails („internal secret incidents … Generic Password")** are a third scanner on the public repo, not ours. On 2026-10-02 it reported 7 incidents on `31ea3889`: the made-up sample passwords in `src/lib/auth/passwordRule.test.ts` — a false positive (verified: the dev test password is not in the commit). Before dismissing such a mail, read the named commit and compare against the real secrets by COUNT only (`grep -c -F -f <secret file>`), never by printing. Mark them „false positive / test credential" in the GitGuardian dashboard.
 - **Whitelist**: `.gitleaksignore` lists historical findings accepted as residual risk (fingerprint format `<sha>:<file>:<rule>:<line>`). Add new entries only after a deliberate decision; each line silences a real finding.
 
 ## Repo identity & code backup
