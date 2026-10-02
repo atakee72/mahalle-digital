@@ -5,6 +5,7 @@
   import { slugifyHandle, normalizeChosenHandle, chosenHandleProblem } from '../../../lib/profile/handle';
   import MemberTypeChoice from '../../profile/kiosk/atoms/MemberTypeChoice.svelte';
   import type { MemberType } from '../../../lib/members/memberType';
+  import { isAcceptablePassword } from '../../../lib/auth/passwordRule';
   import AuthField from './primitives/AuthField.svelte';
   import AuthPrimaryBtn from './primitives/AuthPrimaryBtn.svelte';
   import AuthBanner from './primitives/AuthBanner.svelte';
@@ -46,8 +47,8 @@
   // Preview of the automatic handle, shown as the placeholder (a number may be added on a clash).
   const autoHandle = $derived(isValidDisplayName(cleanDisplayName(name)) ? slugifyHandle(cleanDisplayName(name)) : '');
   const pwScore = $derived(scorePw(password));
-  // "valid enough" = min 8 + at least lower, upper, digit (the form's own check).
-  const pwOk = $derived(password.length >= 8 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password));
+  // The server's rule (8–100 characters, lower + upper + digit) — one function for both.
+  const pwOk = $derived(isAcceptablePassword(password));
   const emailOk = $derived(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
 
   async function submit(e: Event) {
