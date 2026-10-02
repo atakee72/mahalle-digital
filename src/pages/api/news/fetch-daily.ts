@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import * as Sentry from '@sentry/astro';
 import { connectDB } from '../../../lib/mongodb';
 import { checkAirLoggerFreshness } from '../../../lib/kiez/airFreshness';
+import { announceNewBlogPosts } from '../../../lib/blog/blogNotify';
 import type { NewsItem } from '../../../types';
 import { decodeHtmlEntities } from '../../../utils/decodeHtmlEntities';
 import crypto from 'crypto';
@@ -349,6 +350,9 @@ export const GET: APIRoute = async ({ request }) => {
     // that killed the logger unnoticed for two days. Runs before the early
     // returns below so a news-side outage can't also blind the air check.
     await checkAirLoggerFreshness();
+    // Also unrelated to news: announce a blog post nobody has opened yet since the deploy
+    // (the blog pages do the same on their first visit). Never throws.
+    await announceNewBlogPosts();
 
     const openaiKey = import.meta.env.OPENAI_API_KEY;
     const newsDataKey = import.meta.env.NEWSDATA_API_KEY;

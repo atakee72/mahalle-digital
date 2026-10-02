@@ -4,9 +4,12 @@ import { getCollection } from 'astro:content';
 import KioskLayout from '../../layouts/KioskLayout.astro';
 import BeilageIndex from '../../components/blog/kiosk/BeilageIndex.svelte';
 import { readingMinutes, type BeilagePost, compareNewest } from '../../lib/blog/beilage';
+import { announceNewBlogPosts } from '../../lib/blog/blogNotify';
 
 // Session-varying SSR (KioskLayout reads the session for the nav) — never let a shared cache keep it.
 Astro.response.headers.set('Cache-Control', 'no-store, must-revalidate');
+// New post on disk? Tell the members once (never throws; see src/lib/blog/blogNotify.ts).
+await announceNewBlogPosts();
 const entries = await getCollection('blog', ({ data }) => !data.draft);
 const posts: BeilagePost[] = entries
   .map((e) => ({

@@ -79,6 +79,27 @@ export async function notifyAllMembers(input: Omit<NotifyInput, 'userId'>): Prom
   }
 }
 
+/** Broadcast to every member who is not an admin (blog post announcements — the admin is the
+ *  usual author, and a blog author is a plain name, not an account, so „except the author"
+ *  cannot be expressed). Anonymized accounts are skipped like in notifyAllMembers(). */
+export async function notifyMembersExceptAdmins(input: Omit<NotifyInput, 'userId' | 'actorId'>): Promise<void> {
+  try {
+    const db = await connectDB();
+    const users = await db
+      .collection('users')
+      .find({ anonymized: { $ne: true }, role: { $ne: 'admin' } }, { projection: { _id: 1 } })
+      .toArray();
+    const userIds = users.map((u) => u._id.toString());
+    if (!userIds.length) return;
+    const now = new Date();
+    const docs: NotificationDoc[] = userIds.map((userId) => ({ userId, ...input, createdAt: now, readAt: null }));
+    await db.collection<NotificationDoc>('notifications').insertMany(docs, { ordered: false });
+    await sendPushToUsers(userIds, buildPushPayload(input.type, input.target, input.meta));
+  } catch (err) {
+    await capture(err);
+  }
+}
+
 // Comment hooks know the PARENT collection name ('topics' | 'announcements'
 // | 'recommendations' | 'events'); events have no detail route yet, so their
 // rows link to the calendar page.
