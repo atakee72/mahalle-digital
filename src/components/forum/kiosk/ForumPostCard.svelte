@@ -34,6 +34,7 @@
   import { relTime as relTimeFor } from '../../../lib/relTime';
   import { optimizeCloudinary } from '../../../utils/cloudinary';
   import { shortenUrlsInText } from '../../../lib/linkify';
+  import NewMark from './NewMark.svelte';
 
   let {
     topic,
@@ -302,6 +303,7 @@
            layout. Order matches the visual hierarchy: kind first, state
            below as a modifier. -->
       <div class="flex flex-col items-end gap-1.5 shrink-0">
+        <NewMark section="forum" created={topic.date} {authorId} invert={isInkCard} />
         {#if !strapLabel}
           <!-- Card kind-chip — direct port of the design HTML
                (Mahalle Redesign.html). Filled with the kind color

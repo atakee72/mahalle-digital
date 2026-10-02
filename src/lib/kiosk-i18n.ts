@@ -89,6 +89,8 @@ const de = {
   'common.confirm.title': 'Bist du sicher?',
   'common.confirm.cta': 'Bestätigen',
   'common.cancel': 'Abbrechen',
+  'common.new': 'neu',
+  'nav.newDot': 'Neues seit deinem letzten Besuch',
   'nav.menu.abmelden': 'Abmelden',
   'nav.menu.seit': 'IM KIEZ SEIT',
 
@@ -2187,6 +2189,8 @@ const en: Dict = {
   'common.confirm.title': 'Are you sure?',
   'common.confirm.cta': 'Confirm',
   'common.cancel': 'Cancel',
+  'common.new': 'new',
+  'nav.newDot': 'New since your last visit',
   'nav.menu.abmelden': 'Sign out',
   'nav.menu.seit': 'IN THE KIEZ SINCE',
 

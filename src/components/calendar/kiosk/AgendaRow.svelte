@@ -14,6 +14,7 @@
   import { showError } from '../../../utils/toast';
   import StatusBadge from '../../forum/kiosk/StatusBadge.svelte';
   import type { Event as EventDoc, EventCategory } from '../../../types';
+  import NewMark from '../../forum/kiosk/NewMark.svelte';
 
   let {
     ev,
@@ -177,6 +178,7 @@
         >
           {ev.title}
         </button>
+        <NewMark section="kalender" created={(ev as any).date} {authorId} invert={!!today} />
       </h4>
 
       {#if ev.location}
@@ -274,6 +276,7 @@
         >
           {ev.title}
         </button>
+        <NewMark section="kalender" created={(ev as any).date} {authorId} invert={!!today} />
       </h4>
 
       <!-- Meta line: time + location + organizer.

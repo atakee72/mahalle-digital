@@ -41,11 +41,15 @@
   import { createSavedEventsQuery, createSaveEventMutation } from '../../../lib/savedEventsQueries';
   import { showToast, showSuccess } from '../../../utils/toast';
   import type { EventCategory, Event as EventDoc } from '../../../types';
+  import { onMount } from 'svelte';
+  import { markVisit } from '../../../lib/visits/visitClient';
 
   let { initialEvents = [], currentUserId = null } = $props<{
     initialEvents?: any[];
     currentUserId?: string | null;
   }>();
+
+  onMount(() => { void markVisit('kalender', currentUserId); });
 
   // useQueryClient must be called during component setup (it reads from
   // QueryClientProvider context). Used by the flash-effect below to

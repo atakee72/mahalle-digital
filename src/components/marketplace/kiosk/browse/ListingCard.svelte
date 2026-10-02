@@ -12,6 +12,7 @@
   import MarketStrap from '../primitives/MarketStrap.svelte';
   import KioskAvatar from '../../../forum/kiosk/KioskAvatar.svelte';
   import StatusBadge from '../../../forum/kiosk/StatusBadge.svelte';
+  import NewMark from '../../../forum/kiosk/NewMark.svelte';
 
   let {
     listing,
@@ -226,12 +227,15 @@
       "
     >
       <CategoryChip id={listing.category} mini={true} />
-      <span
-        style="
-          font-family: var(--k-font-mono); font-size: 10px;
-          color: var(--k-ink-mute);
-        "
-      >{relTime}</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;">
+        <NewMark section="markt" created={listing.createdAt} authorId={String(listing.sellerId ?? '')} />
+        <span
+          style="
+            font-family: var(--k-font-mono); font-size: 10px;
+            color: var(--k-ink-mute);
+          "
+        >{relTime}</span>
+      </span>
     </div>
 
     <!-- Title -->

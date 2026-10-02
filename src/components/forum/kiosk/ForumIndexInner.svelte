@@ -49,6 +49,7 @@
   import OwnStatusBanner from './states/OwnStatusBanner.svelte';
   import FeedStatusFooter from './states/FeedStatusFooter.svelte';
   import ForumDraftsSection from './ForumDraftsSection.svelte';
+  import { markVisit } from '../../../lib/visits/visitClient';
 
   let { initialItems = [], currentUserId = null } = $props<{
     initialItems?: any[];
@@ -64,6 +65,7 @@
   let savedIds = $state<Set<string>>(new Set());
 
   onMount(() => {
+    void markVisit('forum', currentUserId);
     const url = new URL(window.location.href);
     if (url.searchParams.get('just_posted') === '1') {
       showToast($t['forum.compose.success'], { type: 'success' });

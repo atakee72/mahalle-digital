@@ -25,8 +25,15 @@
   import BlPostMeta from './BlPostMeta.svelte';
   import BlLayoutBadge from './BlLayoutBadge.svelte';
   import { initialsOf } from '../../../lib/initials';
+  import { onMount } from 'svelte';
+  import NewMark from '../../forum/kiosk/NewMark.svelte';
+  import { markVisit } from '../../../lib/visits/visitClient';
 
   let { posts }: { posts: BeilagePost[] } = $props();
+
+  // Blog authors are plain names, not accounts — nothing is „own" here. Logged-out
+  // readers get a 401 from the visit route and simply see no markers.
+  onMount(() => { void markVisit('blog', null); });
 
   // ── State ────────────────────────────────────────────────────────
   let query = $state('');
@@ -205,6 +212,7 @@
     <div class="flex items-center" style="gap: 8px;">
       <span class="font-dmmono" style="font-size: 9.5px; letter-spacing: 0.12em; color: var(--k-rust);">{fmtDateKicker(post.pubDateISO, $locale)}</span>
       <BlLayoutBadge layout={post.layout} />
+      <NewMark section="blog" created={post.pubDateISO} />
     </div>
     <h3 class="font-bricolage" style="font-size: 18px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; margin: 5px 0 6px;">{post.title}</h3>
     <div style="font-size: 12.5px; line-height: 1.45; color: var(--k-ink-soft); margin-bottom: 8px;">{post.description}</div>
@@ -360,6 +368,7 @@
                   class="font-dmmono inline-block"
                   style="font-size: 10px; letter-spacing: 0.14em; background: var(--k-rust); color: var(--k-paper); padding: 3px 10px; border-radius: 4px; border: 1px solid var(--k-ink);"
                 >{$t['blog.lead.strap']}</span>
+                <NewMark section="blog" created={lead.pubDateISO} />
                 <h2 class="font-bricolage text-[21px] md:text-[33px]" style="font-weight: 800; letter-spacing: -0.025em; line-height: 1.04; margin: 12px 0 8px;">{lead.title}</h2>
                 <div class="font-instrument italic" style="font-size: 16.5px; line-height: 1.45; color: var(--k-ink-soft); margin-bottom: 10px;">{lead.description}</div>
                 <BlPostMeta post={lead} />

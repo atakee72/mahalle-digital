@@ -30,6 +30,7 @@
   import MarketEmpty from '../states/MarketEmpty.svelte';
   import MarketSearchEmpty from '../states/MarketSearchEmpty.svelte';
   import MarketError from '../states/MarketError.svelte';
+  import { markVisit } from '../../../../lib/visits/visitClient';
 
   // ── Props ────────────────────────────────────────────────────────────
   let { initialData, currentUserId }: {
@@ -287,6 +288,7 @@
 
   // ── Mount: hydrate from URL if not default + consume flash params ───
   onMount(() => {
+    void markVisit('markt', currentUserId);
     // ── Flash toasts from compose / edit redirects ─────────────────────
     const url = new URL(window.location.href);
     const params = url.searchParams;
