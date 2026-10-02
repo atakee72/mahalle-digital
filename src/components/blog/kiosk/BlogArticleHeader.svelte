@@ -48,16 +48,16 @@
   <div
     class="bl-hero-band text-center"
     style="
-      background: var(--k-ink);
+      background: var(--k-rust);
       color: var(--k-paper);
       border: 2px solid var(--k-ink);
       border-radius: var(--k-radius-lg);
-      box-shadow: 3px 3px 0 var(--k-rust);
+      box-shadow: 3px 3px 0 var(--k-ink);
       padding: 20px 34px;
       max-width: 760px;
     "
   >
-    <div class="font-dmmono" style="font-size: 9.5px; letter-spacing: 0.2em; color: var(--k-rust-on-ink);">
+    <div class="font-dmmono" style="font-size: 9.5px; letter-spacing: 0.2em; color: var(--k-paper); opacity: 0.85;">
       {$t['blog.strap.hero']} · {$t['blog.strap.rubrik']} {post.tags[0]?.toUpperCase()} · № {rank.no} / {rank.of}
     </div>
     <h1 class="font-bricolage text-[26px] lg:text-[38px]" style="font-weight: 800; letter-spacing: -0.025em; line-height: 1.02; margin: 8px 0 0;">{title}</h1>
