@@ -240,7 +240,8 @@
     if (page > 0) url.searchParams.set('page', String(page));
     else url.searchParams.delete('page');
 
-    history.pushState({}, '', url.toString());
+    // Copy the current entry's state: Astro's ClientRouter reads state.index on popstate.
+    history.pushState(history.state, '', url.toString());
   }
 
   // ── Fetch ────────────────────────────────────────────────────────────
@@ -302,7 +303,7 @@
       }
     }
     if (consumed) {
-      window.history.replaceState({}, '', url.toString());
+      window.history.replaceState(window.history.state, '', url.toString());
       void refetch(); // cache-bust so the new/updated listing appears
     }
 

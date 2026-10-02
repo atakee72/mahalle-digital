@@ -129,7 +129,7 @@
     if (url.searchParams.get('just_submitted') === '1') {
       showToast($t['news.submit.success'], { type: 'success' });
       url.searchParams.delete('just_submitted');
-      window.history.replaceState({}, '', url.toString());
+      window.history.replaceState(window.history.state, '', url.toString());
     }
   });
 

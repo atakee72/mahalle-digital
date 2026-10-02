@@ -91,7 +91,7 @@
       params.delete('edit_blocked');
       const qs = params.toString();
       const clean = window.location.pathname + (qs ? `?${qs}` : '');
-      window.history.replaceState({}, '', clean);
+      window.history.replaceState(window.history.state, '', clean);
     }
   });
 
@@ -388,7 +388,7 @@
     p.delete('event');
     p.delete('d');
     const qs = p.toString();
-    window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    window.history.replaceState(window.history.state, '', window.location.pathname + (qs ? `?${qs}` : ''));
   });
 
   // Re-derive selected event from the live cache so RSVP optimistic
