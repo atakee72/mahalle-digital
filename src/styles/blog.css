@@ -63,6 +63,13 @@
 }
 [data-page="blog"] .bl-prose h2 { font-size: 21px; margin: 22px 0 10px; }
 [data-page="blog"] .bl-prose h3 { font-size: 16.5px; margin: 16px 0 8px; }
+/* Lists: Tailwind's reset strips the markers; a step list needs its numbers. */
+[data-page="blog"] .bl-prose ol,
+[data-page="blog"] .bl-prose ul { margin: 0 0 14px; padding-left: 22px; }
+[data-page="blog"] .bl-prose ol { list-style: decimal; }
+[data-page="blog"] .bl-prose ul { list-style: disc; }
+[data-page="blog"] .bl-prose li { margin: 0 0 5px; padding-left: 2px; }
+[data-page="blog"] .bl-prose li::marker { color: var(--k-rust-deep); font-weight: 700; }
 [data-page="blog"] .bl-prose a {
   color: var(--k-rust-deep);
   text-decoration: underline;
@@ -72,6 +79,28 @@
   max-width: 100%;
   border: 1.5px solid var(--k-ink);
   border-radius: 10px;
+}
+/* Step drawings in a guide post (`<div class="bl-steps">` in the MDX): up to three
+   side by side, wrapping on phones. The drawings bring their own card + shadow, so
+   the prose image frame is dropped; a real screenshot (.png) keeps it. */
+[data-page="blog"] .bl-prose .bl-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  max-width: 660px;
+  margin: 6px auto 18px;
+}
+[data-page="blog"] .bl-prose .bl-steps:has(> img:only-child) { max-width: 240px; }
+[data-page="blog"] .bl-prose .bl-steps:has(> img:first-child:nth-last-child(2)) { max-width: 440px; }
+[data-page="blog"] .bl-prose .bl-steps--wide:has(> img:only-child) { max-width: 560px; }
+[data-page="blog"] .bl-prose .bl-steps img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+[data-page="blog"] .bl-prose .bl-steps img[src$=".svg"] {
+  border: 0;
+  border-radius: 0;
 }
 /* Pull quote = markdown blockquote (Decision 7) */
 [data-page="blog"] .bl-prose blockquote {

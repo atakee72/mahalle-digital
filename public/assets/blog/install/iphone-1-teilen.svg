@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 400" width="320" height="400" role="img" stroke-linecap="round" stroke-linejoin="round" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<title>Unten im Browser auf dem iPhone: Tippe auf den Teilen-Knopf in der Mitte.</title>
+<defs><clipPath id="c"><rect x="8" y="8" width="300" height="380" rx="18"/></clipPath><clipPath id="p"><rect x="36" y="-140" width="248" height="520" rx="32"/></clipPath></defs><rect x="12" y="12" width="300" height="380" rx="18" fill="#a3552e"/><rect x="8" y="8" width="300" height="380" rx="18" fill="#f7f0de" stroke="#1b1a17" stroke-width="2"/>
+<g clip-path="url(#c)"><rect x="36" y="-140" width="248" height="520" rx="32" fill="#f3ead8"/>
+<g clip-path="url(#p)"><rect x="52" y="70" width="216" height="70" rx="10" fill="#ebe1c7"/><rect x="52" y="156" width="170" height="8" rx="4" fill="#ebe1c7"/><rect x="52" y="174" width="200" height="8" rx="4" fill="#ebe1c7"/><rect x="52" y="192" width="120" height="8" rx="4" fill="#ebe1c7"/><rect x="52" y="216" width="104" height="60" rx="10" fill="#ebe1c7"/><rect x="164" y="216" width="104" height="60" rx="10" fill="#ebe1c7"/><rect x="36" y="286" width="248" height="74" fill="#f7f0de"/><path d="M36 286H284" fill="none" stroke="#1b1a17" stroke-width="2"/>
+<path d="M84 312L74 322L84 332" fill="none" stroke="#1b1a17" stroke-width="2"/><path d="M118 312L128 322L118 332" fill="none" stroke="#1b1a17" stroke-width="2"/>
+<path d="M153 318H148V338H172V318H167M160 333V310M153 316L160 309L167 316" fill="none" stroke="#1b1a17" stroke-width="2"/>
+<rect x="196" y="313" width="22" height="20" rx="3" fill="none" stroke="#1b1a17" stroke-width="2"/><path d="M207 313V333" fill="none" stroke="#1b1a17" stroke-width="2"/>
+<rect x="232" y="315" width="16" height="16" rx="3" fill="none" stroke="#1b1a17" stroke-width="2"/><rect x="238" y="309" width="16" height="16" rx="3" fill="#f7f0de" stroke="#1b1a17" stroke-width="2"/>
+<rect x="134" y="298" width="52" height="50" rx="12" fill="none" stroke="#b23a5b" stroke-width="3"/><circle cx="186" cy="298" r="11" fill="#b23a5b"/><text x="186" y="303" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+<rect x="120" y="351" width="80" height="4" rx="2" fill="#1b1a17"/></g>
+<rect x="36" y="-140" width="248" height="520" rx="32" fill="none" stroke="#1b1a17" stroke-width="2"/></g>
+</svg>
