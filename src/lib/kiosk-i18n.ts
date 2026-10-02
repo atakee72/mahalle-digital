@@ -529,6 +529,8 @@ const de = {
   'comment.toast.delete.error': 'Konnte nicht gelöscht werden.',
   'detail.delete.error': 'Löschen fehlgeschlagen. Bitte versuch es erneut.',
   'detail.delete.banned': 'Dein Konto ist gesperrt — Löschen ist nicht möglich.',
+  'detail.edit.banned': 'Dein Konto ist gesperrt — Bearbeiten ist nicht möglich.',
+  'detail.edit.error': 'Speichern fehlgeschlagen. Bitte versuch es erneut.',
   'comment.toast.create.tooLong': 'Dein Kommentar ist zu lang — höchstens 3000 Zeichen. Dein Text ist noch da.',
   'comment.toast.create.login': 'Bitte melde dich neu an, dann kannst du kommentieren. Dein Text ist noch da.',
   'comment.toast.create.banned': 'Dein Konto kann zurzeit nicht kommentieren.',
@@ -901,6 +903,18 @@ const de = {
   'market.owner.deleteConfirm.cta': 'Löschen',
   'market.owner.draft.deleted': 'Entwurf gelöscht.',
   'market.owner.draft.deleteError': 'Entwurf konnte nicht gelöscht werden.',
+  'market.detail.toast.linkCopied': 'Link kopiert!',
+  'market.detail.toast.linkFailed': 'Link konnte nicht kopiert werden.',
+  'market.detail.toast.banned': 'Dein Konto ist gesperrt — das ist nicht möglich.',
+  'market.detail.toast.bumpRateLimited': 'Du kannst diese Anzeige erst ab {date} wieder hochholen.',
+  'market.detail.toast.bumpBlocked': 'Reservierte oder verkaufte Anzeigen können nicht hochgeholt werden.',
+  'market.detail.toast.bumpFailed': 'Hochholen fehlgeschlagen. Bitte versuch es erneut.',
+  'market.detail.toast.bumped': 'Anzeige hochgeholt!',
+  'market.detail.toast.statusFailed': 'Status konnte nicht geändert werden. Bitte versuch es erneut.',
+  'market.detail.toast.markedReserved': 'Als reserviert markiert.',
+  'market.detail.toast.markedSold': 'Als verkauft markiert.',
+  'market.detail.toast.reservationCleared': 'Reservierung aufgehoben.',
+  'market.detail.toast.deleteFailed': 'Löschen fehlgeschlagen. Bitte versuch es erneut.',
 
   // ─── Marketplace ─ Seller card ─────────────────────────────────────────
 
@@ -1156,6 +1170,8 @@ const de = {
   'news.submit.cancel': 'abbrechen',
   'news.submit.success': 'Eingereicht — läuft jetzt durch die Moderation.',
   'news.submit.error': 'Einreichen fehlgeschlagen.',
+  'news.submit.duplicate': 'Dieser Artikel wurde schon eingereicht.',
+  'news.submit.banned': 'Dein Konto ist gesperrt — Einreichen ist nicht möglich.',
   'news.submit.modnote': 'Nach dem Absenden läuft AI-Moderation (Profanität / Hass / Spam / Werbung). Freigabe i. d. R. < 5 Min.',
   // ── Newsboard · Phase 2 (detail) ──────────────────────────
   'news.detail.back': '← zurück zum Feed',
@@ -2579,6 +2595,8 @@ const en: Dict = {
   'comment.toast.delete.error': "Couldn't delete the comment.",
   'detail.delete.error': "Couldn't delete the post. Please try again.",
   'detail.delete.banned': 'Your account is suspended — deleting is not possible.',
+  'detail.edit.banned': 'Your account is suspended — editing is not possible.',
+  'detail.edit.error': "Couldn't save your changes. Please try again.",
   'comment.toast.create.tooLong': "Your comment is too long — 3000 characters at most. Your text is still here.",
   'comment.toast.create.login': "Please log in again, then you can comment. Your text is still here.",
   'comment.toast.create.banned': "Your account can't comment at the moment.",
@@ -2929,6 +2947,18 @@ const en: Dict = {
   'market.owner.deleteConfirm.cta': 'Delete',
   'market.owner.draft.deleted': 'Draft deleted.',
   'market.owner.draft.deleteError': 'Could not delete draft.',
+  'market.detail.toast.linkCopied': 'Link copied!',
+  'market.detail.toast.linkFailed': "Couldn't copy the link.",
+  'market.detail.toast.banned': 'Your account is suspended — this is not possible.',
+  'market.detail.toast.bumpRateLimited': 'You can bump this listing again from {date}.',
+  'market.detail.toast.bumpBlocked': 'Reserved or sold listings cannot be bumped.',
+  'market.detail.toast.bumpFailed': 'Bump failed. Please try again.',
+  'market.detail.toast.bumped': 'Listing bumped!',
+  'market.detail.toast.statusFailed': "Couldn't change the status. Please try again.",
+  'market.detail.toast.markedReserved': 'Marked as reserved.',
+  'market.detail.toast.markedSold': 'Marked as sold.',
+  'market.detail.toast.reservationCleared': 'Reservation cleared.',
+  'market.detail.toast.deleteFailed': 'Delete failed. Please try again.',
 
   // ─── Marketplace ─ Seller card ─────────────────────────────────────────
 
@@ -3157,6 +3187,8 @@ const en: Dict = {
   'news.submit.cancel': 'cancel',
   'news.submit.success': 'Submitted — now running through moderation.',
   'news.submit.error': 'Submission failed.',
+  'news.submit.duplicate': 'This article has already been submitted.',
+  'news.submit.banned': 'Your account is suspended — submitting is not possible.',
   'news.submit.modnote': 'After submission, AI moderation runs (profanity / hate / spam / promotion). Approval usually < 5 min.',
   // ── Newsboard · Phase 2 (detail) ──────────────────────────
   'news.detail.back': '← back to feed',

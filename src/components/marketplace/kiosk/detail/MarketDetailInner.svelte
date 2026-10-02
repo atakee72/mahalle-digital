@@ -18,7 +18,7 @@
   import BackfillBanner from '../states/BackfillBanner.svelte';
   import ListingRejectedPanel from '../states/ListingRejectedPanel.svelte';
   import KioskReportModal from '../../../forum/kiosk/KioskReportModal.svelte';
-  import { t } from '../../../../lib/kiosk-i18n';
+  import { t, tStr, locale } from '../../../../lib/kiosk-i18n';
   import TranslateControl from '../../../forum/kiosk/TranslateControl.svelte';
 
   // ─── Props ─────────────────────────────────────────────────────────────────
@@ -101,9 +101,9 @@
     } else {
       try {
         await navigator.clipboard.writeText(url);
-        showSuccess('Link kopiert!');
+        showSuccess($t['market.detail.toast.linkCopied']);
       } catch {
-        showToast('Link konnte nicht kopiert werden.', { type: 'error' });
+        showToast($t['market.detail.toast.linkFailed'], { type: 'error' });
       }
     }
   }
@@ -146,30 +146,30 @@
       if (result.error === 'bump_rate_limited' && result.retryAt) {
         const dt = new Date(result.retryAt);
         showToast(
-          `Du kannst diese Anzeige erst ab ${dt.toLocaleDateString('de')} wieder hochholen.`,
+          tStr($t['market.detail.toast.bumpRateLimited'], { date: dt.toLocaleDateString($locale) }),
           { type: 'warning', duration: 6000 },
         );
       } else if (result.error === 'bump_blocked_by_status') {
-        showError('Reservierte oder verkaufte Anzeigen können nicht hochgeholt werden.');
+        showError($t['market.detail.toast.bumpBlocked']);
       } else {
-        showError(`Hochholen fehlgeschlagen: ${result.error}`);
+        showError(result.error === 'account_banned' ? $t['market.detail.toast.banned'] : $t['market.detail.toast.bumpFailed']);
       }
       return;
     }
-    showSuccess('Anzeige hochgeholt!');
+    showSuccess($t['market.detail.toast.bumped']);
     listing = { ...listing, lastBumpedAt: result.lastBumpedAt!, isBumped: true };
   }
 
   async function handleStatusChange(status: 'available' | 'reserved' | 'sold') {
     const result = await setListingStatus(String(listing._id), status);
     if (!result.ok) {
-      showError(`Status-Wechsel fehlgeschlagen: ${result.error}`);
+      showError(result.error === 'account_banned' ? $t['market.detail.toast.banned'] : $t['market.detail.toast.statusFailed']);
       return;
     }
     const successMsg =
-      status === 'reserved' ? 'Als reserviert markiert.' :
-      status === 'sold'     ? 'Als verkauft markiert.'   :
-                              'Reservierung aufgehoben.';
+      status === 'reserved' ? $t['market.detail.toast.markedReserved'] :
+      status === 'sold'     ? $t['market.detail.toast.markedSold']     :
+                              $t['market.detail.toast.reservationCleared'];
     showSuccess(successMsg);
     listing = {
       ...listing,
@@ -185,12 +185,18 @@
       variant: 'danger',
     });
     if (!ok) return;
-    const res = await fetch(`/api/listings/delete/${listing._id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-    if (!res.ok) {
-      showError('Löschen fehlgeschlagen.');
+    try {
+      const res = await fetch(`/api/listings/delete/${listing._id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showError(err?.error === 'account_banned' ? $t['market.detail.toast.banned'] : $t['market.detail.toast.deleteFailed']);
+        return;
+      }
+    } catch {
+      showError($t['market.detail.toast.deleteFailed']);
       return;
     }
     window.location.href = '/marketplace?just_deleted=1';

@@ -82,7 +82,14 @@
         body: JSON.stringify({ title, description, sourceUrl, sourceName: sourceName || new URL(sourceUrl).hostname, imageUrl, sektion }),
       });
       if (res.status === 429) { quotaReached = true; throw new Error($t['news.submit.quotaReached']); }
-      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err?.error || 'submit failed'); }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(
+          res.status === 409 ? ($t['news.submit.duplicate'] as string)
+          : err?.error === 'account_banned' ? ($t['news.submit.banned'] as string)
+          : ($t['news.submit.error'] as string)
+        );
+      }
       // Toast fires on the DESTINATION page (flash param): a toast shown here
       // dies in the immediate full-page navigation before it can render.
       window.location.href = '/newsboard?just_submitted=1';

@@ -410,7 +410,13 @@
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || err.message || 'Speichern fehlgeschlagen.');
+          throw new Error(
+            err.error === 'account_banned'
+              ? ($t['detail.edit.banned'] as string)
+              : err.error === 'edit_blocked_by_moderation'
+                ? ($t['detail.edit.blocked'] as string)
+                : ($t['detail.edit.error'] as string)
+          );
         }
         const json = await res.json();
         topic = { ...topic, ...json.topic };
@@ -446,7 +452,7 @@
       }
       editing = false;
     } catch (err) {
-      editError = err instanceof Error ? err.message : 'Speichern fehlgeschlagen.';
+      editError = err instanceof Error ? err.message : ($t['detail.edit.error'] as string);
     } finally {
       if (!navigating) saving = false; // keep the buttons locked while the new page loads
     }
