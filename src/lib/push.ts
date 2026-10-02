@@ -72,6 +72,11 @@ export function buildPushPayload(
         ? 'Admin-Hinweis in einem Kommentar'
         : 'Admin-Hinweis in einem Beitrag';
       break;
+    case 'blog':
+      body = (meta?.count ?? 1) > 1
+        ? `${meta?.count} neue Beiträge in der Beilage`
+        : `Neu in der Beilage: ‚${t}‘`;
+      break;
     case 'moderation': {
       const noun = meta?.contentKind === 'comment' ? 'Kommentar' : 'Beitrag';
       if (meta?.outcome === 'rejected') body = `Dein ${noun} wurde abgelehnt — Details in deinem Profil`;

@@ -1,11 +1,11 @@
 import type { ObjectId } from 'mongodb';
 
-export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention' | 'admin_hint';
+export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention' | 'admin_hint' | 'blog';
 
 export interface NotificationTarget {
   /** The page kind the row deep-links to (mirrors the href, not necessarily
    *  the moderated doc itself — a moderated comment links to its parent). */
-  contentType: 'topic' | 'announcement' | 'recommendation' | 'event' | 'listing' | 'news' | 'forum';
+  contentType: 'topic' | 'announcement' | 'recommendation' | 'event' | 'listing' | 'news' | 'forum' | 'blog';
   contentId: string;
   title: string; // snapshot at event time
   href: string;
@@ -23,6 +23,8 @@ export interface NotificationMeta {
    *  key; comment („replied") rows since 2026-09-30: the comment's own id. Either way the key
    *  a delete purges by (target.contentId is the PARENT page for comments, so it cannot serve). */
   sourceId?: string;
+  /** blog: how many posts this one notification stands for (set only when > 1). */
+  count?: number;
 }
 
 /** DB shape — one doc per recipient per event. */
