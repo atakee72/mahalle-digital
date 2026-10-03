@@ -81,6 +81,7 @@ test('issue data: public posts of the week with author names, next week\'s event
   assert.deepEqual(topics.hasWarningLabel, { $ne: true });
   const events = calls.find((c) => c.collection === 'events')!.filter;
   assert.deepEqual(events.startDate, { $gte: new Date(NOW), $lt: new Date(NOW + 7 * DAY) });
+  assert.deepEqual(events.visibility, { $ne: 'private' });
   const listings = calls.find((c) => c.collection === 'listings')!.filter;
   assert.deepEqual(listings.status, { $in: ['available', 'reserved'] });
   const users = calls.find((c) => c.collection === 'users')!.filter;
@@ -97,10 +98,10 @@ test('a failing air lookup leaves the air line out, nothing else', async () => {
   assert.equal(d.posts.length, 0);
 });
 
-test('recipients: verified, not anonymized, not banned, not off, with an e-mail string', async () => {
+test('recipients: verified, not anonymized, not banned, not off, not in deletion grace, with an e-mail string', async () => {
   const { db, calls } = fakeDb({ users: [{ _id: 'u1', email: 'a@b.c', name: 'A' }, { _id: 'u2', email: 'd@e.f' }] });
   assert.deepEqual(await loadRecipients(db), [{ id: 'u1', email: 'a@b.c', name: 'A' }, { id: 'u2', email: 'd@e.f', name: null }]);
   assert.deepEqual(calls[0].filter, {
-    emailVerified: true, anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, email: { $type: 'string' },
+    emailVerified: true, anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, deletionScheduledAt: { $exists: false }, email: { $type: 'string' },
   });
 });

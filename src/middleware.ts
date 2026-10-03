@@ -16,25 +16,26 @@ import { isCrossSiteForm } from './lib/security/crossSiteForm';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   try {
-    // Skip middleware for static assets and prerendered routes
     const pathname = context.url.pathname;
-    if (
-      pathname.startsWith("/_image") ||
-      pathname.startsWith("/favicon") ||
-      pathname.includes(".") // Skip for files with extensions
-    ) {
-      return await next();
-    }
-
     // Cross-site form check — Astro's own (`security.checkOrigin`) is OFF in astro.config.mjs
     // because it has no exemption list, and the Kiez-Brief one-click unsubscribe endpoint must
-    // accept a form POST from Gmail's servers (RFC 8058). Same rule, one exempt path.
+    // accept a form POST from Gmail's servers (RFC 8058). Same rule, one exempt path; it runs before the
+    // static-asset skip so it covers exactly what Astro's check covered (dotted dynamic paths too).
     if (!context.isPrerendered && isCrossSiteForm({
       method: context.request.method, pathname,
       origin: context.request.headers.get('origin'), contentType: context.request.headers.get('content-type'),
       siteOrigin: context.url.origin,
     })) {
       return new Response(`Cross-site ${context.request.method} form submissions are forbidden`, { status: 403 });
+    }
+
+    // Skip middleware for static assets and prerendered routes
+    if (
+      pathname.startsWith("/_image") ||
+      pathname.startsWith("/favicon") ||
+      pathname.includes(".") // Skip for files with extensions
+    ) {
+      return await next();
     }
 
     // Skip session fetching for prerendered routes (no request headers available)

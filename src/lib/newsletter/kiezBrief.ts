@@ -11,7 +11,7 @@ import { isMailerConfigured, sendMailBatch } from '../email/mailer';
 import KiezBriefEmail from '../../emails/KiezBriefEmail';
 import { makeUnsubToken, unsubSecret } from './unsubToken';
 import {
-  UNSUB_PLACEHOLDER, MAX_RECIPIENTS, issueWeek, isQuiet, subjectFor, unsubscribeHeaders, type BriefData,
+  UNSUB_PLACEHOLDER, MAX_RECIPIENTS, issueWeek, berlinWeekday, isQuiet, subjectFor, unsubscribeHeaders, type BriefData,
 } from './kiezBriefRules';
 import { claimIssue, loadIssueData, loadRecipients, markIssue, type BlogInput, type Recipient } from './kiezBriefStore';
 
@@ -69,17 +69,20 @@ export function mailsFor(html: string, subject: string, recipients: Recipient[],
 
 export interface SendResult {
   week: string;
-  outcome: 'sent' | 'claimed-elsewhere' | 'quiet' | 'quota' | 'not-configured' | 'failed';
+  outcome: 'sent' | 'claimed-elsewhere' | 'quiet' | 'quota' | 'not-configured' | 'not-due' | 'failed';
   recipients: number;
 }
 
 /**
- * Send this week's issue, once. `fallback` marks the Monday run (it only sends when Sunday's never
- * arrived — the claim decides). Never throws.
+ * Send this week's issue, once. `fallback` marks the Monday run (it only sends on a Berlin Monday, and only when
+ * Sunday's never arrived — the claim decides). Never throws.
  */
 export async function sendKiezBrief(opts: { fallback?: boolean; now?: number } = {}): Promise<SendResult> {
   const nowMs = opts.now ?? Date.now();
   const week = issueWeek(nowMs);
+  // The fallback rides a daily job: it is due on a Berlin Monday only (any other day its
+  // issueWeek would already point at the NEXT issue).
+  if (opts.fallback === true && berlinWeekday(nowMs) !== 1) return { week, outcome: 'not-due', recipients: 0 };
   try {
     const baseUrl = kiezBriefBaseUrl();
     const secret = unsubSecret();
@@ -104,6 +107,10 @@ export async function sendKiezBrief(opts: { fallback?: boolean; now?: number } =
     if (!isMailerConfigured()) {
       console.log(`[kiez-brief] (dev) no mail transport — would send ${week} to ${recipients.length} members`);
       await markIssue(db, week, { recipients: 0 });
+      if (import.meta.env.PROD) {
+        Sentry.captureMessage('kiez-brief: no mail transport configured — the week was claimed but nothing was sent', { level: 'warning', extra: { week } });
+        await Sentry.flush(2000);
+      }
       return { week, outcome: 'not-configured', recipients: recipients.length };
     }
     const html = await renderIssue(data, baseUrl);

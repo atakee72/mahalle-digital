@@ -17,7 +17,7 @@ Code: `src/lib/newsletter/*`, `src/pages/api/cron/kiez-brief.ts`, `src/pages/api
 
 ## Watching a run
 
-- `gh run list --workflow=kiez-brief.yml` — GitHub starts scheduled runs 0–4 h late (mail lands 18:00 to ~22:00 Berlin). If the run never arrives, the Monday 06:00 UTC cron (`fetch-daily`) sends the issue instead.
+- `gh run list --workflow=kiez-brief.yml` — GitHub starts scheduled runs 0–4 h late (mail lands 18:00 to ~22:00 Berlin). If the run never arrives, the Monday 06:00 UTC cron (`fetch-daily`) sends the issue instead (Berlin Mondays only; other days the fallback is a no-op `not-due`).
 - The route answers JSON `{ week, outcome, recipients }`; `outcome` is `sent`, `claimed-elsewhere`, `quiet`, `quota`, `not-configured` or `failed` (see the workflow log).
 - A failed batch is a Sentry issue and the week stays claimed — it is not retried.
 

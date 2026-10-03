@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
-  preheaderFor, withUtm, fmtEventWhen, fmtPrice, unsubscribeHeaders, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
+  preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
 } from './kiezBriefRules';
 
@@ -93,4 +93,10 @@ test('the one-click headers follow RFC 8058', () => {
     'List-Unsubscribe': '<https://x/api/newsletter/unsubscribe?t=abc>, <mailto:admin@x?subject=unsubscribe>',
     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
   });
+});
+
+test('berlinWeekday reads the Berlin day, not the UTC day', () => {
+  assert.equal(berlinWeekday(SUN_18), 0);
+  assert.equal(berlinWeekday(MON_06), 1);
+  assert.equal(berlinWeekday(Date.parse('2026-10-12T23:30:00.000Z')), 2); // Tuesday 01:30 CEST
 });

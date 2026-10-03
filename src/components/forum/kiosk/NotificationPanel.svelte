@@ -81,13 +81,14 @@
 
   // Kiez-Brief preference (weekly · off), same shape as the forum row.
   let newsMode = $state<NewsletterMode | null>(null);
+  let newsVerified = $state(false);
   let newsBusy = $state(false);
 
   $effect(() => {
     let alive = true;
     fetch('/api/profile/newsletter')
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (alive && d) newsMode = storedNewsletterMode(d.mode); })
+      .then((d) => { if (alive && d) { newsMode = storedNewsletterMode(d.mode); newsVerified = d.emailVerified === true; } })
       .catch(() => {});
     return () => { alive = false; };
   });
@@ -340,7 +341,7 @@
         </span>
       </div>
     {/if}
-    {#if newsMode !== null}
+    {#if newsMode !== null && newsVerified}
       <div class="nc-pref" role="group" aria-busy={newsBusy} aria-label={$t['nc.newsletter.label']}>
         <span class="nc-pref-label font-dmmono">{$t['nc.newsletter.label']}</span>
         <span class="nc-pref-opts">

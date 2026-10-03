@@ -23,7 +23,7 @@ export interface IssueDoc {
   sentAt?: Date;
 }
 
-/** Claim the issue BEFORE anything is rendered or sent; null = already claimed (at-most-once). */
+/** Claim the issue BEFORE anything is rendered or sent; false = already claimed (at-most-once). */
 export async function claimIssue(db: Db, week: string, nowMs: number, fallback: boolean): Promise<boolean> {
   const w = windowFor(nowMs);
   try {
@@ -64,7 +64,7 @@ export async function loadIssueData(db: Db, week: string, nowMs: number, blog: B
       return docs.map((d) => ({ kind, doc: d }));
     })),
     db.collection('events')
-      .find({ ...PUBLIC, startDate: { $gte: new Date(w.toMs), $lt: new Date(w.aheadMs) } },
+      .find({ ...PUBLIC, startDate: { $gte: new Date(w.toMs), $lt: new Date(w.aheadMs) }, visibility: { $ne: 'private' } },
         { projection: { title: 1, startDate: 1, allDay: 1, location: 1 } })
       .toArray(),
     db.collection('listings')
@@ -114,7 +114,7 @@ export interface Recipient { id: string; email: string; name: string | null }
 /** Verified, reachable members who did not turn the mail off. One query, allowlist projection. */
 export async function loadRecipients(db: Db): Promise<Recipient[]> {
   const users = await db.collection('users')
-    .find({ emailVerified: true, anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, email: { $type: 'string' } },
+    .find({ emailVerified: true, anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, deletionScheduledAt: { $exists: false }, email: { $type: 'string' } },
       { projection: { _id: 1, email: 1, name: 1 } })
     .toArray();
   return users.map((u) => ({ id: String(u._id), email: String(u.email), name: typeof u.name === 'string' ? u.name : null }));

@@ -35,6 +35,11 @@ function berlinParts(ms: number): { y: number; m: number; d: number; wd: number;
   return { y: Number(get('year')), m: Number(get('month')), d: Number(get('day')), wd, hh: Number(get('hour')) % 24, mm: Number(get('minute')) };
 }
 
+/** Berlin weekday of an instant: 0 = Sunday … 6 = Saturday. */
+export function berlinWeekday(ms: number): number {
+  return berlinParts(ms).wd;
+}
+
 /** ISO week key ('2026-W41') of a Berlin calendar day. */
 export function isoWeek(ms: number): string {
   const { y, m, d } = berlinParts(ms);

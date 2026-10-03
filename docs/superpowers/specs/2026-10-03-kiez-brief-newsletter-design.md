@@ -41,7 +41,7 @@ Push and the bell reach only the members who allowed push; the mail reaches the 
    `*.vercel.app` — the 308 drops the header). Fail-closed: without `CRON_SECRET` the route answers 503
    (the `process-deletions` precedent), and it is NOT in the middleware's gated prefixes.
 2. **Monday fallback:** `fetch-daily.ts` (06:00 UTC) calls `sendKiezBrief({ fallback: true })` after
-   the forum digest; it sends only when the current ISO week's issue is not claimed yet — i.e. when the
+   the forum digest; it sends only on a Berlin Monday, and only when the current ISO week's issue is not claimed yet — i.e. when the
    Sunday workflow never arrived. Nothing is lost, nothing goes out twice.
 3. **At-most-once per issue week:** collection `kiezBriefIssues` `{ _id: '2026-W41', windowFrom,
    windowTo, recipients, skipped?: 'quiet' | 'quota', sentAt }`, claim-by-insert BEFORE rendering or
@@ -92,7 +92,8 @@ the mail is visible in GoatCounter later (no tracking pixel, no per-member link 
   every old link (the member then uses the switch in the app) — accepted, the secret has never been
   rotated and a rotation logs everyone out anyway.
 - `GET /newsletter/abmelden?t=<token>` — a small SSR page (KioskLayout, no login needed): sets
-  `users.newsletter = 'off'`, shows „Du bekommst den Kiez-Brief nicht mehr." with a link to switch it
+  GET only asks (mail link scanners prefetch links): „Kiez-Brief abbestellen?" with a form button
+  „Abbestellen" that POSTs the same URL; the POST sets `users.newsletter = 'off'` and shows „Abbestellt." with a link to switch it
   back on in the app. Invalid token → neutral „Dieser Link ist ungültig." (no oracle).
 - `POST /api/newsletter/unsubscribe?t=<token>` — RFC 8058 one-click target: accepts
   `List-Unsubscribe=One-Click` form body, sets the flag, answers 200 with no body. Gmail/Yahoo call it
