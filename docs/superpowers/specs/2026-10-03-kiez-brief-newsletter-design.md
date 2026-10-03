@@ -85,10 +85,10 @@ the mail is visible in GoatCounter later (no tracking pixel, no per-member link 
 
 ## Unsubscribe (two paths, no token table)
 
-- Token: `base64url(userId) + '.' + HMAC-SHA256(AUTH_SECRET, 'kiez-brief:' + userId)` — a pure,
+- Token: `base64url(userId) + '.' + HMAC-SHA256(NEXTAUTH_SECRET, 'kiez-brief:' + userId)` — a pure,
   tested helper `src/lib/newsletter/unsubToken.ts` (`makeUnsubToken`, `verifyUnsubToken`). No
   expiry (the link must work from a months-old mail), no state; revoking is impossible, and that is
-  fine: the only thing the token can do is turn the mail off. Rotating `AUTH_SECRET` invalidates
+  fine: the only thing the token can do is turn the mail off. Rotating `NEXTAUTH_SECRET` (the Auth.js secret; `JWT_SECRET` is its fallback) invalidates
   every old link (the member then uses the switch in the app) — accepted, the secret has never been
   rotated and a rotation logs everyone out anyway.
 - `GET /newsletter/abmelden?t=<token>` — a small SSR page (KioskLayout, no login needed): sets
@@ -100,6 +100,12 @@ the mail is visible in GoatCounter later (no tracking pixel, no per-member link 
   `List-Unsubscribe-Post: List-Unsubscribe=One-Click`.
 - Both routes are in the middleware's public set (not gated), rate-limited by IP via the existing
   `rateLimits` helper (60/h) — the token is the secret, the limit only blunts scanning.
+- **Astro's `security.checkOrigin` blocks exactly this POST** (a form content type without our
+  Origin → 403, before any middleware; found on the prototype). It has no exemption list, so it
+  is switched OFF in `astro.config.mjs` and re-implemented with the same rule in
+  `src/middleware.ts` (`src/lib/security/crossSiteForm.ts`, pure, tested) with ONE exempt path.
+  The session cookie is `SameSite=Lax`, so cross-site form POSTs never carry a session anyway;
+  the check stays as belt and braces for every other route.
 
 ## The switch in the app
 
@@ -124,7 +130,8 @@ the Resend plan before the next Sunday. Admins are recipients like everyone.
 
 `GET /api/admin/kiez-brief/preview` (admin session) renders THIS week's issue as HTML for the owner's
 own address (no send, no claim) — the way to look at it before the first Sunday and after any change
-to the template. Query `?send=1` sends that preview to the admin's own e-mail only.
+to the template. `POST` on the same route sends that preview to the admin's own e-mail only (a POST,
+not `?send=1` on the GET — a mail-sending GET could be triggered by a lured click).
 
 ## Code layout (mirrors the blog/forum notification trio)
 
