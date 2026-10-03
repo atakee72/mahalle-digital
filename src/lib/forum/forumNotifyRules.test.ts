@@ -10,10 +10,10 @@ const HOUR = 3_600_000;
 const post = (id: string, authorId: string, hoursAgo: number, kind: ForumPostRef['kind'] = 'topic'): ForumPostRef =>
   ({ id, kind, title: `Titel ${id}`, authorId, dateMs: NOW - hoursAgo * HOUR });
 
-test('the stored preference falls back to the digest', () => {
-  assert.equal(storedForumNotify('each'), 'each');
+test('the stored preference falls back to every post', () => {
+  assert.equal(storedForumNotify('digest'), 'digest');
   assert.equal(storedForumNotify('off'), 'off');
-  for (const v of [undefined, null, '', 'digest', 'EACH', 1, {}]) assert.equal(storedForumNotify(v), 'digest');
+  for (const v of [undefined, null, '', 'each', 'DIGEST', 1, {}]) assert.equal(storedForumNotify(v), 'each');
 });
 
 test('the window starts where the previous digest ended', () => {

@@ -5,7 +5,7 @@ import { ObjectId } from 'mongodb';
 import { connectDB } from '../../../lib/mongodb';
 import { FORUM_NOTIFY_MODES, storedForumNotify } from '../../../lib/forum/forumNotifyRules';
 
-// The member's forum-notification preference (users.forumNotify; absent = 'digest').
+// The member's forum-notification preference (users.forumNotify; absent = 'each').
 // Not ban-gated: turning notifications down must always be possible.
 const BodySchema = z.object({ mode: z.enum(FORUM_NOTIFY_MODES) });
 
@@ -38,7 +38,7 @@ export const POST: APIRoute = async ({ request }) => {
   const db = await connectDB();
   await db.collection('users').updateOne(
     { _id: new ObjectId(session.user.id) },
-    mode === 'digest' ? { $unset: { forumNotify: '' } } : { $set: { forumNotify: mode } },
+    mode === 'each' ? { $unset: { forumNotify: '' } } : { $set: { forumNotify: mode } },
   );
   return json({ mode });
 };

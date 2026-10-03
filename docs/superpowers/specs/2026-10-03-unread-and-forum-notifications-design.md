@@ -27,7 +27,7 @@ browser on the local production build against `mahalle-dev`.
 
 ## B. Forum notifications (plan `2026-10-03-forum-notifications.md`)
 
-- **One preference per member,** `users.forumNotify`: absent = **digest** (his default), `'each'`
+- **One preference per member,** `users.forumNotify`: absent = **every post** (his default since 03:41; the digest was the default for the first hours), `'digest'`
   = every new public forum post at once, `'off'`.
 - **Digest:** **daily**, rides the morning cron (`/api/news/fetch-daily`, 06:00 UTC), once per
   Berlin day (claim-by-insert in `forumDigests`, the afternoon GitHub run finds the day claimed),

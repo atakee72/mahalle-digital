@@ -60,16 +60,16 @@ export async function loadDigestPosts(db: Db, startMs: number, nowMs: number): P
 
 const REACHABLE = { anonymized: { $ne: true }, isBanned: { $ne: true } };
 
-/** Everyone on the digest: no preference stored (or an unknown one), not banned, not anonymized. */
+/** The members who chose the digest, not banned, not anonymized. */
 export async function loadDigestMembers(db: Db): Promise<DigestMember[]> {
   const users = await db.collection('users')
-    .find({ ...REACHABLE, forumNotify: { $nin: ['each', 'off'] } }, { projection: { _id: 1, 'lastVisit.forum': 1 } })
+    .find({ ...REACHABLE, forumNotify: 'digest' }, { projection: { _id: 1, 'lastVisit.forum': 1 } })
     .toArray();
   return users.map((u) => ({ id: String(u._id), forumVisitMs: toMs(u.lastVisit?.forum) }));
 }
 
 /**
- * Who hears about ONE new post at once: the „each" members except the author.
+ * Who hears about ONE new post at once: everyone without a stored 'digest'/'off' (the default) except the author.
  * Idempotent per post: when a forum row for this post exists already, nobody is told again.
  */
 export async function eachRecipients(db: Db, post: ForumPostRef): Promise<string[]> {
@@ -77,7 +77,7 @@ export async function eachRecipients(db: Db, post: ForumPostRef): Promise<string
     .findOne({ type: 'forum', 'meta.sourceId': post.id }, { projection: { _id: 1 } });
   if (already) return [];
   const users = await db.collection('users')
-    .find({ ...REACHABLE, forumNotify: 'each' }, { projection: { _id: 1 } }).toArray();
+    .find({ ...REACHABLE, forumNotify: { $nin: ['digest', 'off'] } }, { projection: { _id: 1 } }).toArray();
   return users.map((u) => String(u._id)).filter((id) => id !== post.authorId);
 }
 

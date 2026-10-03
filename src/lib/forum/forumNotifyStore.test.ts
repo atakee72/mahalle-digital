@@ -90,7 +90,7 @@ test('posts come from the three forum collections, with kind, author and date', 
   assert.deepEqual(f.$or, [{ moderationStatus: 'approved' }, { moderationStatus: { $exists: false } }]);
 });
 
-test('digest members: the query leaves out each/off, banned and anonymized; the forum visit is read', async () => {
+test('digest members: only a stored digest, not banned, not anonymized; the forum visit is read', async () => {
   const { db, calls } = fakeDb({
     users: [{ _id: 'u1', lastVisit: { forum: new Date(NOW - HOUR) } }, { _id: 'u2' }],
   });
@@ -99,7 +99,7 @@ test('digest members: the query leaves out each/off, banned and anonymized; the 
     { id: 'u2', forumVisitMs: null },
   ]);
   assert.deepEqual(calls[0].filter, {
-    anonymized: { $ne: true }, isBanned: { $ne: true }, forumNotify: { $nin: ['each', 'off'] },
+    anonymized: { $ne: true }, isBanned: { $ne: true }, forumNotify: 'digest',
   });
 });
 
@@ -108,7 +108,7 @@ test('every-post recipients: the author is left out, and a post is announced onl
   const { db, data, calls } = fakeDb({ users: [{ _id: 'u1' }, { _id: 'u2' }, { _id: 'u3' }] });
   assert.deepEqual(await eachRecipients(db, post), ['u2', 'u3']);
   assert.deepEqual(calls.find((c) => c.collection === 'users')!.filter, {
-    anonymized: { $ne: true }, isBanned: { $ne: true }, forumNotify: 'each',
+    anonymized: { $ne: true }, isBanned: { $ne: true }, forumNotify: { $nin: ['digest', 'off'] },
   });
   await insertForumRows(db, ['u2', 'u3'], { contentType: 'topic', contentId: 'p1', title: 'Frage', href: '/topics/p1' }, { sourceId: 'p1' }, new Date(NOW));
   assert.equal(data.notifications.length, 2);

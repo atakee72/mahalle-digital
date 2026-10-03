@@ -2,8 +2,8 @@
  * Forum notifications — pure rules (no imports besides types; shared with the panel island).
  *
  * One preference per member, `users.forumNotify`:
- *   absent  → 'digest'  one notification each morning when the forum has new posts
- *   'each'  → one notification per new public post
+ *   absent  → 'each'    one notification per new public post (the default since 2026-10-03 03:41, owner)
+ *   'digest' → one notification each morning when the forum has new posts
  *   'off'   → none
  * A member's own posts never count. Official announcements are left out (they have their
  * own „official" notification), posts with a warning label too.
@@ -14,7 +14,7 @@ export const FORUM_NOTIFY_MODES = ['digest', 'each', 'off'] as const;
 export type ForumNotifyMode = (typeof FORUM_NOTIFY_MODES)[number];
 
 export function storedForumNotify(v: unknown): ForumNotifyMode {
-  return v === 'each' || v === 'off' ? v : 'digest';
+  return v === 'digest' || v === 'off' ? v : 'each';
 }
 
 export type ForumPostKind = 'topic' | 'announcement' | 'recommendation';
