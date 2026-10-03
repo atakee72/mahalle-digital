@@ -872,6 +872,21 @@ option:disabled {
 /* Foot slot — anatomy from R1, renders nothing (R2: push opt-in). */
 .nc-foot { border-top: 1.5px solid var(--k-ink); background: var(--k-paper-warm); height: 10px; }
 
+/* Forum preference row under the head — always in view, before the (scrolling) list. */
+.nc-pref {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 14px; border-bottom: 1.5px solid var(--k-ink); background: var(--k-paper-warm);
+}
+.nc-pref-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--k-ink-soft); }
+.nc-pref-opts { display: inline-flex; border: 1.5px solid var(--k-ink); border-radius: 999px; overflow: hidden; flex-shrink: 0; }
+.nc-pref-opt {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 6px 10px; min-height: 28px; background: transparent; color: var(--k-ink); cursor: pointer;
+}
+.nc-pref-opt + .nc-pref-opt { border-left: 1.5px solid var(--k-ink); }
+.nc-pref-opt.nc-pref-on { background: var(--k-ink); color: var(--k-paper); }
+.nc-pref-opt:disabled { cursor: default; }
+
 /* Foot slot with live content (R2 push opt-in). Base .nc-foot stays the
    empty 10px strip for unsupported browsers. */
 .nc-foot--live {

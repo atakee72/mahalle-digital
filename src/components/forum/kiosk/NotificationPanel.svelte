@@ -7,6 +7,7 @@
   import type { NotificationItem } from '../../../types/notification';
   import { detectPushState, subscribeToPush, unsubscribeFromPush, type PushUiState } from '../../../lib/pushClient';
   import { showError } from '../../../utils/toast';
+  import { FORUM_NOTIFY_MODES, storedForumNotify, type ForumNotifyMode } from '../../../lib/forum/forumNotifyRules';
 
   let { onClose } = $props<{ onClose: (restoreFocus: boolean) => void }>();
 
@@ -37,6 +38,39 @@
     await unsubscribeFromPush();
     pushBusy = false;
     pushState = 'ready';
+  }
+
+  // Forum preference (digest · every post · off). null = not loaded yet (row hidden).
+  let forumMode = $state<ForumNotifyMode | null>(null);
+  let forumBusy = $state(false);
+
+  $effect(() => {
+    let alive = true;
+    fetch('/api/profile/forum-notify')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d) forumMode = storedForumNotify(d.mode); })
+      .catch(() => {});
+    return () => { alive = false; };
+  });
+
+  async function setForumMode(mode: ForumNotifyMode) {
+    if (forumBusy || mode === forumMode) return;
+    const previous = forumMode;
+    forumMode = mode; // optimistic
+    forumBusy = true;
+    try {
+      const res = await fetch('/api/profile/forum-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+    } catch {
+      forumMode = previous;
+      showError($t['nc.forumNotify.error']);
+    } finally {
+      forumBusy = false;
+    }
   }
 
   let items = $state<NotificationItem[] | null>(null);
@@ -251,6 +285,23 @@
         <span class="nc-head-neu font-dmmono">{freshIds.size} {$t['nc.neu']}</span>
       {/if}
     </div>
+    {#if forumMode !== null}
+      <div class="nc-pref" role="group" aria-label={$t['nc.forumNotify.label']}>
+        <span class="nc-pref-label font-dmmono">{$t['nc.forumNotify.label']}</span>
+        <span class="nc-pref-opts">
+          {#each FORUM_NOTIFY_MODES as mode (mode)}
+            <button
+              type="button"
+              class="nc-pref-opt font-dmmono"
+              class:nc-pref-on={forumMode === mode}
+              aria-pressed={forumMode === mode}
+              disabled={forumBusy}
+              onclick={() => setForumMode(mode)}
+            >{$t[`nc.forumNotify.${mode}`]}</button>
+          {/each}
+        </span>
+      </div>
+    {/if}
     {#if failed}
       <div class="nc-empty font-instrument">{$t['nc.error']}</div>
     {:else if items === null}
