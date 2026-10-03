@@ -1,0 +1,96 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
+  preheaderFor, withUtm, fmtEventWhen, fmtPrice, unsubscribeHeaders, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
+  type BriefData,
+} from './kiezBriefRules';
+
+const SUN_18 = Date.parse('2026-10-11T16:00:00.000Z'); // Sunday 18:00 CEST, ISO week 41
+const MON_06 = Date.parse('2026-10-12T06:00:00.000Z'); // Monday 08:00 CEST — the fallback, ISO week 42
+
+const empty = (): BriefData => ({ week: '2026-W41', posts: [], events: [], listings: [], blog: [], air: null });
+const post = (id: string, h: number): BriefData['posts'][number] => ({ id, kind: 'topic', title: `T${id}`, author: 'A', comments: 0, dateMs: SUN_18 - h * 3_600_000 });
+
+test('the stored preference falls back to weekly', () => {
+  assert.equal(storedNewsletterMode('off'), 'off');
+  for (const v of [undefined, null, '', 'weekly', 'OFF', 1]) assert.equal(storedNewsletterMode(v), 'weekly');
+});
+
+test('ISO week of a Berlin day, around the year boundary too', () => {
+  assert.equal(isoWeek(SUN_18), '2026-W41');
+  assert.equal(isoWeek(MON_06), '2026-W42');
+  assert.equal(isoWeek(Date.parse('2026-01-01T12:00:00.000Z')), '2026-W01');
+  assert.equal(isoWeek(Date.parse('2027-01-03T12:00:00.000Z')), '2026-W53'); // Sunday 3 Jan 2027 is still ISO week 53 of 2026
+  assert.equal(isoWeek(Date.parse('2026-10-11T22:30:00.000Z')), '2026-W42'); // 00:30 Berlin Monday
+});
+
+test('Sunday evening and the Monday-morning fallback share one issue key', () => {
+  assert.equal(issueWeek(SUN_18), '2026-W41');
+  assert.equal(issueWeek(MON_06), '2026-W41');
+  assert.equal(issueWeek(Date.parse('2026-10-13T06:00:00.000Z')), '2026-W42'); // Tuesday: next issue
+  assert.equal(weekLabel('2026-W05'), 'KW 5');
+});
+
+test('the window looks seven days back and seven days ahead', () => {
+  assert.deepEqual(windowFor(SUN_18), { fromMs: SUN_18 - WINDOW_MS, toMs: SUN_18, aheadMs: SUN_18 + WINDOW_MS });
+});
+
+test('sections are ordered and capped, an invalid air grade is dropped', () => {
+  const d = empty();
+  d.posts = Array.from({ length: MAX_POSTS + 3 }, (_, i) => post(String(i), i));
+  d.events = [{ id: 'b', title: 'B', startMs: 2, allDay: false, location: null }, { id: 'a', title: 'A', startMs: 1, allDay: true, location: 'Platz' }];
+  d.listings = Array.from({ length: MAX_LISTINGS + 1 }, (_, i) => ({ id: String(i), title: 'L', kind: 'sell' as const, price: 1, createdMs: i }));
+  d.air = { lqi: 7 };
+  const a = arrangeData(d);
+  assert.equal(a.posts.length, MAX_POSTS);
+  assert.equal(a.posts[0].id, '0'); // newest first
+  assert.deepEqual(a.events.map((e) => e.id), ['a', 'b']); // nearest first
+  assert.equal(a.listings.length, MAX_LISTINGS);
+  assert.equal(a.listings[0].id, String(MAX_LISTINGS)); // newest first
+  assert.equal(a.air, null);
+  assert.deepEqual(arrangeData({ ...empty(), air: { lqi: 2 } }).air, { lqi: 2 });
+  assert.equal(MAX_EVENTS, 8);
+});
+
+test('a quiet week is one without content; the air line alone does not count', () => {
+  assert.equal(isQuiet(empty()), true);
+  assert.equal(isQuiet({ ...empty(), air: { lqi: 1 } }), true);
+  assert.equal(isQuiet({ ...empty(), blog: [{ slug: 's', title: 't', description: 'd', pubMs: 1 }] }), false);
+});
+
+test('the subject names the two biggest counts, singular and plural', () => {
+  const d = empty();
+  d.posts = [post('1', 1), post('2', 2), post('3', 3)];
+  d.events = [{ id: 'e', title: 'E', startMs: 1, allDay: false, location: null }];
+  d.listings = [{ id: 'l', title: 'L', kind: 'gift', price: null, createdMs: 1 }];
+  assert.equal(subjectFor(d), 'Kiez-Brief · KW 41 · 3 neue Beiträge, 1 Termin');
+  d.listings.push({ id: 'l2', title: 'L', kind: 'gift', price: null, createdMs: 2 });
+  assert.equal(subjectFor(d), 'Kiez-Brief · KW 41 · 3 neue Beiträge, 2 neue Anzeigen'); // the two biggest counts
+  assert.equal(subjectFor({ ...empty(), posts: [post('1', 1)] }), 'Kiez-Brief · KW 41 · 1 neuer Beitrag');
+  assert.equal(subjectFor(empty()), 'Kiez-Brief · KW 41');
+});
+
+test('the preheader prefers the newest post, then the next event', () => {
+  assert.equal(preheaderFor({ ...empty(), posts: [post('9', 1)] }), 'T9');
+  assert.equal(preheaderFor({ ...empty(), events: [{ id: 'e', title: 'Flohmarkt', startMs: 1, allDay: true, location: null }] }), 'Flohmarkt');
+  assert.equal(preheaderFor(empty()), 'Neues aus dem Schillerkiez');
+});
+
+test('links carry the source; Berlin times and prices print the German way', () => {
+  assert.equal(withUtm('https://x/topics/1'), 'https://x/topics/1?utm_source=kiez-brief');
+  assert.equal(withUtm('https://x/calendar?x=1'), 'https://x/calendar?x=1&utm_source=kiez-brief');
+  assert.equal(fmtEventWhen(Date.parse('2026-10-13T17:00:00.000Z'), false), 'Di. 13.10. · 19:00');
+  assert.equal(fmtEventWhen(Date.parse('2026-10-17T00:00:00.000Z'), true), 'Sa. 17.10. · ganztägig');
+  assert.equal(fmtEventWhen(Date.parse('2026-12-01T18:30:00.000Z'), false), 'Di. 1.12. · 19:30'); // CET
+  assert.equal(fmtPrice(12), '12 €');
+  assert.equal(fmtPrice(12.5), '12,50 €');
+  assert.equal(fmtPrice(null), null);
+});
+
+test('the one-click headers follow RFC 8058', () => {
+  assert.deepEqual(unsubscribeHeaders('https://x/api/newsletter/unsubscribe?t=abc', 'admin@x'), {
+    'List-Unsubscribe': '<https://x/api/newsletter/unsubscribe?t=abc>, <mailto:admin@x?subject=unsubscribe>',
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  });
+});
