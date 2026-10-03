@@ -377,6 +377,7 @@ Tab dots and „neu" chips for what other members published since the member las
 - Probes (gitignored, dev DB only — `stamp.mjs` refuses any db name without „dev"): `scratchpad/plan-unread/probe.cjs <base>` (13 checks, logs in with `?redirect=/newsboard` because landing on `/forum` would already be a visit) and `scratchpad/plan-unread/stamp.mjs <email> <days>` (ages a member's stamps).
 
 ### Forum notifications (2026-10-03)
+- **„aus" is not shown (owner decision 2026-10-03 03:28):** the switch offers only „täglich" and „jeden" — a member who turns everything off forgets the app. `'off'` stays valid in the route, the store and the digest filter (`SHOWN_MODES` in the panel is the only place that hides it).
 - **Three modes, one preference** (`users.forumNotify`, pure rules in `src/lib/forum/forumNotifyRules.ts`, store `forumNotifyStore.ts`, senders `forumNotify.ts`): absent = **daily digest** (the default), `'each'` = every new public post at once, `'off'` = none. Bell row + web push (type `'forum'`), never e-mail.
 - **Left out everywhere:** the member's own posts, official announcements (own notification), warning-labelled posts, banned and anonymized accounts. Admins are recipients like everyone.
 - **Digest:** `sendForumDigest()` rides the morning cron (after `announceNewBlogPosts()`), once per Berlin day (`forumDigests` claim, see root CLAUDE.md). Per member it counts only posts newer than the member's last forum visit (`lastVisit.forum`): one post → the row opens the post, several → „n neue Beiträge im Forum" opening `/forum` (`meta.count`).

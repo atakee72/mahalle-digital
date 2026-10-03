@@ -7,7 +7,7 @@
   import type { NotificationItem } from '../../../types/notification';
   import { detectPushState, subscribeToPush, unsubscribeFromPush, type PushUiState } from '../../../lib/pushClient';
   import { showError } from '../../../utils/toast';
-  import { FORUM_NOTIFY_MODES, storedForumNotify, type ForumNotifyMode } from '../../../lib/forum/forumNotifyRules';
+  import { storedForumNotify, type ForumNotifyMode } from '../../../lib/forum/forumNotifyRules';
 
   let { onClose } = $props<{ onClose: (restoreFocus: boolean) => void }>();
 
@@ -43,6 +43,10 @@
   // Forum preference (digest · every post · off). null = not loaded yet (row hidden).
   // In the phone bottom sheet the whole card scrolls (.nc-card max-height 80vh): the row sits at the top of the sheet but scrolls with it.
   let forumMode = $state<ForumNotifyMode | null>(null);
+  // „aus" is deliberately NOT offered (owner, 2026-10-03: members who switch everything off
+  // forget the app). The route and the store keep accepting 'off'; a member who somehow has
+  // it stored sees neither button selected until they pick one.
+  const SHOWN_MODES = ['digest', 'each'] as const satisfies readonly ForumNotifyMode[];
   let forumBusy = $state(false);
 
   $effect(() => {
@@ -290,7 +294,7 @@
       <div class="nc-pref" role="group" aria-busy={forumBusy} aria-label={$t['nc.forumNotify.label']}>
         <span class="nc-pref-label font-dmmono">{$t['nc.forumNotify.label']}</span>
         <span class="nc-pref-opts">
-          {#each FORUM_NOTIFY_MODES as mode (mode)}
+          {#each SHOWN_MODES as mode (mode)}
             <button
               type="button"
               class="nc-pref-opt font-dmmono"
