@@ -43,10 +43,13 @@ Push and the bell reach only the members who allowed push; the mail reaches the 
 2. **Monday fallback:** `fetch-daily.ts` (06:00 UTC) calls `sendKiezBrief({ fallback: true })` after
    the forum digest; it sends only when the current ISO week's issue is not claimed yet — i.e. when the
    Sunday workflow never arrived. Nothing is lost, nothing goes out twice.
-3. **At-most-once per ISO week:** collection `kiezBriefIssues` `{ _id: '2026-W41', windowFrom,
+3. **At-most-once per issue week:** collection `kiezBriefIssues` `{ _id: '2026-W41', windowFrom,
    windowTo, recipients, skipped?: 'quiet' | 'quota', sentAt }`, claim-by-insert BEFORE rendering or
    sending (the `forumDigests` precedent; a duplicate-key loser returns silently; never delete a row
-   in prod).
+   in prod). **The issue key is the ISO week (Europe/Berlin) of `now − 24 h`**, not of `now`: Sunday
+   18:00 and the Monday 06:00 UTC fallback must land on the SAME key — Monday already belongs to the
+   next ISO week, so a naive `isoWeek(now)` would let the fallback claim a fresh week and send a
+   second mail. `issueWeek(nowMs)` is a pure, tested function; the audit found this before any code.
 
 ## Content of an issue (one data set per issue, not per member)
 
@@ -56,7 +59,7 @@ pages: `moderationStatus` approved or absent, no warning label.
 | Section | Source | Shown |
 |---|---|---|
 | **Im Forum** | topics + announcements + recommendations, `date` in the window, not `isOfficial` (officials had their own mail/notification) | up to 8, newest first: kind label, title, author display name, comment count; link to the post |
-| **Nächste Woche im Kiez** | events with `startDate` in [now, now + 7 d], approved | up to 8 by start: Berlin weekday + time (all-day → „ganztägig"), title, place if set; link to `/calendar` (events have no detail route) |
+| **Nächste Woche im Kiez** | events with `startDate` in [now, now + 7 d], approved (an event that started earlier and is still running is left out — it was in last week's issue) | up to 8 by start: Berlin weekday + time (all-day → „ganztägig"), title, place if set; link to `/calendar` (events have no detail route) |
 | **Neu auf dem Markt** | listings `createdAt` in the window, status available/reserved, public | up to 6: title, kind label (Verkaufen/Tausch/Verschenken), price when sell; link to the listing |
 | **In der Beilage** | blog posts with `pubDate` in the window, not draft | all: title, description; link to the post |
 | **Luft im Kiez** | `getAirHistory(db).lastReading` (mc042 only, never the substitute station) | one line „Luftqualität heute: gut (LQI 2)"; omitted without a valid reading |
@@ -69,20 +72,25 @@ the mail is visible in GoatCounter later (no tracking pixel, no per-member link 
 ## The mail
 
 - React Email template `src/emails/KiezBriefEmail.tsx`, same look as `WelcomeEmail.tsx` (paper,
-  Bricolage headline, ink rule); plain-text alternative generated from the same data (`text` field)
-  for clients that block HTML — Resend accepts `html` + `text`.
+  Bricolage headline, ink rule). No hand-made plain-text part: Resend derives the text alternative
+  from the HTML when `text` is omitted (its documented default), so the template must read well
+  linearised (headings, one link per line).
 - Header: wordmark „mahalle" + „Kiez-Brief · Schillerkiez · KW 41". Footer: „Du bekommst diesen
   Brief, weil du Mitglied bei Mahalle bist. [Abbestellen] · [Mitteilungen einstellen] ·
   Impressum · Datenschutz".
-- Per-recipient only the unsubscribe URL differs; the body is rendered once, the footer link
-  substituted per recipient.
+- Per-recipient only the unsubscribe URL differs: the body is rendered ONCE with the literal
+  placeholder `%%UNSUB%%` in the footer link, and `replaceAll('%%UNSUB%%', url)` runs per recipient.
+  Author names in the forum section come through `PUBLIC_AUTHOR_PROJECTION` (tombstone-safe), never
+  from a stored name.
 
 ## Unsubscribe (two paths, no token table)
 
 - Token: `base64url(userId) + '.' + HMAC-SHA256(AUTH_SECRET, 'kiez-brief:' + userId)` — a pure,
   tested helper `src/lib/newsletter/unsubToken.ts` (`makeUnsubToken`, `verifyUnsubToken`). No
   expiry (the link must work from a months-old mail), no state; revoking is impossible, and that is
-  fine: the only thing the token can do is turn the mail off.
+  fine: the only thing the token can do is turn the mail off. Rotating `AUTH_SECRET` invalidates
+  every old link (the member then uses the switch in the app) — accepted, the secret has never been
+  rotated and a rotation logs everyone out anyway.
 - `GET /newsletter/abmelden?t=<token>` — a small SSR page (KioskLayout, no login needed): sets
   `users.newsletter = 'off'`, shows „Du bekommst den Kiez-Brief nicht mehr." with a link to switch it
   back on in the app. Invalid token → neutral „Dieser Link ist ungültig." (no oracle).
@@ -105,7 +113,10 @@ the mail is visible in GoatCounter later (no tracking pixel, no per-member link 
 ## Recipients of an issue
 
 `emailVerified: true`, `anonymized != true`, `isBanned != true`, `newsletter != 'off'`, `email` is a
-string. Projection `{ _id, email, name }` — never the full document. More than 95 → claim the week
+string. On 2026-10-03 prod has 62 members, 45 of them verified — the 17 unverified addresses were typed
+once and never confirmed, and a bounce rate hurts the domain's reputation at Resend, so they stay out
+until they verify (the banner nags them on every page; the owner's own prod account is among the
+unverified — he must verify to receive the Sunday issue himself). Projection `{ _id, email, name }` — never the full document. More than 95 → claim the week
 with `skipped: 'quota'`, send nothing, `Sentry.captureMessage` (static text) so the owner upgrades
 the Resend plan before the next Sunday. Admins are recipients like everyone.
 
@@ -130,11 +141,18 @@ to the template. Query `?send=1` sends that preview to the admin's own e-mail on
 - No open/click tracking, no per-member personalisation beyond the unsubscribe link.
 - No admin text per issue (he chose automatic; can be added as an admin field later).
 - No public signup for non-members.
-- No re-send on failure: a failed batch is a Sentry issue and the week is claimed — the owner can
-  `workflow_dispatch` the Monday fallback only if the claim row was removed by hand on dev; on prod
-  the rule is „never delete a claim row".
+- No re-send on failure: a failed batch is a Sentry issue and the week is claimed. The
+  `Idempotency-Key` only protects against a duplicated HTTP call inside one run (Resend answers 409
+  to the same key with a different payload, so a later re-render could not reuse it anyway). On prod
+  the rule is „never delete a claim row"; on dev the e2e script removes it.
 
 ## Honest gaps
+
+- Hard bounces are not fed back: Resend's bounce webhooks are not wired, so a dead address keeps
+  receiving one attempt a week until the member is anonymized. At ≤100 members this is invisible;
+  wire `email.bounced` → `newsletter: 'off'` when the list grows.
+- The `mailto:` fallback in `List-Unsubscribe` lands in the admin@ mailbox for the owner to handle by
+  hand (the one-click POST is the path every modern client takes).
 
 - GitHub's cron jitter: the mail lands between 18:00 and ~22:00 Berlin; if GitHub skips the run, Monday 08:00.
 - A member who verified their e-mail after the Sunday run is first included the following week.
