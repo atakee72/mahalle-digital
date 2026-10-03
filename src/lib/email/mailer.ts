@@ -43,6 +43,8 @@ export interface MailInput {
   subject: string;
   html: string;
   replyTo?: string;
+  /** Extra headers (e.g. List-Unsubscribe for the Kiez-Brief). */
+  headers?: Record<string, string>;
 }
 
 // The Resend SDK rides a bare fetch with no timeout — a hung provider would
@@ -97,6 +99,7 @@ export async function sendMail(input: MailInput): Promise<void> {
         subject: input.subject,
         html: input.html,
         ...(replyTo ? { replyTo } : {}),
+        ...(input.headers ? { headers: input.headers } : {}),
       });
       return;
     }
@@ -109,6 +112,7 @@ export async function sendMail(input: MailInput): Promise<void> {
           subject: input.subject,
           html: input.html,
           ...(replyTo ? { replyTo } : {}),
+          ...(input.headers ? { headers: input.headers } : {}),
         }),
         RESEND_TIMEOUT_MS,
         'Resend send'
@@ -128,4 +132,42 @@ export async function sendMail(input: MailInput): Promise<void> {
     await Sentry.flush(2000);
     throw err;
   }
+}
+
+/**
+ * Several mails in one go (the Kiez-Brief). Resend: ONE call to its batch endpoint (up to 100
+ * mails) with an Idempotency-Key, so a duplicated HTTP call inside a run cannot send twice.
+ * SMTP/dev: sequential sendMail (the batch is a Resend feature, not a contract). Throws like
+ * sendMail; the caller decides what a failure means.
+ */
+export async function sendMailBatch(inputs: MailInput[], idempotencyKey: string): Promise<void> {
+  if (!inputs.length) return;
+  if (inputs.length > 100) throw new Error('sendMailBatch: at most 100 mails per batch');
+  if (!smtpConfigured && RESEND_API_KEY) {
+    try {
+      const resend = new Resend(RESEND_API_KEY);
+      const { error } = await withTimeout(
+        resend.batch.send(
+          inputs.map((input) => ({
+            from: SENDING_FROM,
+            to: punycodeEmailDomain(input.to),
+            subject: input.subject,
+            html: input.html,
+            ...(input.replyTo ? { replyTo: punycodeEmailDomain(input.replyTo) } : {}),
+            ...(input.headers ? { headers: input.headers } : {}),
+          })),
+          { idempotencyKey },
+        ),
+        RESEND_TIMEOUT_MS * 3,
+        'Resend batch send'
+      );
+      if (error) throw new Error(`Resend batch failed: ${error.name}: ${error.message}`);
+      return;
+    } catch (err) {
+      Sentry.captureException(err, { tags: { feature: 'mailer-batch' } });
+      try { await Sentry.flush(2000); } catch { /* best-effort */ }
+      throw err;
+    }
+  }
+  for (const input of inputs) await sendMail(input);
 }
