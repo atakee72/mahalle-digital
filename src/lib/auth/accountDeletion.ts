@@ -447,6 +447,7 @@ export async function runDeletionPipeline(
           tours: '',
           tourHelloDismissedAt: '',
           lastVisit: '',
+          forumNotify: '',
           deletionClaimedAt: '',
         },
       }

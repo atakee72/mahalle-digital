@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../lib/mongodb';
+import { notifyForumSubscribers } from '../../../lib/forum/forumNotify';
 import { checkDailyLimit, limitReachedResponse } from '../../../lib/limits/dailyLimit';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../lib/publicAuthor';
 import { resolveMentions, notifyMentions, applyBroadcast, notifyAdminHint } from '../../../lib/mentions/mentionsStore';
@@ -125,6 +126,10 @@ export const POST: APIRoute = async ({ request }) => {
     // Mentions notify only once the post is public; a pending post is picked up
     // by notifyMentionsOnApproval() in reviewAction.ts. Never throws.
     if (!mergedResult) {
+      // Members who asked for every new forum post (never throws).
+      await notifyForumSubscribers({
+        id: result.insertedId.toString(), kind: 'announcement', title, authorId: userId, dateMs: Date.now(),
+      });
       await notifyMentions(db, {
         actorId: userId, mentions, sourceId: result.insertedId.toString(), kind: 'post',
         target: moderationTarget('announcement', result.insertedId.toString(), title),
