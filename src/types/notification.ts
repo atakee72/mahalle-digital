@@ -1,6 +1,6 @@
 import type { ObjectId } from 'mongodb';
 
-export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention' | 'admin_hint' | 'blog';
+export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention' | 'admin_hint' | 'blog' | 'forum';
 
 export interface NotificationTarget {
   /** The page kind the row deep-links to (mirrors the href, not necessarily
@@ -23,7 +23,7 @@ export interface NotificationMeta {
    *  key; comment („replied") rows since 2026-09-30: the comment's own id. Either way the key
    *  a delete purges by (target.contentId is the PARENT page for comments, so it cannot serve). */
   sourceId?: string;
-  /** blog: how many posts this one notification stands for (set only when > 1). */
+  /** blog + forum digest: how many posts this one notification stands for (set only when > 1). */
   count?: number;
 }
 

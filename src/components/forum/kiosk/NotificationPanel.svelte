@@ -182,6 +182,7 @@
     moderation: { g: '§', c: 'var(--k-plum, #6f2f59)' },
     official: { g: '◉', c: 'var(--k-teal, #3f8f9f)' },
     blog: { g: '¶', c: 'var(--k-rust, #a3552e)' },
+    forum: { g: '✦', c: 'var(--k-wine, #b23a5b)' },
     admin_hint: { g: '!', c: 'var(--k-plum, #6f2f59)' },
   };
 
@@ -205,6 +206,10 @@
       case 'blog': {
         const n = it.meta?.count ?? 1;
         return n > 1 ? tStr($t['nc.blog.many'], { n: String(n) }) : tStr($t['nc.blog.one'], { title });
+      }
+      case 'forum': {
+        const n = it.meta?.count ?? 1;
+        return n > 1 ? tStr($t['nc.forum.many'], { n: String(n) }) : tStr($t['nc.forum.one'], { title });
       }
       case 'market_contact':
         return tStr($t['nc.market'], { title });

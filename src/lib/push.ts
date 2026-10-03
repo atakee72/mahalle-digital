@@ -77,6 +77,11 @@ export function buildPushPayload(
         ? `${meta?.count} neue Beiträge in der Beilage`
         : `Neu in der Beilage: ‚${t}‘`;
       break;
+    case 'forum':
+      body = (meta?.count ?? 1) > 1
+        ? `${meta?.count} neue Beitr\u00e4ge im Forum`
+        : `Neu im Forum: \u201a${t}\u2018`;
+      break;
     case 'moderation': {
       const noun = meta?.contentKind === 'comment' ? 'Kommentar' : 'Beitrag';
       if (meta?.outcome === 'rejected') body = `Dein ${noun} wurde abgelehnt — Details in deinem Profil`;
