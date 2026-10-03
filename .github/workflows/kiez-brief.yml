@@ -1,0 +1,33 @@
+name: Kiez-Brief (weekly member mail)
+# Rings GET /api/cron/kiez-brief on Sunday evening (GET like the other workflows — a bodiless
+# POST without a content type trips the cross-site form check). Vercel Hobby allows one cron run a day and
+# both vercel.json slots are taken (fetch-daily 06:00 UTC, process-deletions 05:30 UTC), so —
+# like kiez-air-logger.yml and news-afternoon-fetch.yml — GitHub Actions rings the route.
+# 16:00 UTC = 18:00 Berlin in summer (CEST) / 17:00 in winter (CET); GitHub starts scheduled runs
+# 0–4 h late, so "Sunday evening" is the promise. The issue is claimed per ISO week inside the
+# app: if this run never arrives, the Monday 06:00 UTC cron (fetch-daily) sends it instead.
+# Requires repo secret CRON_SECRET (same value as the Vercel env).
+on:
+  schedule:
+    - cron: '0 16 * * 0'
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the Kiez-Brief
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Canonical domain — never the *.vercel.app origin (308 redirect; curl drops the
+          # Authorization header across hosts, see kiez-air-logger.yml).
+          APP_ORIGIN: https://mahalle.digital
+        run: |
+          code=$(curl -s -o /tmp/resp.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_ORIGIN/api/cron/kiez-brief")
+          cat /tmp/resp.json; echo
+          if [ "$code" != "200" ]; then
+            echo "kiez-brief trigger failed with HTTP $code"
+            exit 1
+          fi

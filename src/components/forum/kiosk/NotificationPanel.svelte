@@ -8,6 +8,7 @@
   import { detectPushState, subscribeToPush, unsubscribeFromPush, type PushUiState } from '../../../lib/pushClient';
   import { showError } from '../../../utils/toast';
   import { storedForumNotify, type ForumNotifyMode } from '../../../lib/forum/forumNotifyRules';
+  import { NEWSLETTER_MODES, storedNewsletterMode, type NewsletterMode } from '../../../lib/newsletter/kiezBriefRules';
 
   let { onClose } = $props<{ onClose: (restoreFocus: boolean) => void }>();
 
@@ -75,6 +76,39 @@
       showError($t['nc.forumNotify.error']);
     } finally {
       forumBusy = false;
+    }
+  }
+
+  // Kiez-Brief preference (weekly · off), same shape as the forum row.
+  let newsMode = $state<NewsletterMode | null>(null);
+  let newsBusy = $state(false);
+
+  $effect(() => {
+    let alive = true;
+    fetch('/api/profile/newsletter')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d) newsMode = storedNewsletterMode(d.mode); })
+      .catch(() => {});
+    return () => { alive = false; };
+  });
+
+  async function setNewsMode(mode: NewsletterMode) {
+    if (newsBusy || mode === newsMode) return;
+    const previous = newsMode;
+    newsMode = mode; // optimistic
+    newsBusy = true;
+    try {
+      const res = await fetch('/api/profile/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+    } catch {
+      newsMode = previous;
+      showError($t['nc.newsletter.error']);
+    } finally {
+      newsBusy = false;
     }
   }
 
@@ -302,6 +336,22 @@
               aria-pressed={forumMode === mode}
               onclick={() => setForumMode(mode)}
             >{$t[`nc.forumNotify.${mode}`]}</button>
+          {/each}
+        </span>
+      </div>
+    {/if}
+    {#if newsMode !== null}
+      <div class="nc-pref" role="group" aria-busy={newsBusy} aria-label={$t['nc.newsletter.label']}>
+        <span class="nc-pref-label font-dmmono">{$t['nc.newsletter.label']}</span>
+        <span class="nc-pref-opts">
+          {#each NEWSLETTER_MODES as mode (mode)}
+            <button
+              type="button"
+              class="nc-pref-opt font-dmmono"
+              class:nc-pref-on={newsMode === mode}
+              aria-pressed={newsMode === mode}
+              onclick={() => setNewsMode(mode)}
+            >{$t[`nc.newsletter.${mode}`]}</button>
           {/each}
         </span>
       </div>

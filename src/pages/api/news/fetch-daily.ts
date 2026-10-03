@@ -4,6 +4,7 @@ import { connectDB } from '../../../lib/mongodb';
 import { checkAirLoggerFreshness } from '../../../lib/kiez/airFreshness';
 import { announceNewBlogPosts } from '../../../lib/blog/blogNotify';
 import { sendForumDigest } from '../../../lib/forum/forumNotify';
+import { sendKiezBrief } from '../../../lib/newsletter/kiezBrief';
 import type { NewsItem } from '../../../types';
 import { decodeHtmlEntities } from '../../../utils/decodeHtmlEntities';
 import crypto from 'crypto';
@@ -358,6 +359,11 @@ export const GET: APIRoute = async ({ request }) => {
   // The forum digest rides the same morning job: once per Berlin day (the afternoon
   // run of this route finds the day claimed), never throws.
   await sendForumDigest();
+
+  // Monday fallback of the weekly member mail: sends only when Sunday's GitHub run never
+  // claimed this issue week (the key is the ISO week of now − 24 h, so Monday morning still
+  // belongs to Sunday's issue). Never throws.
+  await sendKiezBrief({ fallback: true });
 
     const openaiKey = import.meta.env.OPENAI_API_KEY;
     const newsDataKey = import.meta.env.NEWSDATA_API_KEY;
