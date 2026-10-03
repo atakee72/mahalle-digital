@@ -41,6 +41,7 @@
   }
 
   // Forum preference (digest · every post · off). null = not loaded yet (row hidden).
+  // In the phone bottom sheet the whole card scrolls (.nc-card max-height 80vh): the row sits at the top of the sheet but scrolls with it.
   let forumMode = $state<ForumNotifyMode | null>(null);
   let forumBusy = $state(false);
 
@@ -286,7 +287,7 @@
       {/if}
     </div>
     {#if forumMode !== null}
-      <div class="nc-pref" role="group" aria-label={$t['nc.forumNotify.label']}>
+      <div class="nc-pref" role="group" aria-busy={forumBusy} aria-label={$t['nc.forumNotify.label']}>
         <span class="nc-pref-label font-dmmono">{$t['nc.forumNotify.label']}</span>
         <span class="nc-pref-opts">
           {#each FORUM_NOTIFY_MODES as mode (mode)}
@@ -295,7 +296,6 @@
               class="nc-pref-opt font-dmmono"
               class:nc-pref-on={forumMode === mode}
               aria-pressed={forumMode === mode}
-              disabled={forumBusy}
               onclick={() => setForumMode(mode)}
             >{$t[`nc.forumNotify.${mode}`]}</button>
           {/each}

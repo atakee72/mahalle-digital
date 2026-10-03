@@ -43,7 +43,7 @@ export async function notifyForumSubscribers(post: ForumPostRef): Promise<void> 
 /**
  * A post that waited in the review queue becomes public on approval. Skipped: user reports
  * (the post was public already), deleted content, a warning label, anything that is not a
- * forum post, official announcements, and posts older than EACH_MAX_AGE_MS.
+ * forum post, official announcements, edited posts (a re-approval), and posts older than EACH_MAX_AGE_MS.
  */
 export async function notifyForumSubscribersOnApproval(
   flagged: { contentType: string; contentId?: string; source?: string; contentDeleted?: boolean },
@@ -56,9 +56,9 @@ export async function notifyForumSubscribersOnApproval(
     const db = await connectDB();
     const doc = await db.collection(collection).findOne(
       { _id: new ObjectId(flagged.contentId) },
-      { projection: { title: 1, author: 1, date: 1, isOfficial: 1 } },
+      { projection: { title: 1, author: 1, date: 1, isOfficial: 1, isEdited: 1 } },
     );
-    if (!doc || doc.isOfficial === true) return;
+    if (!doc || doc.isOfficial === true || doc.isEdited === true) return;
     const dateMs = Number(doc.date);
     if (!Number.isFinite(dateMs) || Date.now() - dateMs > EACH_MAX_AGE_MS) return;
     await notifyForumSubscribers({
@@ -83,8 +83,9 @@ export async function sendForumDigest(): Promise<void> {
     const now = new Date(nowMs);
     for (const g of groups) {
       await insertForumRows(db, g.userIds, g.target, g.meta, now);
-      await sendPushToUsers(g.userIds, buildPushPayload('forum', g.target, g.meta));
     }
+    // Parallel: the worst case is one stuck push endpoint (10 s), not one per group — the digest shares the cron request with the news fetch.
+    await Promise.all(groups.map((g) => sendPushToUsers(g.userIds, buildPushPayload('forum', g.target, g.meta))));
   } catch (err) {
     await capture(err);
   }

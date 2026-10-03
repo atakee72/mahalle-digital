@@ -45,3 +45,4 @@ browser on the local production build against `mahalle-dev`.
 - **Setting UI:** a three-way switch („täglich · jeden · aus") at the top of the notification
   panel, under its head — where notifications live and where the push toggle already is. Route
   `GET/POST /api/profile/forum-notify`.
+- **Honest gap:** the digest reads the creation `date`, so a post held in review across the morning digest and approved later is in no digest window — digest members never hear about it, „jeden" members do on approval (the fix would be an `approvedAt` stamp on forum posts in `processReviewAction` and a `$or` on it in `loadDigestPosts`).
