@@ -34,7 +34,7 @@ export function kiezBriefBaseUrl(): string {
 
 async function blogPosts(): Promise<BlogInput[]> {
   const posts = await getCollection('blog');
-  return posts.map((p) => ({ slug: p.id, title: p.data.title, description: p.data.description, pubDate: p.data.pubDate, draft: p.data.draft }));
+  return posts.map((p) => ({ slug: p.id, title: p.data.title, description: p.data.description, pubDate: p.data.pubDate, draft: p.data.draft, cover: p.data.cover?.src ?? null }));
 }
 
 /** This week's data (no claim, no send) — the admin preview and the sender share it. */

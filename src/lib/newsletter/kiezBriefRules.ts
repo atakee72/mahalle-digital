@@ -79,10 +79,10 @@ export function windowFor(nowMs: number): IssueWindow {
 // ── Issue data ────────────────────────────────────────────────────────────────────────
 
 export type BriefPostKind = 'topic' | 'announcement' | 'recommendation';
-export interface BriefPost { id: string; kind: BriefPostKind; title: string; author: string | null; comments: number; dateMs: number }
+export interface BriefPost { id: string; kind: BriefPostKind; title: string; author: string | null; comments: number; dateMs: number; excerpt: string | null; image: string | null }
 export interface BriefEvent { id: string; title: string; startMs: number; allDay: boolean; location: string | null }
-export interface BriefListing { id: string; title: string; kind: 'sell' | 'exchange' | 'gift'; price: number | null; createdMs: number }
-export interface BriefBlogPost { slug: string; title: string; description: string; pubMs: number }
+export interface BriefListing { id: string; title: string; kind: 'sell' | 'exchange' | 'gift'; price: number | null; createdMs: number; image: string | null }
+export interface BriefBlogPost { slug: string; title: string; description: string; pubMs: number; cover: string | null }
 export interface BriefAir { lqi: number }
 
 export interface BriefData {
@@ -159,6 +159,31 @@ export function fmtPrice(price: number | null): string | null {
   if (price === null || !Number.isFinite(price)) return null;
   const s = Number.isInteger(price) ? String(price) : price.toFixed(2).replace('.', ',');
   return `${s} €`;
+}
+
+/** The first ~140 characters of a post body as one line: tags, markdown marks and links stripped. */
+export function excerptOf(body: unknown, max = 140): string | null {
+  if (typeof body !== 'string') return null;
+  const text = body
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/[#*_>`~]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return null;
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  return cut.slice(0, Math.max(cut.lastIndexOf(' '), 60)).trimEnd() + ' …';
+}
+
+/** A Cloudinary URL for a fixed-width thumbnail (the mail never downloads the full photo); anything else unchanged. */
+export function thumb(url: unknown, w: number): string | null {
+  if (typeof url !== 'string' || !url.startsWith('https://')) return null;
+  if (!url.includes('res.cloudinary.com/') || !url.includes('/upload/')) return url;
+  const bare = url.replace(/\/upload\/f_auto,q_auto(?:,w_\d+,c_fill)?\//, '/upload/');
+  return bare.replace('/upload/', `/upload/f_auto,q_auto,w_${w},h_${w},c_fill/`);
 }
 
 /** RFC 8058 one-click headers; the mailto: is the fallback for clients without the POST path. */

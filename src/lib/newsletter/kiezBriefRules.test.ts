@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
-  preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
+  preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
 } from './kiezBriefRules';
 
@@ -10,7 +10,7 @@ const SUN_18 = Date.parse('2026-10-11T16:00:00.000Z'); // Sunday 18:00 CEST, ISO
 const MON_06 = Date.parse('2026-10-12T06:00:00.000Z'); // Monday 08:00 CEST — the fallback, ISO week 42
 
 const empty = (): BriefData => ({ week: '2026-W41', posts: [], events: [], listings: [], blog: [], air: null });
-const post = (id: string, h: number): BriefData['posts'][number] => ({ id, kind: 'topic', title: `T${id}`, author: 'A', comments: 0, dateMs: SUN_18 - h * 3_600_000 });
+const post = (id: string, h: number): BriefData['posts'][number] => ({ id, kind: 'topic', title: `T${id}`, author: 'A', comments: 0, dateMs: SUN_18 - h * 3_600_000, excerpt: null, image: null });
 
 test('the stored preference falls back to weekly', () => {
   assert.equal(storedNewsletterMode('off'), 'off');
@@ -40,7 +40,7 @@ test('sections are ordered and capped, an invalid air grade is dropped', () => {
   const d = empty();
   d.posts = Array.from({ length: MAX_POSTS + 3 }, (_, i) => post(String(i), i));
   d.events = [{ id: 'b', title: 'B', startMs: 2, allDay: false, location: null }, { id: 'a', title: 'A', startMs: 1, allDay: true, location: 'Platz' }];
-  d.listings = Array.from({ length: MAX_LISTINGS + 1 }, (_, i) => ({ id: String(i), title: 'L', kind: 'sell' as const, price: 1, createdMs: i }));
+  d.listings = Array.from({ length: MAX_LISTINGS + 1 }, (_, i) => ({ id: String(i), title: 'L', kind: 'sell' as const, price: 1, createdMs: i, image: null }));
   d.air = { lqi: 7 };
   const a = arrangeData(d);
   assert.equal(a.posts.length, MAX_POSTS);
@@ -56,16 +56,16 @@ test('sections are ordered and capped, an invalid air grade is dropped', () => {
 test('a quiet week is one without content; the air line alone does not count', () => {
   assert.equal(isQuiet(empty()), true);
   assert.equal(isQuiet({ ...empty(), air: { lqi: 1 } }), true);
-  assert.equal(isQuiet({ ...empty(), blog: [{ slug: 's', title: 't', description: 'd', pubMs: 1 }] }), false);
+  assert.equal(isQuiet({ ...empty(), blog: [{ slug: 's', title: 't', description: 'd', pubMs: 1, cover: null }] }), false);
 });
 
 test('the subject names the two biggest counts, singular and plural', () => {
   const d = empty();
   d.posts = [post('1', 1), post('2', 2), post('3', 3)];
   d.events = [{ id: 'e', title: 'E', startMs: 1, allDay: false, location: null }];
-  d.listings = [{ id: 'l', title: 'L', kind: 'gift', price: null, createdMs: 1 }];
+  d.listings = [{ id: 'l', title: 'L', kind: 'gift', price: null, createdMs: 1, image: null }];
   assert.equal(subjectFor(d), 'Kiez-Brief · KW 41 · 3 neue Beiträge, 1 Termin');
-  d.listings.push({ id: 'l2', title: 'L', kind: 'gift', price: null, createdMs: 2 });
+  d.listings.push({ id: 'l2', title: 'L', kind: 'gift', price: null, createdMs: 2, image: null });
   assert.equal(subjectFor(d), 'Kiez-Brief · KW 41 · 3 neue Beiträge, 2 neue Anzeigen'); // the two biggest counts
   assert.equal(subjectFor({ ...empty(), posts: [post('1', 1)] }), 'Kiez-Brief · KW 41 · 1 neuer Beitrag');
   assert.equal(subjectFor(empty()), 'Kiez-Brief · KW 41');
@@ -100,3 +100,22 @@ test('berlinWeekday reads the Berlin day, not the UTC day', () => {
   assert.equal(berlinWeekday(MON_06), 1);
   assert.equal(berlinWeekday(Date.parse('2026-10-12T23:30:00.000Z')), 2); // Tuesday 01:30 CEST
 });
+
+test('an excerpt is one plain line, cut at a word, links and marks stripped', () => {
+  assert.equal(excerptOf('**Hallo** Kiez! Siehe [hier](https://x.y/z) und https://a.b/c.\n\n# Mehr'), 'Hallo Kiez! Siehe hier und Mehr');
+  assert.equal(excerptOf('<p>Tag</p>'), 'Tag');
+  assert.equal(excerptOf(''), null);
+  assert.equal(excerptOf(42), null);
+  const long = 'wort '.repeat(60).trim();
+  const e = excerptOf(long)!;
+  assert.ok(e.endsWith(' …') && e.length <= 143, e);
+});
+
+test('thumbnails: a Cloudinary photo gets a square fill transform, other https urls pass, the rest is dropped', () => {
+  assert.equal(thumb('https://res.cloudinary.com/demo/image/upload/v1/mahalle/posts/a.jpg', 120), 'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_120,h_120,c_fill/v1/mahalle/posts/a.jpg');
+  assert.equal(thumb('https://res.cloudinary.com/demo/image/upload/f_auto,q_auto/v1/a.jpg', 80), 'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_80,h_80,c_fill/v1/a.jpg');
+  assert.equal(thumb('https://example.org/x.png', 80), 'https://example.org/x.png');
+  assert.equal(thumb('http://insecure/x.png', 80), null);
+  assert.equal(thumb(null, 80), null);
+});
+
