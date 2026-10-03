@@ -20,7 +20,7 @@ browser on the local production build against `mahalle-dev`.
   tab — the account menu's „Beilage" row carries the blog dot there.
 - **Not done:** a per-post read record (his rejected option), markers on the market lead card (it
   already wears „frisch im Kiez heute"), markers in the calendar month grid (agenda rows only).
-- **Honest gap:** a post held for review and approved after the member's next visit gets no dot
+- **Honest gap:** the blog's „new" reads the post's `pubDate` (day precision), not the deploy moment — a post deployed in the evening raises no dot for a member who opened the blog that morning (the bell notification covers it). A post held for review and approved after the member's next visit gets no dot
   and no chip (the rules read the creation time). Listings published from a draft are stamped
   `createdAt = now` on publish — until now a draft kept for over 21 days was hidden from the
   public feed the moment it was published (the freshness clock read the draft's creation date).

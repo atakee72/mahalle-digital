@@ -29,11 +29,11 @@
   import NewMark from '../../forum/kiosk/NewMark.svelte';
   import { markVisit } from '../../../lib/visits/visitClient';
 
-  let { posts }: { posts: BeilagePost[] } = $props();
+  let { posts, currentUserId = null }: { posts: BeilagePost[]; currentUserId?: string | null } = $props();
 
-  // Blog authors are plain names, not accounts — nothing is „own" here. Logged-out
-  // readers get a 401 from the visit route and simply see no markers.
-  onMount(() => { void markVisit('blog', null); });
+  // Blog authors are plain names, not accounts — nothing is „own" here (NewMark gets no authorId).
+  // The member id keys the visit baseline; logged-out readers post no visit and see no markers.
+  onMount(() => { void markVisit('blog', currentUserId); });
 
   // ── State ────────────────────────────────────────────────────────
   let query = $state('');

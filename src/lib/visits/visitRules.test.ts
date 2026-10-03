@@ -38,24 +38,29 @@ test('an unreadable creation date is not new', () => {
 });
 
 test('a reload inside the visit keeps the baseline, a later visit takes the server stamp', () => {
-  const first = pickBaseline(null, iso(T0), T0 + 1000);
-  assert.deepEqual(first, { since: iso(T0), at: T0 + 1000 });
-  const reload = pickBaseline(first, iso(T0 + 1000), T0 + 60_000);
+  const first = pickBaseline(null, iso(T0), T0 + 1000, 'me');
+  assert.deepEqual(first, { since: iso(T0), at: T0 + 1000, me: 'me' });
+  const reload = pickBaseline(first, iso(T0 + 1000), T0 + 60_000, 'me');
   assert.deepEqual(reload, first);
-  const later = pickBaseline(first, iso(T0 + 60_000), first.at + VISIT_SESSION_MS);
-  assert.deepEqual(later, { since: iso(T0 + 60_000), at: first.at + VISIT_SESSION_MS });
+  const later = pickBaseline(first, iso(T0 + 60_000), first.at + VISIT_SESSION_MS, 'me');
+  assert.deepEqual(later, { since: iso(T0 + 60_000), at: first.at + VISIT_SESSION_MS, me: 'me' });
 });
 
 test('a stored baseline from the future (clock change) is dropped', () => {
-  const b = pickBaseline({ since: iso(T0), at: T0 + 5000 }, null, T0);
-  assert.deepEqual(b, { since: null, at: T0 });
+  const b = pickBaseline({ since: iso(T0), at: T0 + 5000, me: 'me' }, null, T0, 'me');
+  assert.deepEqual(b, { since: null, at: T0, me: 'me' });
+});
+
+test('a baseline stored by another account is ignored', () => {
+  const b = pickBaseline({ since: iso(T0), at: T0 + 1000, me: 'a' }, iso(T0 + 500), T0 + 2000, 'b');
+  assert.deepEqual(b, { since: iso(T0 + 500), at: T0 + 2000, me: 'b' });
 });
 
 test('parseBaseline accepts its own output and refuses anything else', () => {
-  const b = { since: iso(T0), at: T0 };
+  const b = { since: iso(T0), at: T0, me: 'm1' };
   assert.deepEqual(parseBaseline(JSON.stringify(b)), b);
-  assert.deepEqual(parseBaseline(JSON.stringify({ since: null, at: T0 })), { since: null, at: T0 });
-  for (const bad of [null, '', '{', '[]', '{"since":"x","at":1}', '{"since":null,"at":"1"}', '{"since":5,"at":1}']) {
+  assert.deepEqual(parseBaseline(JSON.stringify({ since: null, at: T0, me: 'm1' })), { since: null, at: T0, me: 'm1' });
+  for (const bad of [null, '', '{', '[]', '{"since":"x","at":1,"me":"m"}', '{"since":null,"at":"1","me":"m"}', '{"since":5,"at":1,"me":"m"}', JSON.stringify({ since: null, at: T0 }), JSON.stringify({ since: null, at: T0, me: '' })]) {
     assert.equal(parseBaseline(bad), null);
   }
 });

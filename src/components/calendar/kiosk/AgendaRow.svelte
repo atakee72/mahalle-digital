@@ -178,7 +178,7 @@
         >
           {ev.title}
         </button>
-        <NewMark section="kalender" created={(ev as any).date} {authorId} invert={!!today} />
+        <NewMark section="kalender" created={ev.date} {authorId} invert={!!today} />
       </h4>
 
       {#if ev.location}
@@ -276,7 +276,7 @@
         >
           {ev.title}
         </button>
-        <NewMark section="kalender" created={(ev as any).date} {authorId} invert={!!today} />
+        <NewMark section="kalender" created={ev.date} {authorId} invert={!!today} />
       </h4>
 
       <!-- Meta line: time + location + organizer.

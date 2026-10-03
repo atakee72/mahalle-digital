@@ -22,6 +22,7 @@ function readStored(section: VisitSection) {
 /** Stamp the visit on the server and publish this visit's baseline. Never throws. */
 export async function markVisit(section: VisitSection, me: string | null): Promise<void> {
   if (typeof window === 'undefined') return;
+  if (!me) return; // logged out: no visit, no markers
   // Astro's dev server preloads client:only pages in a hidden iframe — that is not a visit.
   if (window.top !== window.self) return;
   const publish = (since: string | null) =>
@@ -29,7 +30,7 @@ export async function markVisit(section: VisitSection, me: string | null): Promi
 
   // A running visit shows its markers at once, before the request returns.
   const stored = readStored(section);
-  const running = stored ? pickBaseline(stored, null, Date.now()) : null;
+  const running = stored ? pickBaseline(stored, null, Date.now(), me) : null;
   if (stored && running === stored) publish(stored.since);
 
   try {
@@ -40,7 +41,7 @@ export async function markVisit(section: VisitSection, me: string | null): Promi
     });
     if (!res.ok) return; // logged out (401) or a hiccup: no markers, nothing stored
     const data = (await res.json()) as { previous?: string | null };
-    const baseline = pickBaseline(stored, data.previous ?? null, Date.now());
+    const baseline = pickBaseline(stored, data.previous ?? null, Date.now(), me);
     try { sessionStorage.setItem(storageKey(section), JSON.stringify(baseline)); } catch { /* private mode */ }
     publish(baseline.since);
   } catch {

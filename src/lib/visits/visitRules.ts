@@ -47,23 +47,26 @@ export interface Baseline {
   since: string | null;
   /** When this visit began (ms). */
   at: number;
+  /** Id of the member this baseline belongs to (an account switch must not reuse it). */
+  me: string;
 }
 
 /** Keep the baseline of a running visit; otherwise start a new visit from the server's previous stamp. */
-export function pickBaseline(stored: Baseline | null, serverPrevious: string | null, nowMs: number): Baseline {
-  if (stored && Number.isFinite(stored.at) && nowMs >= stored.at && nowMs - stored.at < VISIT_SESSION_MS) {
+export function pickBaseline(stored: Baseline | null, serverPrevious: string | null, nowMs: number, me: string): Baseline {
+  if (stored && stored.me === me && Number.isFinite(stored.at) && nowMs >= stored.at && nowMs - stored.at < VISIT_SESSION_MS) {
     return stored;
   }
-  return { since: serverPrevious, at: nowMs };
+  return { since: serverPrevious, at: nowMs, me };
 }
 
 export function parseBaseline(raw: string | null): Baseline | null {
   if (!raw) return null;
   try {
-    const v = JSON.parse(raw) as { since?: unknown; at?: unknown };
+    const v = JSON.parse(raw) as { since?: unknown; at?: unknown; me?: unknown };
     if (typeof v.at !== 'number' || !Number.isFinite(v.at)) return null;
     if (v.since !== null && (typeof v.since !== 'string' || toMs(v.since) === null)) return null;
-    return { since: v.since as string | null, at: v.at };
+    if (typeof v.me !== 'string' || v.me === '') return null;
+    return { since: v.since as string | null, at: v.at, me: v.me };
   } catch {
     return null;
   }
