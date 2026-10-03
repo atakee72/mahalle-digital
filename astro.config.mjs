@@ -13,6 +13,12 @@ export default defineConfig({
 
   output: 'server', // Server mode for Vercel serverless functions
 
+  // The cross-site form check lives in src/middleware.ts (same rule, one exempt path for the
+  // Kiez-Brief one-click unsubscribe — Gmail POSTs it as a form without an Origin). Never
+  // switch this back on without removing that exemption's need: Astro's check runs BEFORE the
+  // middleware and would 403 the endpoint again.
+  security: { checkOrigin: false },
+
   adapter: vercel({
     webAnalytics: {
       enabled: true

@@ -1,0 +1,42 @@
+---
+// Unsubscribe landing page of the Kiez-Brief (the link in the mail's footer). Works without a
+// login — the link may be opened anywhere. The token names the member; a valid one turns the
+// mail off on the spot, an invalid one gets a neutral answer (no oracle).
+import { ObjectId } from 'mongodb';
+import LandingLayout from '../../layouts/LandingLayout.astro';
+import { connectDB } from '../../lib/mongodb';
+import { unsubSecret, verifyUnsubToken } from '../../lib/newsletter/unsubToken';
+
+const token = new URL(Astro.request.url).searchParams.get('t');
+const userId = verifyUnsubToken(token, unsubSecret());
+if (userId) {
+  const db = await connectDB();
+  await db.collection('users').updateOne({ _id: new ObjectId(userId) }, { $set: { newsletter: 'off' } });
+}
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+
+<LandingLayout title="Kiez-Brief abbestellen | Mahalle" description="Kiez-Brief abbestellen.">
+  <div class="lgl-wrap">
+    <a href="/" class="lgl-back font-dmmono">← Mahalle</a>
+    {userId ? (
+      <>
+        <h1 class="font-bricolage">Abbestellt.</h1>
+        <p>Du bekommst den Kiez-Brief nicht mehr. Deine Mitteilungen in der App bleiben, wie sie sind.</p>
+        <p>Wieder einschalten kannst du ihn jederzeit in Mahalle: Glocke antippen, dann „Kiez-Brief · wöchentlich".</p>
+      </>
+    ) : (
+      <>
+        <h1 class="font-bricolage">Dieser Link ist ungültig.</h1>
+        <p>Den Kiez-Brief stellst du in Mahalle ein: Glocke antippen, dann „Kiez-Brief · aus".</p>
+      </>
+    )}
+  </div>
+</LandingLayout>
+
+<style>
+  .lgl-wrap { max-width: 680px; margin: 0 auto; padding: 40px 22px 60px; }
+  .lgl-back { display: inline-block; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--k-ink-soft); margin-bottom: 18px; }
+  .lgl-wrap h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 20px; }
+  .lgl-wrap p { font-size: 15px; line-height: 1.55; color: var(--k-ink-soft); margin: 0 0 12px; }
+</style>
