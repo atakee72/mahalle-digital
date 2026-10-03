@@ -178,10 +178,13 @@ export function excerptOf(body: unknown, max = 140): string | null {
   return cut.slice(0, Math.max(cut.lastIndexOf(' '), 60)).trimEnd() + ' …';
 }
 
-/** A Cloudinary URL for a fixed-width thumbnail (the mail never downloads the full photo); anything else unchanged. */
+/**
+ * A Cloudinary URL for a fixed-size thumbnail (the mail never downloads the full photo). ONLY our
+ * own upload host is allowed: a member-supplied image from any other origin would reach every
+ * member's inbox as third-party content (tracking pixel) — such an image is dropped, not passed.
+ */
 export function thumb(url: unknown, w: number): string | null {
-  if (typeof url !== 'string' || !url.startsWith('https://')) return null;
-  if (!url.includes('res.cloudinary.com/') || !url.includes('/upload/')) return url;
+  if (typeof url !== 'string' || !url.startsWith('https://res.cloudinary.com/') || !url.includes('/upload/')) return null;
   const bare = url.replace(/\/upload\/f_auto,q_auto(?:,w_\d+,c_fill)?\//, '/upload/');
   return bare.replace('/upload/', `/upload/f_auto,q_auto,w_${w},h_${w},c_fill/`);
 }

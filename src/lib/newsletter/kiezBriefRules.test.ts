@@ -111,10 +111,11 @@ test('an excerpt is one plain line, cut at a word, links and marks stripped', ()
   assert.ok(e.endsWith(' …') && e.length <= 143, e);
 });
 
-test('thumbnails: a Cloudinary photo gets a square fill transform, other https urls pass, the rest is dropped', () => {
+test('thumbnails: a Cloudinary photo gets a square fill transform, every other origin is dropped', () => {
   assert.equal(thumb('https://res.cloudinary.com/demo/image/upload/v1/mahalle/posts/a.jpg', 120), 'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_120,h_120,c_fill/v1/mahalle/posts/a.jpg');
   assert.equal(thumb('https://res.cloudinary.com/demo/image/upload/f_auto,q_auto/v1/a.jpg', 80), 'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_80,h_80,c_fill/v1/a.jpg');
-  assert.equal(thumb('https://example.org/x.png', 80), 'https://example.org/x.png');
+  assert.equal(thumb('https://example.org/x.png', 80), null); // foreign origin: never into a mail
+  assert.equal(thumb('https://evil.example/res.cloudinary.com/upload/x.png', 80), null);
   assert.equal(thumb('http://insecure/x.png', 80), null);
   assert.equal(thumb(null, 80), null);
 });
