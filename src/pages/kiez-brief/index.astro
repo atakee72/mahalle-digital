@@ -1,0 +1,24 @@
+---
+// /kiez-brief — the list of sent Kiez-Brief issues, newest first. Members only (middleware gate;
+// the check below is the same belt-and-braces as /entwuerfe). Each row opens the browser view
+// (`[week].ts`). Not in any menu: the way in is „Im Browser ansehen" in the mail, then „Alle Ausgaben".
+import KioskLayout from '../../layouts/KioskLayout.astro';
+import KiezBriefArchive from '../../components/newsletter/KiezBriefArchive.svelte';
+import { getSession } from 'auth-astro/server';
+import { connectDB } from '../../lib/mongodb';
+import { listSentIssues } from '../../lib/newsletter/kiezBriefStore';
+
+const session = await getSession(Astro.request);
+if (!session?.user?.id) {
+  return Astro.redirect('/login?redirect=/kiez-brief');
+}
+Astro.response.headers.set('Cache-Control', 'no-store');
+const issues = await listSentIssues(await connectDB());
+---
+
+<KioskLayout title="Mahalle · Kiez-Brief" description="Alle Ausgaben des Kiez-Briefs." page="profile" tour={false} noindex>
+  <!-- Same centred 1280 px page column as every main section. -->
+  <div class="mx-auto w-full max-w-[1280px]">
+    <KiezBriefArchive client:only="svelte" issues={issues} />
+  </div>
+</KioskLayout>

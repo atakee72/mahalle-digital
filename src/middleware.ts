@@ -90,6 +90,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       '/forum', '/topics', '/announcements', '/recommendations',
       '/calendar', '/events', '/newsboard', '/marketplace',
       '/bookmarks', '/search', '/steckbrief', '/nachbarn', '/entwuerfe',
+      '/kiez-brief', // list + browser view of sent Kiez-Brief issues (the cron lives under /api/cron)
     ];
     // List/read APIs of gated surfaces — without this the page gate is
     // cosmetic (data stays scrapable). Write endpoints already self-gate.
