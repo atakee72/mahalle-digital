@@ -29,3 +29,10 @@ More than `MAX_RECIPIENTS` (95, in `kiezBriefRules.ts`) members qualify. Resend 
 
 - **Prod: never.** Never delete a `kiezBriefIssues` row — the issue would be sent to every member again.
 - **Dev only:** `npx tsx --env-file=.env scratchpad/kiez-brief/dry-run.mts cleanup` removes the claim and resets preferences; run `dry-run.mts` again. Probes: `token.mts`, `probe.cjs` (16 checks).
+
+## Browser view
+
+- Every mail links to `/kiez-brief/<week>` („Im Browser ansehen"); `/kiez-brief` lists the sent issues. Members only, in no menu.
+- The page is rebuilt from today's data for the window stored in the issue's row — nothing of the mail is stored. An old issue therefore shows less than the mail did once posts were deleted or listings sold. That is intended.
+- Only an issue with `sentAt` has a page. If a send succeeded but the `sentAt` write failed (Sentry issue of that evening), the link in that mail leads to the list. Repair, prod, by hand and only then: set `sentAt` (a date) and `recipients` on that one row — never delete the row.
+- Dev probe: `npx tsx --env-file=.env scratchpad/kiez-brief/web-seed.mts seed` prints four week keys (two sent, one skipped, one never sent); pass that JSON to `web-probe.cjs` on the local build (30 checks); `web-seed.mts cleanup` afterwards.
