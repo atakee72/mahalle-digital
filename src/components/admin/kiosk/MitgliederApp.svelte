@@ -21,6 +21,7 @@
     id: string;
     name: string;
     handle: string | null;
+    email: string | null;
     createdAt: string | null;
     emailVerified: boolean;
     verified: boolean;
@@ -267,6 +268,14 @@
                   <span class="font-dmmono" style="font-size: 9px; font-weight: 600; background: var(--k-accent); color: var(--k-paper); padding: 1px 6px; border-radius: 999px; letter-spacing: 0.08em;">{$t['admin.users.adminchip']}</span>
                 {/if}
               </div>
+              {#if row.email}
+                <a
+                  data-admin-email
+                  href={`mailto:${row.email}`}
+                  class="font-dmmono"
+                  style="display: inline-block; font-size: 11px; color: var(--k-ink); margin-top: 3px; overflow-wrap: anywhere; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px;"
+                >{row.email}</a>
+              {/if}
               <div class="font-dmmono" style="font-size: 10px; color: var(--k-ink-mute); margin-top: 3px; letter-spacing: 0.05em;">
                 {tStr($t['admin.users.since'], { d: fmtDate(row.createdAt) })}
                 &nbsp;·&nbsp;

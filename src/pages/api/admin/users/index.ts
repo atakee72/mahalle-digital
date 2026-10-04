@@ -13,9 +13,11 @@ import { emailFragment, escapeRegex } from '../../../../lib/members/emailLookup'
 // Capped at 1000 — a neighborhood app; revisit with pagination if the
 // community ever outgrows it.
 //
+// Since 2026-10-04 (evening) each row carries the member's `email` — the admin asked for a new
+// member's address and no admin surface showed one. Admin-only payload, `no-store`.
+//
 // GET /api/admin/users?email=<part of an address> (2026-10-04) — which members have an
-// address containing this? Answers `{ ids }` only: the list above never carries addresses,
-// and this lookup echoes none either (a bounce names an address; the admin needs the row).
+// address containing this? Answers `{ ids }` only (a bounce names an address; the admin needs the row).
 // The island calls it while the admin types (from three characters). Literal, case-insensitive
 // substring match on `email` and on the address of a pending change; at most 50 hits.
 
@@ -53,7 +55,7 @@ export const GET: APIRoute = async ({ request }) => {
       .collection('users')
       .find(
         { anonymized: { $ne: true } },
-        { projection: { name: 1, handle: 1, createdAt: 1, emailVerified: 1, verified: 1, role: 1, memberType: 1, dailyLimit: 1, newsletter: 1 } }
+        { projection: { name: 1, handle: 1, email: 1, createdAt: 1, emailVerified: 1, verified: 1, role: 1, memberType: 1, dailyLimit: 1, newsletter: 1 } }
       )
       .sort({ createdAt: -1 })
       .limit(1000)
@@ -63,6 +65,7 @@ export const GET: APIRoute = async ({ request }) => {
       id: u._id.toString(),
       name: typeof u.name === 'string' ? u.name : '',
       handle: typeof u.handle === 'string' ? u.handle : null,
+      email: typeof u.email === 'string' ? u.email : null,
       createdAt:
         u.createdAt instanceof Date
           ? u.createdAt.toISOString()
@@ -82,7 +85,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     return new Response(JSON.stringify({ users }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
     });
   } catch (error) {
     console.error('Admin users list error:', error);
