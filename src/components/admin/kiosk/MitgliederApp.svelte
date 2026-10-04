@@ -7,14 +7,15 @@
    * and, for organisations, a daily-limit field — both through the same PATCH.
    * Optimistic toggle with rollback + error toast. Client-side search
    * (name/@handle) — the list is capped at 1000 server-side, no pager v1.
-   * A WHOLE e-mail address in the search field asks the server which member
-   * has it (2026-10-04; the list itself carries no addresses).
+   * The same field also searches e-mail addresses WHILE the admin types (from
+   * three characters): the server answers which members match, the list itself
+   * carries no addresses (2026-10-04).
    */
   import { onDestroy } from 'svelte';
   import { MEMBER_TYPES, MAX_DAILY_LIMIT, type MemberType } from '../../../lib/members/memberType';
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { showError } from '../../../utils/toast';
-  import { isEmailQuery, lookupEmail } from '../../../lib/members/emailLookup';
+  import { emailFragment } from '../../../lib/members/emailLookup';
 
   type AdminUserRow = {
     id: string;
@@ -35,41 +36,39 @@
   // Rows with an in-flight PATCH — disables the row's toggle.
   let busy = $state<Set<string>>(new Set());
 
-  // Search by e-mail address: the server names the member(s), the rows come from the loaded list.
-  const emailMode = $derived(isEmailQuery(query));
+  // E-mail search while typing: the server names the members whose address contains the text,
+  // the rows come from the loaded list and are shown TOGETHER with the name/@handle matches.
   let emailIds = $state<string[]>([]);
-  let emailStatus = $state<'incomplete' | 'searching' | 'done' | 'error'>('incomplete');
+  let emailStatus = $state<'idle' | 'searching' | 'done' | 'error'>('idle');
 
   $effect(() => {
-    if (!emailMode) return;
-    const email = lookupEmail(query);
-    emailIds = [];
-    if (!email) { emailStatus = 'incomplete'; return; }
+    const fragment = emailFragment(query);
+    if (!fragment) { emailIds = []; emailStatus = 'idle'; return; }
     emailStatus = 'searching';
     let alive = true;
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/admin/users?email=${encodeURIComponent(email)}`, { credentials: 'include' });
+        const res = await fetch(`/api/admin/users?email=${encodeURIComponent(fragment)}`, { credentials: 'include' });
         if (!res.ok) throw new Error(String(res.status));
         const data = await res.json();
         if (!alive) return;
         emailIds = Array.isArray(data.ids) ? data.ids : [];
         emailStatus = 'done';
       } catch {
-        if (alive) emailStatus = 'error';
+        if (alive) { emailIds = []; emailStatus = 'error'; }
       }
-    }, 350);
+    }, 250);
     return () => { alive = false; clearTimeout(timer); };
   });
 
   const filtered = $derived.by(() => {
-    if (emailMode) return users.filter((u) => emailIds.includes(u.id));
     const q = query.trim().toLowerCase();
     if (!q) return users;
     return users.filter(
       (u) =>
         u.name.toLowerCase().includes(q) ||
-        (u.handle ?? '').toLowerCase().includes(q.replace(/^@/, ''))
+        (u.handle ?? '').toLowerCase().includes(q.replace(/^@/, '')) ||
+        emailIds.includes(u.id)
     );
   });
 
@@ -238,17 +237,13 @@
     </div>
 
     {#if filtered.length === 0}
-      <div data-admin-empty={emailMode ? emailStatus : 'none'} class="font-instrument" style="font-style: italic; font-size: 14px; color: var(--k-ink-mute); padding: 30px 0; text-align: center;">
-        {#if !emailMode}
-          {$t['admin.users.empty']}
-        {:else if emailStatus === 'incomplete'}
-          {$t['admin.users.email.incomplete']}
-        {:else if emailStatus === 'searching'}
+      <div data-admin-empty={emailStatus} class="font-instrument" style="font-style: italic; font-size: 14px; color: var(--k-ink-mute); padding: 30px 0; text-align: center;">
+        {#if emailStatus === 'searching'}
           {$t['admin.users.email.searching']}
         {:else if emailStatus === 'error'}
           {$t['admin.users.email.error']}
         {:else}
-          {$t['admin.users.email.none']}
+          {$t['admin.users.empty']}
         {/if}
       </div>
     {:else}

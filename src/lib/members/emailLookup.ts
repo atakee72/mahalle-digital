@@ -1,17 +1,24 @@
 /**
  * Admin member list: find a member by e-mail address (a bounce names an address, the list shows
  * none). Pure — the island and the route share it. The list payload never carries addresses: the
- * admin types the WHOLE address and the server answers which member it is.
+ * admin types part of an address and the server answers which members match.
  */
 
-/** The search text is meant as an address: an „@" that is not the first character („@handle" is the handle search). */
-export function isEmailQuery(q: string): boolean {
-  return q.trim().indexOf('@') > 0;
+/** Shortest piece of an address worth a lookup (one or two letters match half the list). */
+export const EMAIL_FRAGMENT_MIN = 3;
+
+/**
+ * The piece of an address to look up while the admin types, trimmed; null while it is too short,
+ * has a space in it, or is a handle search („@name").
+ */
+export function emailFragment(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const q = v.trim();
+  if (q.length < EMAIL_FRAGMENT_MIN || q.length > 254 || /\s/.test(q) || q.startsWith('@')) return null;
+  return q;
 }
 
-/** The address to look up, trimmed; null while it is not a whole address yet. */
-export function lookupEmail(v: unknown): string | null {
-  if (typeof v !== 'string') return null;
-  const email = v.trim();
-  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? email : null;
+/** The fragment as a literal for a regular expression: every special character escaped. */
+export function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
