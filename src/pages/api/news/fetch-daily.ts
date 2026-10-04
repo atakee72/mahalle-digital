@@ -361,7 +361,7 @@ export const GET: APIRoute = async ({ request }) => {
   await sendForumDigest();
 
   // The weekly member mail rides this job twice: (1) on ANY day it sends the next GROUP of an
-  // issue whose members are still waiting (groups of 75, a full day apart); (2) on a Berlin Monday,
+  // issue whose members are still waiting (groups of 75, one per UTC day); (2) on a Berlin Monday,
   // when Sunday's GitHub run never claimed the issue, it starts the issue itself (the key is the
   // ISO week of now − 24 h, so Monday morning still belongs to Sunday's issue). Never throws.
   await sendKiezBrief({ fallback: true });

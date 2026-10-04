@@ -23,7 +23,7 @@ Code: `src/lib/newsletter/*`, `src/pages/api/cron/kiez-brief.ts`, `src/pages/api
 
 ## More members than one day's quota: groups
 
-Resend Free allows 100 mails a day, shared with the login mails. An issue therefore goes out in groups of 75 (`GROUP_SIZE` in `kiezBriefRules.ts`), a full 24 hours apart (`GROUP_GAP_MS`): Sunday evening, then the first job a full day later (Monday evening's run if it is late enough, otherwise Tuesday 08:00), and so on. 24 hours, not „the next morning", because Resend does not say whether its day is the UTC day or a rolling 24 hours; ask their support, and if it is the UTC day, a shorter gap (Monday 08:00) is one constant away. Members are taken oldest first; each group is claimed in the issue's row before it is sent, so no group goes out twice and a failed group is not retried.
+Resend Free allows 100 mails per UTC calendar day (reset at midnight UTC, not a rolling 24 hours), shared with the login mails. An issue therefore goes out in groups of 75 (`GROUP_SIZE` in `kiezBriefRules.ts`), one group per UTC day: Sunday evening, then Monday 08:00 with the morning job, then Tuesday 08:00 (07:00 in winter time). Members are taken oldest first; each group is claimed in the issue's row before it is sent, so no group goes out twice and a failed group is not retried.
 
 - Watch it: the route's answer and the morning job's log name the group (`group 2 sent to 31 members`). The row shows `groups`, `more`, `recipients`.
 - Sentry warning „more members than two daily groups": more than 150 recipients — the issue now takes three days. That is the agreed moment for the paid plan; up to about 300 members nothing is lost meanwhile (four groups fit before the four-day cut-off).

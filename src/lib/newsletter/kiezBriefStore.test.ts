@@ -258,7 +258,7 @@ test('a claimed issue starts with no group taken', async () => {
   assert.deepEqual([row.groups, row.cursor, row.more], [0, null, false]);
 });
 
-test('groups: a full day apart, each claimed once, nobody twice, nobody skipped', async () => {
+test('groups: one per UTC day, each claimed once, nobody twice, nobody skipped', async () => {
   const { db, data } = fakeDb({ users: [member(1), member(2), member(3), member(4), member(5)] });
   await claimIssue(db, '2026-W41', NOW, false);
   const row = () => ({ ...data[KIEZ_BRIEF_COLLECTION][0] }) as IssueDoc;
@@ -272,23 +272,22 @@ test('groups: a full day apart, each claimed once, nobody twice, nobody skipped'
   // A second run that read the row BEFORE the claim loses: the group count moved on.
   assert.equal(await takeNextGroup(db, sunday, NOW + HOUR, 2), null);
   assert.equal(row().groups, 1);
-  // The late job of the same evening, and Monday morning 14 h later: not due (a full day apart).
+  // Same UTC day (the late afternoon job): not due.
   assert.equal(await takeNextGroup(db, row(), NOW + 3 * HOUR, 2), null);
-  assert.equal(await takeNextGroup(db, row(), NOW + 14 * HOUR, 2), null);
   assert.equal(row().groups, 1);
 
-  // Monday evening, 25 h later. Between the groups member 3 switched the mail off and member 6 joined.
+  // Monday morning. Between the groups member 3 switched the mail off and member 6 joined.
   data.users.find((u) => u._id === uid(3))!.newsletter = 'off';
   data.users.push(member(6));
-  const MON = NOW + 25 * HOUR;
+  const MON = NOW + 14 * HOUR;
   assert.equal((await findPendingIssue(db, MON))?._id, '2026-W41');
   const g2 = await takeNextGroup(db, row(), MON, 2);
   assert.deepEqual([ids(g2), g2?.index, g2?.more], [[4, 5], 1, true]);
   assert.equal(row().lastGroupSize, 2);
-  // Tuesday morning, 13 h later: still not due.
-  assert.equal(await takeNextGroup(db, row(), MON + 13 * HOUR, 2), null);
+  // Monday afternoon: the same UTC day again.
+  assert.equal(await takeNextGroup(db, row(), MON + 8 * HOUR, 2), null);
 
-  // Tuesday evening: the late joiner, and the issue is closed.
+  // Tuesday morning: the late joiner, and the issue is closed.
   const TUE = MON + DAY;
   const g3 = await takeNextGroup(db, row(), TUE, 2);
   assert.deepEqual([ids(g3), g3?.index, g3?.more], [[6], 2, false]);
