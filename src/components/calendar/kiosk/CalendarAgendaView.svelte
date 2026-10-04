@@ -4,7 +4,8 @@
   // dark ink-fill card per CD's design; past days collapse behind a
   // "show past" toggle (default off).
 
-  import { isSameDay, startOfDay, isBefore } from 'date-fns';
+  import { isSameDay, startOfDay, isBefore, format } from 'date-fns';
+  import { de as deLocale, enUS } from 'date-fns/locale';
 
   import AgendaDayHeader from './AgendaDayHeader.svelte';
   import AgendaRow from './AgendaRow.svelte';
@@ -14,7 +15,7 @@
   import { groupAgenda } from '../../../lib/calendar/agendaGroups';
   import { now } from '../../../lib/calendar/nowTicker';
   import { CATEGORIES } from '../../../lib/calendar/categories';
-  import { t } from '../../../lib/kiosk-i18n';
+  import { t, locale } from '../../../lib/kiosk-i18n';
   import type { Event as EventDoc, EventCategory } from '../../../types';
 
   let {
@@ -37,10 +38,18 @@
 
   const todayStart = $derived(startOfDay(new Date()));
 
-  // Events under their start day; a multi-day event that is still running is
-  // ALSO listed under today (see groupAgenda) — its start day is a past group
-  // and those are hidden behind the „show past" toggle.
+  // Events under their start day. A multi-day event that started earlier and
+  // still covers a listed day is that day's `running` (see groupAgenda): full
+  // rows under today, ONE slim line each under any other day — so a month-long
+  // event is visible on every day without filling the list.
   const grouped = $derived(groupAgenda(events as EventDoc[], todayStart));
+
+  // „bis 31. Okt." on the slim line.
+  function untilLabel(ev: EventDoc): string {
+    const end = ev.endDate instanceof Date ? ev.endDate : new Date(ev.endDate);
+    const d = format(end, $locale === 'de' ? 'd. MMM' : 'MMM d', { locale: $locale === 'de' ? deLocale : enUS });
+    return $t['cal.agenda.until'].replace('{d}', d);
+  }
   const pastGroups = $derived(grouped.filter((g) => isBefore(g.day, todayStart)));
   const visibleGroups = $derived(
     showPast ? grouped : grouped.filter((g) => !isBefore(g.day, todayStart))
@@ -74,9 +83,11 @@
     {:else}
       {#each visibleGroups as g (g.day.toISOString())}
         {@const isTodayGroup = isSameDay(g.day, todayStart)}
+        {@const total = g.events.length + g.running.length}
         {#if isTodayGroup}
-          {@const liveCount = g.events.filter((e) => isLiveNow(e, $now)).length}
-          {@const termLabel = g.events.length === 1
+          {@const todayRows = [...g.running, ...g.events]}
+          {@const liveCount = todayRows.filter((e) => isLiveNow(e, $now)).length}
+          {@const termLabel = total === 1
             ? $t['cal.agenda.term.one']
             : $t['cal.agenda.term.many']}
           <!-- Whole today row (date column + events) sits inside one dark block.
@@ -85,14 +96,14 @@
           <div
             class="bg-ink rounded-md shadow-[3px_3px_0_var(--k-wine,#b23a5b)] mb-4 px-4 py-1 flex flex-col gap-1 lg:grid lg:grid-cols-[140px_1fr] lg:gap-4 lg:items-stretch"
           >
-            <AgendaDayHeader day={g.day} eventCount={g.events.length} />
+            <AgendaDayHeader day={g.day} eventCount={total} />
             <div class="border-t border-dashed border-paper/30 pt-2 lg:border-t-0 lg:border-l lg:pl-4 lg:pt-0 self-stretch">
               <div class="font-dmmono text-[10px] uppercase tracking-[0.1em] text-paper/60 pb-1 lg:pt-2">
-                {g.events.length} {termLabel}{#if liveCount > 0}
+                {total} {termLabel}{#if liveCount > 0}
                   <span class="text-ochre"> · {liveCount} {$t['cal.agenda.today.running']}</span>
                 {/if}
               </div>
-              {#each g.events as ev (String(ev._id))}
+              {#each todayRows as ev (String(ev._id))}
                 {@const eventId = String(ev._id)}
                 <AgendaRow
                   {ev}
@@ -107,8 +118,25 @@
           </div>
         {:else}
           <div class="flex flex-col gap-2 mb-4 lg:grid lg:grid-cols-[140px_1fr] lg:gap-5 lg:items-start">
-            <AgendaDayHeader day={g.day} eventCount={g.events.length} />
+            <AgendaDayHeader day={g.day} eventCount={total} />
             <div class="flex flex-col gap-3">
+              <!-- Still running from an earlier day: one slim line each (opens the event). -->
+              {#each g.running as ev (String(ev._id))}
+                {@const runStyle = CATEGORIES[(ev.category ?? 'kiez') as EventCategory]}
+                <button
+                  type="button"
+                  data-agenda-running
+                  onclick={() => onPickEvent?.(ev)}
+                  class={`w-full min-h-[40px] text-left bg-paper border-[1.5px] border-dashed ${runStyle.borderClass} rounded-md px-3 py-1.5 flex items-center gap-2 hover:bg-paper-warm transition-colors ${ev.moderationStatus === 'pending' || ev.moderationStatus === 'rejected' ? 'opacity-60' : ''}`}
+                >
+                  <span class={`shrink-0 w-2 h-2 rounded-[2px] ${runStyle.bgClass}`} aria-hidden="true"></span>
+                  <span class="shrink-0 font-dmmono text-[10px] uppercase tracking-[0.08em] text-ink-mute">
+                    {ev.allDay ? $t['cal.allDay'] : $t['cal.agenda.ongoing']}
+                  </span>
+                  <span class="min-w-0 flex-1 truncate font-bricolage font-semibold text-[13.5px] tracking-[-0.01em] text-ink">{ev.title}</span>
+                  <span class="shrink-0 font-dmmono text-[10px] uppercase tracking-[0.08em] text-ink-mute">{untilLabel(ev)}</span>
+                </button>
+              {/each}
               {#each g.events as ev (String(ev._id))}
                 {@const eventId = String(ev._id)}
                 {@const catStyle = CATEGORIES[(ev.category ?? 'kiez') as EventCategory]}
