@@ -11,6 +11,7 @@
   import CalendarSidebar from './CalendarSidebar.svelte';
 
   import { isLiveNow } from '../../../lib/calendar/eventTime';
+  import { groupAgenda } from '../../../lib/calendar/agendaGroups';
   import { now } from '../../../lib/calendar/nowTicker';
   import { CATEGORIES } from '../../../lib/calendar/categories';
   import { t } from '../../../lib/kiosk-i18n';
@@ -34,24 +35,12 @@
 
   let showPast = $state(false);
 
-  // Group events by their startDate's day-of-month bucket. Multi-day
-  // events list once under their start day.
-  const grouped = $derived.by(() => {
-    const map = new Map<string, { day: Date; events: EventDoc[] }>();
-    for (const ev of events) {
-      const d = startOfDay(
-        ev.startDate instanceof Date ? ev.startDate : new Date(ev.startDate)
-      );
-      const key = d.toISOString();
-      if (!map.has(key)) map.set(key, { day: d, events: [] });
-      map.get(key)!.events.push(ev);
-    }
-    return [...map.values()].sort(
-      (a, b) => a.day.getTime() - b.day.getTime()
-    );
-  });
-
   const todayStart = $derived(startOfDay(new Date()));
+
+  // Events under their start day; a multi-day event that is still running is
+  // ALSO listed under today (see groupAgenda) — its start day is a past group
+  // and those are hidden behind the „show past" toggle.
+  const grouped = $derived(groupAgenda(events as EventDoc[], todayStart));
   const pastGroups = $derived(grouped.filter((g) => isBefore(g.day, todayStart)));
   const visibleGroups = $derived(
     showPast ? grouped : grouped.filter((g) => !isBefore(g.day, todayStart))
