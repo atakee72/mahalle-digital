@@ -22,6 +22,7 @@
     events = [],
     visibleMonth = new Date(),
     onPickEvent,
+    onPickDay,
     savedIds = new Set<string>(),
     onToggleSave,
     currentUserId = null
@@ -29,6 +30,8 @@
     events?: EventDoc[];
     visibleMonth?: Date;
     onPickEvent?: (ev: EventDoc) => void;
+    // A click on a day of the small month (desktop rail) opens that day in the day view.
+    onPickDay?: (day: Date) => void;
     savedIds?: Set<string>;
     onToggleSave?: (eventId: string) => void;
     currentUserId?: string | null;
@@ -159,5 +162,5 @@
     {/if}
   </div>
 
-  <CalendarSidebar {visibleMonth} {events} />
+  <CalendarSidebar {visibleMonth} {events} {onPickDay} />
 </div>

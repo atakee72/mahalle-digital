@@ -126,6 +126,9 @@
   let dayViewDate = $state<Date | null>(null);
 
   function openDay(day: Date) {
+    // A day of a neighbouring month (grey cells) moves the header month and
+    // the events query with it — otherwise the day view opens on stale data.
+    if (!isSameMonth(day, visibleMonth)) visibleMonth = day;
     dayViewDate = day;
     view = 'day';
   }
@@ -497,6 +500,7 @@
       events={displayedEvents}
       {visibleMonth}
       onPickEvent={onPickEvent}
+      onPickDay={openDay}
       savedIds={savedIds.ids}
       onToggleSave={currentUserId ? onToggleSave : undefined}
       {currentUserId}
