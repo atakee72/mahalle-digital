@@ -84,7 +84,7 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = fal
           <Section style={mast}>
             <Row>
               <Column style={{ width: '44px', verticalAlign: 'middle' }}>
-                <Link href={url('/forum')}>
+                <Link href={url('/forum')} style={wordmarkLink}>
                   <Img src={`${baseUrl}/icons/icon-192.png`} width="36" height="36" alt="Mahalle" style={{ borderRadius: '999px', border: `1.5px solid ${PAPER}` }} />
                 </Link>
               </Column>
@@ -284,7 +284,7 @@ const card = { width: '48%', verticalAlign: 'top' as const, border: `1px solid $
 const cardEmpty = { width: '48%', fontSize: '1px', lineHeight: '1px' };
 const gutter = { width: '4%', fontSize: '1px', lineHeight: '1px' };
 const cardWhen = { color: '#5a5448', fontFamily: 'Menlo, Consolas, monospace', fontSize: '11px', lineHeight: '1.4', letterSpacing: '0.04em', margin: 0 };
-const cardText = { color: '#3a362e', fontSize: '14px', lineHeight: '1.4', margin: '8px 0 0', wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, hyphens: 'auto' as const };
+const cardText = { color: '#3a362e', fontSize: '14px', lineHeight: '1.4', margin: '8px 0 0', wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const }; // no `hyphens: auto`: with lang=de it split words that fitted on the next line („Lo-kal“)
 const tileDay = { fontSize: '20px', fontWeight: 800, color: INK, lineHeight: '1.1', padding: '6px 0 0' };
 const tileMonth = { fontFamily: 'Menlo, Consolas, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: PAPER, backgroundColor: TEAL, padding: '2px 0 3px', marginTop: '4px' };
 const air = { color: '#5a5448', fontSize: '13px', margin: '18px 0 0', paddingTop: '12px', borderTop: '1px dashed #c9bea3' };

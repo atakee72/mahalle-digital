@@ -206,14 +206,15 @@ export function subjectFor(d: BriefData, locale: MailLocale = 'de'): string {
     [d.events.length, en ? plural(d.events.length, 'event', 'events') : plural(d.events.length, 'Termin', 'Termine')],
     [d.listings.length, en ? plural(d.listings.length, 'new listing', 'new listings') : plural(d.listings.length, 'neue Anzeige', 'neue Anzeigen')],
     [d.blog.length, en ? plural(d.blog.length, 'blog article', 'blog articles') : plural(d.blog.length, 'Beilage-Artikel', 'Beilage-Artikel')],
+    [d.official.length, en ? plural(d.official.length, 'update from Mahalle', 'updates from Mahalle') : plural(d.official.length, 'Neuigkeit von Mahalle', 'Neuigkeiten von Mahalle')],
   ];
   const named = parts.filter(([n]) => n > 0).sort((a, b) => b[0] - a[0]).slice(0, 2).map(([, s]) => s); // biggest first, stable
   return [`Kiez-Brief · ${weekLabel(d.week, locale)}`, ...(named.length ? [named.join(', ')] : [])].join(' · ');
 }
 
-/** The hidden preview line: the newest forum title, else the next event, else the newest listing. */
+/** The hidden preview line, in the mail's own order: forum, blog, market, the team's news, then the next event. */
 export function preheaderFor(d: BriefData, locale: MailLocale = 'de'): string {
-  return d.posts[0]?.title ?? d.events[0]?.title ?? d.listings[0]?.title ?? d.blog[0]?.title ?? d.official[0]?.title ?? MAIL_COPY[locale].preheaderFallback;
+  return d.posts[0]?.title ?? d.blog[0]?.title ?? d.listings[0]?.title ?? d.official[0]?.title ?? d.events[0]?.title ?? MAIL_COPY[locale].preheaderFallback;
 }
 
 /** The Kurier teaser: one sentence with the week's real article count (the caller omits it at 0). */

@@ -246,3 +246,14 @@ test('the button opens Mahalle, not „the forum"', () => {
   assert.equal(MAIL_COPY.de.cta, 'Mahalle öffnen');
   assert.equal(MAIL_COPY.en.cta, 'Open Mahalle');
 });
+
+test('a week with only the team\'s news still has a telling subject; the preheader follows the mail\'s order', () => {
+  const off = { id: 'o', title: 'Neue Suche', excerpt: null, dateMs: 1 };
+  assert.equal(subjectFor({ ...empty(), official: [off] }), 'Kiez-Brief · KW 41 · 1 Neuigkeit von Mahalle');
+  assert.equal(subjectFor({ ...empty(), official: [off, { ...off, id: 'p' }] }, 'en'), 'Kiez-Brief · CW 41 · 2 updates from Mahalle');
+  const e = { id: 'e', title: 'Flohmarkt', startMs: 1, allDay: true, location: null };
+  const b = { slug: 's', title: 'Beilage', description: 'd', pubMs: 1, cover: null };
+  assert.equal(preheaderFor({ ...empty(), events: [e], blog: [b], official: [off] }), 'Beilage');
+  assert.equal(preheaderFor({ ...empty(), events: [e], official: [off] }), 'Neue Suche');
+  assert.equal(preheaderFor({ ...empty(), events: [e] }), 'Flohmarkt');
+});

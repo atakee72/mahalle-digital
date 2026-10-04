@@ -127,7 +127,7 @@ export async function loadIssueData(db: Db, week: string, nowMs: number, blog: B
     .filter((b) => b.pubMs > w.fromMs && b.pubMs <= w.toMs);
 
   const official: BriefOfficial[] = officialDocs.map((o) => ({
-    id: String(o._id), title: String(o.title ?? ''), excerpt: excerptOf(o.body), dateMs: toMs(o.date),
+    id: String(o._id), title: String(o.title ?? ''), excerpt: excerptOf(o.body, 100), dateMs: toMs(o.date),
   }));
 
   return arrangeData({
