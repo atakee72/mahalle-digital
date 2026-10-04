@@ -26,7 +26,7 @@ Every scheduled Sunday job first sends the issue to the admin's own address („
 
 ## Watching a run
 
-- `gh run list --workflow=kiez-brief.yml` — GitHub starts scheduled runs 0–4 h late (mail lands 18:00 to ~22:00 Berlin). If the run never arrives, the Monday 06:00 UTC cron (`fetch-daily`) sends the issue instead (the fallback start is for Berlin Mondays only; on other days the job only sends a waiting group, see below).
+- `gh run list --workflow=kiez-brief.yml` — the job is scheduled for 17:00 Berlin (15:00 UTC) and GitHub starts scheduled runs 0–4 h late: test copy 17:00 to ~21:00, the members' mail two hours after it. If the run never arrives, the Monday 06:00 UTC cron (`fetch-daily`) sends the issue instead (the fallback start is for Berlin Mondays only; on other days the job only sends a waiting group, see below).
 - The route answers JSON `{ week, outcome, recipients }`; `outcome` is `sent` (with `group` and `more`), `claimed-elsewhere`, `quiet`, `no-recipients`, `not-configured`, `not-due` or `failed` (see the workflow log).
 - A failed batch is a Sentry issue and the week stays claimed — it is not retried.
 

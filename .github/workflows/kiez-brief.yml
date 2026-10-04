@@ -3,20 +3,21 @@ name: Kiez-Brief (weekly member mail)
 # POST without a content type trips the cross-site form check). Vercel Hobby allows one cron run a day and
 # both vercel.json slots are taken (fetch-daily 06:00 UTC, process-deletions 05:30 UTC), so —
 # like kiez-air-logger.yml and news-afternoon-fetch.yml — GitHub Actions rings the route.
-# 16:00 UTC = 18:00 Berlin in summer (CEST) / 17:00 in winter (CET); GitHub starts scheduled runs
+# 15:00 UTC = 17:00 Berlin in summer (CEST) / 16:00 in winter (CET) — the test copy; the members'
+# mail follows two hours later (owner, 2026-10-04). GitHub starts scheduled runs
 # 0–4 h late, so "Sunday evening" is the promise. The issue is claimed per ISO week inside the
 # app: if this run never arrives, the Monday 06:00 UTC cron (fetch-daily) sends it instead.
 # Requires repo secret CRON_SECRET (same value as the Vercel env).
 #
 # The scheduled job has THREE steps (2026-10-04): (1) a test copy to the admin plus a Telegram
 # line, (2) a two-hour wait so he can look at it, (3) the members' mail. So the members' mail
-# lands about two hours after the job starts (20:00 Berlin + GitHub's lateness). Cancelling the
+# lands about two hours after the job starts (19:00 Berlin + GitHub's lateness). Cancelling the
 # run during the wait stops Sunday's send — the Monday 06:00 UTC fallback then sends unless the
 # problem is fixed first. A manual dispatch skips steps 1 and 2 and sends at once.
 # The wait must match TEST_LEAD_MINUTES in src/lib/newsletter/kiezBriefRules.ts.
 on:
   schedule:
-    - cron: '0 16 * * 0'
+    - cron: '0 15 * * 0'
   workflow_dispatch:
 
 jobs:
