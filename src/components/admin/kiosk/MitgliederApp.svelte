@@ -7,11 +7,14 @@
    * and, for organisations, a daily-limit field — both through the same PATCH.
    * Optimistic toggle with rollback + error toast. Client-side search
    * (name/@handle) — the list is capped at 1000 server-side, no pager v1.
+   * A WHOLE e-mail address in the search field asks the server which member
+   * has it (2026-10-04; the list itself carries no addresses).
    */
   import { onDestroy } from 'svelte';
   import { MEMBER_TYPES, MAX_DAILY_LIMIT, type MemberType } from '../../../lib/members/memberType';
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { showError } from '../../../utils/toast';
+  import { isEmailQuery, lookupEmail } from '../../../lib/members/emailLookup';
 
   type AdminUserRow = {
     id: string;
@@ -32,7 +35,35 @@
   // Rows with an in-flight PATCH — disables the row's toggle.
   let busy = $state<Set<string>>(new Set());
 
+  // Search by e-mail address: the server names the member(s), the rows come from the loaded list.
+  const emailMode = $derived(isEmailQuery(query));
+  let emailIds = $state<string[]>([]);
+  let emailStatus = $state<'incomplete' | 'searching' | 'done' | 'error'>('incomplete');
+
+  $effect(() => {
+    if (!emailMode) return;
+    const email = lookupEmail(query);
+    emailIds = [];
+    if (!email) { emailStatus = 'incomplete'; return; }
+    emailStatus = 'searching';
+    let alive = true;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/admin/users?email=${encodeURIComponent(email)}`, { credentials: 'include' });
+        if (!res.ok) throw new Error(String(res.status));
+        const data = await res.json();
+        if (!alive) return;
+        emailIds = Array.isArray(data.ids) ? data.ids : [];
+        emailStatus = 'done';
+      } catch {
+        if (alive) emailStatus = 'error';
+      }
+    }, 350);
+    return () => { alive = false; clearTimeout(timer); };
+  });
+
   const filtered = $derived.by(() => {
+    if (emailMode) return users.filter((u) => emailIds.includes(u.id));
     const q = query.trim().toLowerCase();
     if (!q) return users;
     return users.filter(
@@ -207,8 +238,18 @@
     </div>
 
     {#if filtered.length === 0}
-      <div class="font-instrument" style="font-style: italic; font-size: 14px; color: var(--k-ink-mute); padding: 30px 0; text-align: center;">
-        {$t['admin.users.empty']}
+      <div data-admin-empty={emailMode ? emailStatus : 'none'} class="font-instrument" style="font-style: italic; font-size: 14px; color: var(--k-ink-mute); padding: 30px 0; text-align: center;">
+        {#if !emailMode}
+          {$t['admin.users.empty']}
+        {:else if emailStatus === 'incomplete'}
+          {$t['admin.users.email.incomplete']}
+        {:else if emailStatus === 'searching'}
+          {$t['admin.users.email.searching']}
+        {:else if emailStatus === 'error'}
+          {$t['admin.users.email.error']}
+        {:else}
+          {$t['admin.users.email.none']}
+        {/if}
       </div>
     {:else}
       <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;">

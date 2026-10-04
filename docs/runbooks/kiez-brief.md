@@ -41,6 +41,7 @@ Resend Free allows 100 mails per UTC calendar day (reset at midnight UTC, not a 
 - One malformed address no longer costs the whole group (the batch is sent „permissive"): Sentry warning „the provider refused some mails of a batch" names the count; find the address in Resend's log and switch that member off.
 - The row's `lastGroupSize` is the size of the last claimed group. If `recipients` did not grow by it, that group was claimed but never booked as sent (a crash or freeze between claim and send) — check Resend's log before telling anyone.
 - A manual dispatch of the workflow works on a Sunday or Monday (Berlin) only; any other day it answers `not-due`.
+- A bounce in Resend's log (`https://resend.com/emails`): Resend puts a hard-bounced address on its suppression list by itself — later mails to it, the login mails included, are skipped and do not count as new bounces. To find the member behind the address, type the whole address into the search field on `/admin/mitglieder`.
 - Exclude a test account or an address that bounces: `/admin/mitglieder` → the „Kiez-Brief: an" pill of that member → „aus".
 
 ## Re-sending
