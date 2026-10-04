@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import {
   storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
   preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb, inert, personalize, LISTING_KIND_SYMBOL,
-  storedMailLocale, escapeHtml, isIssueWeekKey, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
+  storedMailLocale, escapeHtml, isIssueWeekKey, newsLineFor, pairs, MAX_OFFICIAL, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
 } from './kiezBriefRules';
 
 const SUN_18 = Date.parse('2026-10-11T16:00:00.000Z'); // Sunday 18:00 CEST, ISO week 41
 const MON_06 = Date.parse('2026-10-12T06:00:00.000Z'); // Monday 08:00 CEST — the fallback, ISO week 42
 
-const empty = (): BriefData => ({ week: '2026-W41', posts: [], events: [], listings: [], blog: [], air: null });
+const empty = (): BriefData => ({ week: '2026-W41', posts: [], events: [], listings: [], blog: [], official: [], newsCount: 0, air: null });
 const post = (id: string, h: number): BriefData['posts'][number] => ({ id, kind: 'topic', title: `T${id}`, author: 'A', comments: 0, dateMs: SUN_18 - h * 3_600_000, excerpt: null, image: null });
 
 test('the stored preference falls back to weekly', () => {
@@ -213,4 +213,36 @@ test('the mail copy names the browser view and the list in both languages', () =
   assert.equal(MAIL_COPY.de.allIssues, 'Alle Ausgaben');
   assert.equal(MAIL_COPY.en.viewInBrowser, 'View in browser');
   assert.equal(MAIL_COPY.en.allIssues, 'All issues');
+});
+
+test('official announcements: newest first, capped, inert; they alone make a week worth a mail', () => {
+  const off = (id: string, h: number) => ({ id, title: `Neu %%NAME%% ${id}`, excerpt: 'x %%UNSUB%%', dateMs: SUN_18 - h * 3_600_000 });
+  const d = arrangeData({ ...empty(), official: [off('a', 30), off('b', 2), off('c', 50), off('d', 10)] });
+  assert.equal(MAX_OFFICIAL, 3);
+  assert.deepEqual(d.official.map((o) => o.id), ['b', 'd', 'a']);
+  assert.equal(d.official.some((o) => o.title.includes('%%') || o.excerpt!.includes('%%')), false);
+  assert.equal(isQuiet(d), false);
+  assert.equal(preheaderFor({ ...empty(), official: [{ id: 'o', title: 'Neue Suche', excerpt: null, dateMs: 1 }] }), 'Neue Suche');
+});
+
+test('the Kurier teaser is garnish: a week with only news is still quiet; a broken count becomes 0', () => {
+  assert.equal(isQuiet(arrangeData({ ...empty(), newsCount: 23 })), true);
+  assert.equal(arrangeData({ ...empty(), newsCount: 23 }).newsCount, 23);
+  for (const bad of [-1, 2.5, NaN, Infinity]) assert.equal(arrangeData({ ...empty(), newsCount: bad }).newsCount, 0);
+  assert.equal(newsLineFor(23), 'Neugierig, was diese Woche los war? Im Kurier: 23 Artikel.');
+  assert.equal(newsLineFor(1), 'Neugierig, was diese Woche los war? Im Kurier: 1 Artikel.');
+  assert.equal(newsLineFor(23, 'en'), 'Curious what happened this week? On the news board: 23 articles.');
+  assert.equal(newsLineFor(1, 'en'), 'Curious what happened this week? On the news board: 1 article.');
+});
+
+test('pairs: two to a row, an odd list ends on a single', () => {
+  assert.deepEqual(pairs([]), []);
+  assert.deepEqual(pairs([1]), [[1, null]]);
+  assert.deepEqual(pairs([1, 2]), [[1, 2]]);
+  assert.deepEqual(pairs([1, 2, 3]), [[1, 2], [3, null]]);
+});
+
+test('the button opens Mahalle, not „the forum"', () => {
+  assert.equal(MAIL_COPY.de.cta, 'Mahalle öffnen');
+  assert.equal(MAIL_COPY.en.cta, 'Open Mahalle');
 });

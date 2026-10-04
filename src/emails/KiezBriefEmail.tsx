@@ -3,7 +3,7 @@ import {
 } from '@react-email/components';
 import * as React from 'react';
 import {
-  AIR_LABEL, LISTING_KIND_LABEL, LISTING_KIND_SYMBOL, MAIL_COPY, POST_KIND_LABEL, UNSUB_PLACEHOLDER, fmtPrice, preheaderFor, weekLabel, withUtm,
+  AIR_LABEL, LISTING_KIND_LABEL, LISTING_KIND_SYMBOL, MAIL_COPY, POST_KIND_LABEL, UNSUB_PLACEHOLDER, fmtPrice, newsLineFor, pairs, preheaderFor, weekLabel, withUtm,
   type BriefData, type BriefEvent, type MailLocale,
 } from '../lib/newsletter/kiezBriefRules';
 
@@ -19,11 +19,13 @@ interface KiezBriefEmailProps {
 
 const POST_PATH = { topic: 'topics', announcement: 'announcements', recommendation: 'recommendations' } as const;
 
-// Section colours = the app's bars (tokens.css): Forum wine, Kalender teal, Markt ochre, Beilage rust.
+// Section colours = the app's bars (tokens.css): Forum wine, Kalender teal, Markt ochre, Beilage rust,
+// Kurier ink, the team's own news plum (the admin colour).
 const WINE = '#b23a5b';
 const TEAL = '#3f8f9f';
 const OCHRE = '#d68a1a';
 const RUST = '#a3552e';
+const PLUM = '#6f2f59';
 const INK = '#1b1a17';
 const PAPER = '#f3ead8';
 
@@ -55,6 +57,8 @@ function berlin(ms: number, locale: MailLocale) {
 // Images are optional garnish: Gmail/Outlook show them only after the reader allows images,
 // so every row reads complete without them. Reads well linearised on purpose (Resend derives
 // the text part from this HTML). The same markup is the browser view (`web`): only the top line differs.
+// Order (owner, 2026-10-04): what WAS — Forum, Beilage, Markt, the Kurier teaser, Neu bei Mahalle —
+// then what COMES: next week's events, two cards to a row, as the closing part.
 export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = false }: KiezBriefEmailProps) {
   const c = MAIL_COPY[locale];
   const url = (path: string) => withUtm(`${baseUrl}${path}`);
@@ -80,10 +84,12 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = fal
           <Section style={mast}>
             <Row>
               <Column style={{ width: '44px', verticalAlign: 'middle' }}>
-                <Img src={`${baseUrl}/icons/icon-192.png`} width="36" height="36" alt="" style={{ borderRadius: '999px', border: `1.5px solid ${PAPER}` }} />
+                <Link href={url('/forum')}>
+                  <Img src={`${baseUrl}/icons/icon-192.png`} width="36" height="36" alt="Mahalle" style={{ borderRadius: '999px', border: `1.5px solid ${PAPER}` }} />
+                </Link>
               </Column>
               <Column style={{ verticalAlign: 'middle' }}>
-                <Text style={wordmark}>mahalle</Text>
+                <Text style={wordmark}><Link href={url('/forum')} style={wordmarkLink}>mahalle</Link></Text>
                 <Text style={mastKicker}>SCHILLERKIEZ · KIEZ-BRIEF · {weekLabel(data.week, locale).toUpperCase()}</Text>
               </Column>
             </Row>
@@ -119,10 +125,22 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = fal
               </Section>
             )}
 
-            {data.events.length > 0 && (
+            {data.blog.length > 0 && (
               <Section>
-                <Heading as="h2" style={h2(TEAL)}>{c.events}</Heading>
-                {data.events.map((e) => <EventRow key={e.id} e={e} href={url('/calendar')} locale={locale} />)}
+                <Heading as="h2" style={h2(RUST)}>{c.blog}</Heading>
+                {data.blog.map((b) => (
+                  <Section key={b.slug} style={row}>
+                    {b.cover ? (
+                      <Link href={post(`/blog/${b.slug}`)}>
+                        <Img src={abs(b.cover)} width="456" alt="" style={coverImg} />
+                      </Link>
+                    ) : null}
+                    <Text style={item}>
+                      <Link href={post(`/blog/${b.slug}`)} style={link}>{b.title}</Link>
+                      <br /><span style={excerpt}>{b.description}</span>
+                    </Text>
+                  </Section>
+                ))}
               </Section>
             )}
 
@@ -148,21 +166,41 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = fal
               </Section>
             )}
 
-            {data.blog.length > 0 && (
+            {data.newsCount > 0 && (
               <Section>
-                <Heading as="h2" style={h2(RUST)}>{c.blog}</Heading>
-                {data.blog.map((b) => (
-                  <Section key={b.slug} style={row}>
-                    {b.cover ? (
-                      <Link href={post(`/blog/${b.slug}`)}>
-                        <Img src={abs(b.cover)} width="456" alt="" style={coverImg} />
-                      </Link>
-                    ) : null}
+                <Heading as="h2" style={h2(INK)}>{c.news}</Heading>
+                <Text style={item}>
+                  {newsLineFor(data.newsCount, locale)}{' '}
+                  <Link href={url('/newsboard')} style={link}>{`${c.newsCta} →`}</Link>
+                </Text>
+              </Section>
+            )}
+
+            {data.official.length > 0 && (
+              <Section>
+                <Heading as="h2" style={h2(PLUM)}>{c.official}</Heading>
+                {data.official.map((o) => (
+                  <Section key={o.id} style={row}>
                     <Text style={item}>
-                      <Link href={post(`/blog/${b.slug}`)} style={link}>{b.title}</Link>
-                      <br /><span style={excerpt}>{b.description}</span>
+                      <Link href={post(`/announcements/${o.id}`)} style={link}>{o.title}</Link>
+                      {o.excerpt ? <><br /><span style={excerpt}>{o.excerpt}</span></> : null}
                     </Text>
                   </Section>
+                ))}
+              </Section>
+            )}
+
+            {data.events.length > 0 && (
+              <Section>
+                <Heading as="h2" style={h2(TEAL)}>{c.events}</Heading>
+                {pairs(data.events).map(([a, b]) => (
+                  <Row key={a.id} style={gridRow}>
+                    <Column style={card}><EventCard e={a} href={url('/calendar')} locale={locale} /></Column>
+                    <Column style={gutter}>{'\u00a0'}</Column>
+                    {b
+                      ? <Column style={card}><EventCard e={b} href={url('/calendar')} locale={locale} /></Column>
+                      : <Column style={cardEmpty}>{'\u00a0'}</Column>}
+                  </Row>
                 ))}
               </Section>
             )}
@@ -192,24 +230,27 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = fal
   );
 }
 
-function EventRow({ e, href, locale }: { e: BriefEvent; href: string; locale: MailLocale }) {
+// One event card of the two-column grid: date tile and weekday/time side by side, the title under them.
+function EventCard({ e, href, locale }: { e: BriefEvent; href: string; locale: MailLocale }) {
   const d = berlin(e.startMs, locale);
   return (
-    <Row style={row}>
-      <Column style={{ width: '64px', verticalAlign: 'top' }}>
-        <div style={dateTile}>
-          <div style={tileDay}>{d.day}</div>
-          <div style={tileMonth}>{d.month}</div>
-        </div>
-      </Column>
-      <Column style={{ verticalAlign: 'top' }}>
-        <Text style={item}>
-          <span style={meta}>{d.wd} · {e.allDay ? MAIL_COPY[locale].allDay : d.time}</span><br />
-          <Link href={href} style={link}>{e.title}</Link>
-          {e.location ? <><br /><span style={meta}>{e.location}</span></> : null}
-        </Text>
-      </Column>
-    </Row>
+    <>
+      <Row>
+        <Column style={{ width: '60px', verticalAlign: 'middle' }}>
+          <div style={dateTile}>
+            <div style={tileDay}>{d.day}</div>
+            <div style={tileMonth}>{d.month}</div>
+          </div>
+        </Column>
+        <Column style={{ verticalAlign: 'middle' }}>
+          <Text style={cardWhen}>{d.wd}<br />{e.allDay ? MAIL_COPY[locale].allDay : d.time}</Text>
+        </Column>
+      </Row>
+      <Text style={cardText}>
+        <Link href={href} style={link}>{e.title}</Link>
+        {e.location ? <><br /><span style={meta}>{e.location}</span></> : null}
+      </Text>
+    </>
   );
 }
 
@@ -218,6 +259,7 @@ const containerStyle = { backgroundColor: '#f7f0de', border: `1.5px solid ${INK}
 const topLine = { color: '#7a7264', fontSize: '12px', textAlign: 'center' as const, margin: '0 0 10px' };
 const mast = { backgroundColor: RUST, padding: '14px 24px', borderBottom: `1.5px solid ${INK}` };
 const wordmark = { color: PAPER, fontFamily: 'Georgia, serif', fontSize: '22px', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, lineHeight: '1.1' };
+const wordmarkLink = { color: PAPER, textDecoration: 'none' };
 const mastKicker = { color: PAPER, fontFamily: 'Menlo, Consolas, monospace', fontSize: '9px', letterSpacing: '0.14em', margin: '2px 0 0', opacity: 0.85 };
 const inner = { padding: '22px 24px 8px' };
 const foot = { padding: '12px 24px 18px', borderTop: '1px solid #c9bea3', backgroundColor: PAPER };
@@ -233,7 +275,16 @@ const meta = { color: '#7a7264', fontSize: '12.5px' };
 const thumbImg = { borderRadius: '6px', border: `1px solid ${INK}`, display: 'block' as const };
 const placeholderTile = { width: '60px', height: '60px', lineHeight: '60px', textAlign: 'center' as const, borderRadius: '6px', border: `1px solid ${INK}`, backgroundColor: '#f0d9a8', color: OCHRE, fontFamily: 'Menlo, Consolas, monospace', fontSize: '22px', fontWeight: 700 };
 const coverImg = { width: '100%', height: 'auto', borderRadius: '8px', border: `1.5px solid ${INK}`, display: 'block' as const, marginBottom: '8px' };
-const dateTile = { width: '52px', border: `1.5px solid ${INK}`, borderRadius: '8px', textAlign: 'center' as const, backgroundColor: PAPER, overflow: 'hidden' as const };
+const dateTile = { width: '52px', border: `1.5px solid ${INK}`, borderRadius: '8px', textAlign: 'center' as const, backgroundColor: '#fbf6e9', overflow: 'hidden' as const };
+// Events grid: two cards and a gutter per table row. Tables only — no flex/grid in mail clients.
+// `table-layout: fixed` holds the 48/4/48 split: with the automatic layout one long word
+// („Nachbarschaftsfrühstück") widened its card and pushed the whole mail past a phone's width.
+const gridRow = { marginBottom: '10px', tableLayout: 'fixed' as const, width: '100%' };
+const card = { width: '48%', verticalAlign: 'top' as const, border: `1px solid ${INK}`, borderRadius: '8px', backgroundColor: PAPER, padding: '10px' };
+const cardEmpty = { width: '48%', fontSize: '1px', lineHeight: '1px' };
+const gutter = { width: '4%', fontSize: '1px', lineHeight: '1px' };
+const cardWhen = { color: '#5a5448', fontFamily: 'Menlo, Consolas, monospace', fontSize: '11px', lineHeight: '1.4', letterSpacing: '0.04em', margin: 0 };
+const cardText = { color: '#3a362e', fontSize: '14px', lineHeight: '1.4', margin: '8px 0 0', wordBreak: 'break-word' as const, overflowWrap: 'anywhere' as const, hyphens: 'auto' as const };
 const tileDay = { fontSize: '20px', fontWeight: 800, color: INK, lineHeight: '1.1', padding: '6px 0 0' };
 const tileMonth = { fontFamily: 'Menlo, Consolas, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: PAPER, backgroundColor: TEAL, padding: '2px 0 3px', marginTop: '4px' };
 const air = { color: '#5a5448', fontSize: '13px', margin: '18px 0 0', paddingTop: '12px', borderTop: '1px dashed #c9bea3' };

@@ -19,6 +19,7 @@ export const WINDOW_MS = 7 * DAY_MS;
 export const MAX_POSTS = 8;
 export const MAX_EVENTS = 8;
 export const MAX_LISTINGS = 6;
+export const MAX_OFFICIAL = 3;
 
 /** The placeholder the template prints for the unsubscribe link; replaced per recipient. */
 export const UNSUB_PLACEHOLDER = '%%UNSUB%%';
@@ -46,8 +47,9 @@ export const MAIL_COPY = {
     linksHint: null as string | null, // German mail, German posts: nothing to translate
     noName: 'Nachbar:in',
     forum: 'Im Forum', events: 'Nächste Woche im Kiez', market: 'Neu auf dem Markt', blog: 'In der Beilage',
+    news: 'Im Kurier', newsCta: 'Zum Kurier', official: 'Neu bei Mahalle',
     allDay: 'ganztägig', reply: 'Antwort', replies: 'Antworten', formerMember: 'Ehemaliges Mitglied',
-    air: 'Luftqualität heute:', station: 'Station Nansenstraße', cta: 'Zum Forum',
+    air: 'Luftqualität heute:', station: 'Station Nansenstraße', cta: 'Mahalle öffnen',
     why: 'Du bekommst diesen Brief einmal die Woche, weil du Mitglied bei Mahalle bist.',
     unsubscribe: 'Abbestellen', settings: 'Mitteilungen einstellen', imprint: 'Impressum', privacy: 'Datenschutz',
     preheaderFallback: 'Neues aus dem Schillerkiez', week: 'KW',
@@ -60,8 +62,9 @@ export const MAIL_COPY = {
     linksHint: 'Every link opens the post in Mahalle, already translated.' as string | null,
     noName: 'neighbour',
     forum: 'In the forum', events: 'Next week in the Kiez', market: 'New on the market', blog: 'In the Beilage',
+    news: 'In the Kurier', newsCta: 'Open the news board', official: 'New at Mahalle',
     allDay: 'all day', reply: 'reply', replies: 'replies', formerMember: 'Former member',
-    air: 'Air quality today:', station: 'Nansenstraße station', cta: 'Open the forum',
+    air: 'Air quality today:', station: 'Nansenstraße station', cta: 'Open Mahalle',
     why: 'You get this letter once a week because you are a member of Mahalle.',
     unsubscribe: 'Unsubscribe', settings: 'Notification settings', imprint: 'Imprint', privacy: 'Privacy',
     preheaderFallback: 'News from the Schillerkiez', week: 'CW',
@@ -135,6 +138,8 @@ export interface BriefEvent { id: string; title: string; startMs: number; allDay
 export interface BriefListing { id: string; title: string; kind: 'sell' | 'exchange' | 'gift'; price: number | null; createdMs: number; image: string | null }
 export interface BriefBlogPost { slug: string; title: string; description: string; pubMs: number; cover: string | null }
 export interface BriefAir { lqi: number }
+/** An official announcement of the week („Neu bei Mahalle"): what the team shipped or has to say. */
+export interface BriefOfficial { id: string; title: string; excerpt: string | null; dateMs: number }
 
 export interface BriefData {
   week: string;
@@ -142,6 +147,10 @@ export interface BriefData {
   events: BriefEvent[];
   listings: BriefListing[];
   blog: BriefBlogPost[];
+  /** Official announcements of the week, newest first. */
+  official: BriefOfficial[];
+  /** Approved Kurier articles of the week — only a number, the mail prints one teaser line. */
+  newsCount: number;
   air: BriefAir | null;
 }
 
@@ -170,13 +179,19 @@ export function arrangeData(d: BriefData): BriefData {
       .map((l) => ({ ...l, title: inert(l.title) })),
     blog: [...d.blog].sort((a, b) => b.pubMs - a.pubMs || a.slug.localeCompare(b.slug))
       .map((b) => ({ ...b, title: inert(b.title), description: inert(b.description) })),
+    official: [...d.official].sort((a, b) => b.dateMs - a.dateMs || a.id.localeCompare(b.id)).slice(0, MAX_OFFICIAL)
+      .map((o) => ({ ...o, title: inert(o.title), excerpt: o.excerpt === null ? null : inert(o.excerpt) })),
+    newsCount: Number.isInteger(d.newsCount) && d.newsCount > 0 ? d.newsCount : 0,
     air: d.air && Number.isInteger(d.air.lqi) && d.air.lqi >= 1 && d.air.lqi <= 5 ? d.air : null,
   };
 }
 
-/** A quiet week has nothing in the four content sections (the air line alone is no reason to write). */
+/**
+ * A quiet week has nothing in the five content sections. The air line and the Kurier teaser alone
+ * are no reason to write: news arrives every day, so a mail that counted it would never be quiet.
+ */
 export function isQuiet(d: BriefData): boolean {
-  return d.posts.length === 0 && d.events.length === 0 && d.listings.length === 0 && d.blog.length === 0;
+  return d.posts.length === 0 && d.events.length === 0 && d.listings.length === 0 && d.blog.length === 0 && d.official.length === 0;
 }
 
 function plural(n: number, one: string, many: string): string {
@@ -198,7 +213,21 @@ export function subjectFor(d: BriefData, locale: MailLocale = 'de'): string {
 
 /** The hidden preview line: the newest forum title, else the next event, else the newest listing. */
 export function preheaderFor(d: BriefData, locale: MailLocale = 'de'): string {
-  return d.posts[0]?.title ?? d.events[0]?.title ?? d.listings[0]?.title ?? d.blog[0]?.title ?? MAIL_COPY[locale].preheaderFallback;
+  return d.posts[0]?.title ?? d.events[0]?.title ?? d.listings[0]?.title ?? d.blog[0]?.title ?? d.official[0]?.title ?? MAIL_COPY[locale].preheaderFallback;
+}
+
+/** The Kurier teaser: one sentence with the week's real article count (the caller omits it at 0). */
+export function newsLineFor(n: number, locale: MailLocale = 'de'): string {
+  return locale === 'en'
+    ? `Curious what happened this week? On the news board: ${plural(n, 'article', 'articles')}.`
+    : `Neugierig, was diese Woche los war? Im Kurier: ${n} Artikel.`;
+}
+
+/** Events print two to a row; the last row of an odd list has one. */
+export function pairs<T>(list: T[]): [T, T | null][] {
+  const out: [T, T | null][] = [];
+  for (let i = 0; i < list.length; i += 2) out.push([list[i], list[i + 1] ?? null]);
+  return out;
 }
 
 /** Deep links carry the source so a visit from the mail is visible in the visitor counter later. */

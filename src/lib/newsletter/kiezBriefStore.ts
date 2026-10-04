@@ -7,7 +7,7 @@ import { PUBLIC_AUTHOR_PROJECTION } from '../publicAuthor';
 import { getAirHistory } from '../kiez/airLog';
 import {
   windowFor, arrangeData, excerptOf, thumb, storedMailLocale, isIssueWeekKey, type MailLocale,
-  type BriefData, type BriefPost, type BriefPostKind, type BriefEvent, type BriefListing, type BriefBlogPost,
+  type BriefData, type BriefPost, type BriefPostKind, type BriefEvent, type BriefListing, type BriefBlogPost, type BriefOfficial,
 } from './kiezBriefRules';
 
 export const KIEZ_BRIEF_COLLECTION = 'kiezBriefIssues';
@@ -44,6 +44,9 @@ export async function markIssue(db: Db, week: string, patch: Partial<Pick<IssueD
 const PUBLIC = { $or: [{ moderationStatus: 'approved' }, { moderationStatus: { $exists: false } }], hasWarningLabel: { $ne: true } };
 const POST_COLLECTIONS: Record<BriefPostKind, string> = { topic: 'topics', announcement: 'announcements', recommendation: 'recommendations' };
 
+/** News carries its day as a UTC 'YYYY-MM-DD' string (`fetchDate`). */
+const dayKey = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
+
 const toMs = (v: unknown): number => {
   const t = v instanceof Date ? v.getTime() : typeof v === 'number' ? v : typeof v === 'string' ? Date.parse(v) : NaN;
   return Number.isFinite(t) ? t : 0;
@@ -62,7 +65,7 @@ export interface LoadOptions {
 export async function loadIssueData(db: Db, week: string, nowMs: number, blog: BlogInput[], opts: LoadOptions = {}): Promise<BriefData> {
   const w = windowFor(nowMs);
   const kinds = Object.keys(POST_COLLECTIONS) as BriefPostKind[];
-  const [postLists, eventDocs, listingDocs, air] = await Promise.all([
+  const [postLists, eventDocs, listingDocs, air, officialDocs, newsCount] = await Promise.all([
     Promise.all(kinds.map(async (kind) => {
       const docs = await db.collection(POST_COLLECTIONS[kind])
         .find({ ...PUBLIC, date: { $gt: w.fromMs, $lte: w.toMs }, isOfficial: { $ne: true } },
@@ -79,6 +82,16 @@ export async function loadIssueData(db: Db, week: string, nowMs: number, blog: B
         { projection: { title: 1, listingType: 1, price: 1, createdAt: 1, images: 1 } })
       .toArray(),
     opts.air === false ? null : getAirHistory(db, new Date(nowMs)).catch(() => null),
+    // „Neu bei Mahalle": the team's own announcements of the week (kept OUT of the forum section above).
+    db.collection('announcements')
+      .find({ ...PUBLIC, date: { $gt: w.fromMs, $lte: w.toMs }, isOfficial: true },
+        { projection: { title: 1, date: 1, body: 1 } })
+      .toArray(),
+    // The Kurier teaser needs one number: approved articles of the last seven days. Garnish — a
+    // failing count drops the line, never the issue.
+    db.collection('news')
+      .countDocuments({ moderationStatus: 'approved', fetchDate: { $gt: dayKey(w.fromMs), $lte: dayKey(w.toMs) } })
+      .catch(() => 0),
   ]);
 
   // Author names: one join through the public allowlist (tombstone-safe), never a stored name.
@@ -113,8 +126,12 @@ export async function loadIssueData(db: Db, week: string, nowMs: number, blog: B
     .map((b) => ({ slug: b.slug, title: b.title, description: b.description, pubMs: toMs(b.pubDate), cover: typeof b.cover === 'string' && b.cover ? b.cover : null }))
     .filter((b) => b.pubMs > w.fromMs && b.pubMs <= w.toMs);
 
+  const official: BriefOfficial[] = officialDocs.map((o) => ({
+    id: String(o._id), title: String(o.title ?? ''), excerpt: excerptOf(o.body), dateMs: toMs(o.date),
+  }));
+
   return arrangeData({
-    week, posts, events, listings, blog: blogPosts,
+    week, posts, events, listings, blog: blogPosts, official, newsCount,
     air: air?.lastReading ? { lqi: air.lastReading.lqi } : null,
   });
 }

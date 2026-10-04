@@ -22,6 +22,8 @@ function fakeDb(seed: Record<string, any[]> = {}) {
         let list = [...rows(name)];
         if (filter?._id?.$in) list = list.filter((r) => filter._id.$in.some((id: any) => String(id) === String(r._id)));
         if (filter?.sentAt?.$type === 'date') list = list.filter((r) => r.sentAt instanceof Date);
+        if (filter?.isOfficial === true) list = list.filter((r) => r.isOfficial === true);
+        if (filter?.isOfficial?.$ne === true) list = list.filter((r) => r.isOfficial !== true);
         const cursor = {
           sort: (spec: Record<string, 1 | -1> = {}) => {
             const [key, dir] = Object.entries(spec)[0] ?? [];
@@ -32,6 +34,10 @@ function fakeDb(seed: Record<string, any[]> = {}) {
           toArray: async () => list,
         };
         return cursor;
+      },
+      countDocuments: async (filter: any) => {
+        calls.push({ collection: name, op: 'countDocuments', filter });
+        return rows(name).length;
       },
       findOne: async (filter: any) => {
         calls.push({ collection: name, op: 'findOne', filter });
@@ -188,4 +194,35 @@ test('listSentIssues: sent weeks only, newest first, capped', async () => {
   assert.deepEqual(calls[0].filter, { sentAt: { $type: 'date' } });
   assert.deepEqual((await listSentIssues(db, 2)).map((i) => i.week), ['2026-W42', '2026-W40']);
   assert.deepEqual(await listSentIssues(fakeDb().db), []);
+});
+
+test('issue data: the week\'s official announcements are their own section, never in the forum list; news is one number', async () => {
+  const { db, calls } = fakeDb({
+    topics: [], recommendations: [], events: [], listings: [],
+    announcements: [
+      { _id: 'o1', title: 'Neu: die Suche', body: 'Oben rechts die **Lupe** antippen.', date: NOW - 3 * HOUR, isOfficial: true },
+      { _id: 'a1', title: 'Hofflohmarkt', author: 'kaputt', comments: [], date: NOW - 5 * HOUR },
+    ],
+    news: [{ _id: 'n1' }, { _id: 'n2' }, { _id: 'n3' }],
+  });
+  const d = await loadIssueData(db, '2026-W41', NOW, [], { air: false });
+  assert.deepEqual(d.official, [{ id: 'o1', title: 'Neu: die Suche', excerpt: 'Oben rechts die Lupe antippen.', dateMs: NOW - 3 * HOUR }]);
+  assert.deepEqual(d.posts.map((p) => p.id), ['a1']);
+  assert.equal(d.newsCount, 3);
+  const official = calls.find((c) => c.collection === 'announcements' && c.filter.isOfficial === true)!.filter;
+  assert.deepEqual(official.date, { $gt: NOW - 7 * DAY, $lte: NOW });
+  assert.deepEqual(official.hasWarningLabel, { $ne: true });
+  const news = calls.find((c) => c.collection === 'news')!;
+  assert.equal(news.op, 'countDocuments');
+  assert.deepEqual(news.filter, { moderationStatus: 'approved', fetchDate: { $gt: '2026-10-04', $lte: '2026-10-11' } });
+});
+
+test('a failing news count drops the teaser, nothing else', async () => {
+  const base = fakeDb({ topics: [{ _id: 't1', title: 'Frage', author: 'x', comments: [], date: NOW - HOUR }], announcements: [], recommendations: [], events: [], listings: [] });
+  const db = {
+    collection: (name: string) => (name === 'news' ? { countDocuments: async () => { throw new Error('news down'); } } : base.db.collection(name)),
+  } as unknown as Db;
+  const d = await loadIssueData(db, '2026-W41', NOW, [], { air: false });
+  assert.equal(d.newsCount, 0);
+  assert.deepEqual(d.posts.map((p) => p.id), ['t1']);
 });
