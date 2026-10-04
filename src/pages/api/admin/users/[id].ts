@@ -5,11 +5,14 @@ import { connectDB } from '../../../../lib/mongodb';
 import { requireAdminSession } from '../../../../lib/auth';
 import { MEMBER_TYPES, MAX_DAILY_LIMIT } from '../../../../lib/members/memberType';
 import { planAdminPatch } from '../../../../lib/members/memberTypeChange';
+import { NEWSLETTER_MODES, storedNewsletterMode } from '../../../../lib/newsletter/kiezBriefRules';
 
 // PATCH /api/admin/users/[id] — admin writes on a member: `verified` (Kiez-
 // verification v1), `memberType` (correcting the member's own choice) and
 // `dailyLimit` (1–50, organisations only). This admin-gated endpoint is the
 // ONLY writer of `verified` and `dailyLimit` — keep it that way.
+// `newsletter` ('weekly' | 'off', 2026-10-04): the Kiez-Brief switch the member
+// also has in the profile — here for test accounts and addresses that bounce.
 // Tombstoned accounts (anonymized: true) are excluded from the match →
 // 404, so a deleted user can't be re-verified.
 
@@ -17,6 +20,7 @@ const BodySchema = z.object({
   verified: z.boolean().optional(),
   memberType: z.enum(MEMBER_TYPES).optional(),
   dailyLimit: z.number().int().min(1).max(MAX_DAILY_LIMIT).nullable().optional(),
+  newsletter: z.enum(NEWSLETTER_MODES).optional(),
 }).strict();
 
 export const PATCH: APIRoute = async ({ request, params }) => {
@@ -55,7 +59,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     // Read first: the limit rule depends on the member's type AFTER this call.
     const stored = await users.findOne(
       { _id, anonymized: { $ne: true } },
-      { projection: { memberType: 1, dailyLimit: 1, verified: 1 } }
+      { projection: { memberType: 1, dailyLimit: 1, verified: 1, newsletter: 1 } }
     );
     if (!stored) {
       return new Response(JSON.stringify({ error: 'not_found' }), {
@@ -64,7 +68,12 @@ export const PATCH: APIRoute = async ({ request, params }) => {
       });
     }
 
-    const plan = planAdminPatch(stored, parsed.data);
+    // The planner knows `verified`, `memberType` and `dailyLimit`, and refuses a body with none
+    // of them — so a Kiez-Brief-only call gets an empty plan (nothing else changes).
+    const { newsletter, ...rest } = parsed.data;
+    const plan = newsletter !== undefined && Object.keys(rest).length === 0
+      ? planAdminPatch(stored, { verified: stored.verified === true })
+      : planAdminPatch(stored, rest);
     if (!plan.ok) {
       return new Response(JSON.stringify({ error: plan.error }), {
         status: 400,
@@ -72,9 +81,17 @@ export const PATCH: APIRoute = async ({ request, params }) => {
       });
     }
 
+    // Same storage rule as the member's own switch: absent = weekly, 'off' = none.
+    const set: Record<string, unknown> = { ...plan.set };
+    const unset: string[] = [...plan.unset];
+    // The Kiez-Brief-only plan above restates `verified` to satisfy the planner: do not write it.
+    if (newsletter !== undefined && Object.keys(rest).length === 0) delete set.verified;
+    if (newsletter === 'off') set.newsletter = 'off';
+    if (newsletter === 'weekly') unset.push('newsletter');
+
     const update: Record<string, Record<string, unknown>> = {};
-    if (Object.keys(plan.set).length > 0) update.$set = plan.set;
-    if (plan.unset.length > 0) update.$unset = Object.fromEntries(plan.unset.map((f) => [f, '']));
+    if (Object.keys(set).length > 0) update.$set = set;
+    if (unset.length > 0) update.$unset = Object.fromEntries(unset.map((f) => [f, '']));
     if (Object.keys(update).length > 0) {
       await users.updateOne({ _id, anonymized: { $ne: true } }, update);
     }
@@ -84,6 +101,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
       verified: plan.set.verified ?? stored.verified === true,
       memberType: plan.result.memberType,
       dailyLimit: plan.result.dailyLimit,
+      newsletter: newsletter ?? storedNewsletterMode(stored.newsletter),
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

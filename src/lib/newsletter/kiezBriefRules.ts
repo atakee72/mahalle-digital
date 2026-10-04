@@ -9,8 +9,16 @@ export function storedNewsletterMode(v: unknown): NewsletterMode {
   return v === 'off' ? 'off' : 'weekly';
 }
 
-/** Resend Free sends 100 mails per UTC day; the auth mails of that day need the rest. */
-export const MAX_RECIPIENTS = 95;
+/**
+ * Resend Free sends 100 mails per UTC day, shared with the login and confirmation mails. So an
+ * issue goes out in GROUPS of this size, one group per UTC day: the first on Sunday evening, the
+ * next with the morning job of the following day(s). 25 mails a day stay free for the auth mails.
+ */
+export const GROUP_SIZE = 75;
+/** More groups than this (150 members) is the owner's line for the paid plan: the send warns, and still goes out. */
+export const GROUPS_BEFORE_WARNING = 2;
+/** A group still waiting after this long is dropped: „the week" is no longer news. */
+export const PENDING_MAX_AGE_MS = 4 * 24 * 60 * 60 * 1000;
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const WINDOW_MS = 7 * DAY_MS;
@@ -23,6 +31,11 @@ export const MAX_OFFICIAL = 3;
 
 /** The placeholder the template prints for the unsubscribe link; replaced per recipient. */
 export const UNSUB_PLACEHOLDER = '%%UNSUB%%';
+/**
+ * The placeholder for the „confirm your address" note. Members who never confirmed their e-mail
+ * address get the mail too (owner, 2026-10-04) — with this note; for everyone else it becomes ''.
+ */
+export const VERIFY_PLACEHOLDER = '%%VERIFY%%';
 /** The placeholder for the recipient's display name in the greeting; replaced per recipient, HTML-escaped. */
 export const NAME_PLACEHOLDER = '%%NAME%%';
 
@@ -54,6 +67,7 @@ export const MAIL_COPY = {
     unsubscribe: 'Abbestellen', settings: 'Im Profil einstellen', imprint: 'Impressum', privacy: 'Datenschutz',
     preheaderFallback: 'Neues aus dem Schillerkiez', week: 'KW',
     viewInBrowser: 'Im Browser ansehen', allIssues: 'Alle Ausgaben',
+    verifyNote: 'Deine E-Mail-Adresse ist noch nicht bestätigt.', verifyCta: 'Jetzt bestätigen',
   },
   en: {
     title: 'The week in the Kiez',
@@ -69,6 +83,7 @@ export const MAIL_COPY = {
     unsubscribe: 'Unsubscribe', settings: 'Settings in your profile', imprint: 'Imprint', privacy: 'Privacy',
     preheaderFallback: 'News from the Schillerkiez', week: 'CW',
     viewInBrowser: 'View in browser', allIssues: 'All issues',
+    verifyNote: 'Your e-mail address is not confirmed yet.', verifyCta: 'Confirm it now',
   },
 } as const;
 
@@ -294,10 +309,37 @@ export function inert(s: string): string {
   return s.replaceAll('%%', '%\u200b%');
 }
 
-/** The per-recipient step on finished HTML: function replacers keep `$&`, `$\``, `$'` and `$$` literal. */
-export function personalize(html: string, name: string | null, unsubUrl: string, locale: MailLocale): string {
+/**
+ * The note an unconfirmed member reads above the headline. Finished HTML (it is inserted by string
+ * replace, after React's render): fixed copy and our own base URL only, never member input.
+ */
+export function verifyNoteHtml(baseUrl: string, locale: MailLocale = 'de'): string {
+  const c = MAIL_COPY[locale];
+  const href = escapeHtml(withUtm(`${baseUrl}/verify-email`));
+  return `<p style="margin:0 0 14px;padding:10px 12px;border:1.5px solid #c9861b;border-radius:8px;background-color:#fbf1d8;color:#3a362e;font-family:Georgia,serif;font-size:13.5px;line-height:1.45">`
+    + `${escapeHtml(c.verifyNote)} <a href="${href}" style="color:#1b1a17;font-weight:700;text-decoration:underline">${escapeHtml(c.verifyCta)} →</a></p>`;
+}
+
+/**
+ * The per-recipient step on finished HTML; function replacers keep the `$` replacement patterns
+ * of a name literal. `verifyNote` is '' for a confirmed member, verifyNoteHtml() for an unconfirmed one.
+ */
+export function personalize(html: string, name: string | null, unsubUrl: string, locale: MailLocale, verifyNote = ''): string {
   const safeName = escapeHtml(name?.trim() || MAIL_COPY[locale].noName);
-  return html.replaceAll(UNSUB_PLACEHOLDER, () => unsubUrl).replaceAll(NAME_PLACEHOLDER, () => safeName);
+  return html
+    .replaceAll(VERIFY_PLACEHOLDER, () => verifyNote)
+    .replaceAll(UNSUB_PLACEHOLDER, () => unsubUrl)
+    .replaceAll(NAME_PLACEHOLDER, () => safeName);
+}
+
+/** UTC calendar day of an instant — the provider's quota day. */
+export function utcDay(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+/** The next group of an issue is due on a LATER UTC day than the group before it (one group per quota day). */
+export function groupDue(lastGroupAtMs: number | null, nowMs: number): boolean {
+  return lastGroupAtMs === null || utcDay(nowMs) > utcDay(lastGroupAtMs);
 }
 
 /** The placeholder tile of a listing without photo: one symbol per kind, same in both languages. */

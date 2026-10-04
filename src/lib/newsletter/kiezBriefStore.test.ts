@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import type { Db } from 'mongodb';
 import {
   claimIssue, markIssue, loadIssueData, loadRecipients, findSentIssue, loadSentIssue, listSentIssues, KIEZ_BRIEF_COLLECTION,
+  countRecipients, findPendingIssue, takeNextGroup,
   type IssueDoc,
 } from './kiezBriefStore';
 
@@ -24,10 +25,15 @@ function fakeDb(seed: Record<string, any[]> = {}) {
         if (filter?.sentAt?.$type === 'date') list = list.filter((r) => r.sentAt instanceof Date);
         if (filter?.isOfficial === true) list = list.filter((r) => r.isOfficial === true);
         if (filter?.isOfficial?.$ne === true) list = list.filter((r) => r.isOfficial !== true);
+        if (filter?._id?.$gt) list = list.filter((r) => String(r._id) > String(filter._id.$gt));
+        if (filter?.newsletter?.$ne) list = list.filter((r) => r.newsletter !== filter.newsletter.$ne);
+        if (filter?.more === true) list = list.filter((r) => r.more === true);
+        if (filter?.claimedAt?.$gte) list = list.filter((r) => r.claimedAt >= filter.claimedAt.$gte);
         const cursor = {
           sort: (spec: Record<string, 1 | -1> = {}) => {
             const [key, dir] = Object.entries(spec)[0] ?? [];
-            if (key) list.sort((a, b) => (Number(a[key]) - Number(b[key])) * (dir as number));
+            const val = (v: any) => (v instanceof Date ? v.getTime() : typeof v === 'number' ? v : String(v));
+            if (key) list.sort((a, b) => (val(a[key]) < val(b[key]) ? -1 : val(a[key]) > val(b[key]) ? 1 : 0) * (dir as number));
             return cursor;
           },
           limit: (n: number) => { list = list.slice(0, n); return cursor; },
@@ -47,7 +53,14 @@ function fakeDb(seed: Record<string, any[]> = {}) {
         if (rows(name).some((r) => r._id === doc._id)) throw Object.assign(new Error('dup'), { code: 11000 });
         rows(name).push(doc);
       },
-      updateOne: async (filter: any, update: any) => { calls.push({ collection: name, op: 'updateOne', filter, update }); },
+      // Applies $set when every plain condition of the filter matches (enough for the conditional group claim).
+      updateOne: async (filter: any, update: any) => {
+        calls.push({ collection: name, op: 'updateOne', filter, update });
+        const row = rows(name).find((r) => Object.entries(filter).every(([k, v]) => r[k] === v));
+        if (!row) return { modifiedCount: 0 };
+        Object.assign(row, update.$set ?? {});
+        return { modifiedCount: 1 };
+      },
     }),
   } as unknown as Db;
   return { db, data, calls };
@@ -122,12 +135,23 @@ test('a failing air lookup leaves the air line out, nothing else', async () => {
   assert.equal(d.posts.length, 0);
 });
 
-test('recipients: verified, not anonymized, not banned, not off, not in deletion grace, with an e-mail string', async () => {
-  const { db, calls } = fakeDb({ users: [{ _id: 'u1', email: 'a@b.c', name: 'A', locale: 'en' }, { _id: 'u2', email: 'd@e.f' }] });
-  assert.deepEqual(await loadRecipients(db), [{ id: 'u1', email: 'a@b.c', name: 'A', locale: 'en' }, { id: 'u2', email: 'd@e.f', name: null, locale: 'de' }]);
+const uid = (n: number) => n.toString(16).padStart(24, '0'); // ids sort like joining dates
+const member = (n: number, patch: Record<string, unknown> = {}) => ({ _id: uid(n), email: `m${n}@x.test`, name: `M${n}`, emailVerified: true, ...patch });
+
+test('recipients: every reachable member who did not switch it off — confirmed address or not — oldest first', async () => {
+  const { db, calls } = fakeDb({ users: [member(2, { emailVerified: false, locale: 'en' }), member(1), member(3, { name: undefined, emailVerified: undefined })] });
+  assert.deepEqual(await loadRecipients(db), [
+    { id: uid(1), email: 'm1@x.test', name: 'M1', locale: 'de', verified: true },
+    { id: uid(2), email: 'm2@x.test', name: 'M2', locale: 'en', verified: false },
+    { id: uid(3), email: 'm3@x.test', name: null, locale: 'de', verified: false },
+  ]);
+  // No `emailVerified` in the filter: an unconfirmed member gets the mail (with the note).
   assert.deepEqual(calls[0].filter, {
-    emailVerified: true, anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, deletionScheduledAt: { $exists: false }, email: { $type: 'string' },
+    anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, deletionScheduledAt: { $exists: false }, email: { $type: 'string' },
   });
+  assert.deepEqual((await loadRecipients(db, { afterId: uid(1), limit: 1 })).map((r) => r.id), [uid(2)]);
+  assert.deepEqual((await loadRecipients(db, { afterId: 'not-an-id' })).length, 3); // an unreadable cursor is no cursor
+  assert.equal(await countRecipients(db), 3);
 });
 
 const issue = (week: string, patch: Partial<IssueDoc> = {}): IssueDoc => ({
@@ -225,4 +249,66 @@ test('a failing news count drops the teaser, nothing else', async () => {
   const d = await loadIssueData(db, '2026-W41', NOW, [], { air: false });
   assert.equal(d.newsCount, 0);
   assert.deepEqual(d.posts.map((p) => p.id), ['t1']);
+});
+
+test('a claimed issue starts with no group taken', async () => {
+  const { db, data } = fakeDb();
+  await claimIssue(db, '2026-W41', NOW, false);
+  const row = data[KIEZ_BRIEF_COLLECTION][0];
+  assert.deepEqual([row.groups, row.cursor, row.more], [0, null, false]);
+});
+
+test('groups: one per UTC day, each claimed once, nobody twice, nobody skipped', async () => {
+  const { db, data } = fakeDb({ users: [member(1), member(2), member(3), member(4), member(5)] });
+  await claimIssue(db, '2026-W41', NOW, false);
+  const row = () => ({ ...data[KIEZ_BRIEF_COLLECTION][0] }) as IssueDoc;
+  const ids = (t: { recipients: { id: string }[] } | null) => t?.recipients.map((r) => Number.parseInt(r.id, 16)) ?? null;
+
+  // Sunday evening: the first two; three are waiting.
+  const sunday = row();
+  const g1 = await takeNextGroup(db, sunday, NOW, 2);
+  assert.deepEqual([ids(g1), g1?.index, g1?.more], [[1, 2], 0, true]);
+  assert.deepEqual([row().groups, row().cursor, row().more], [1, uid(2), true]);
+  // A second run that read the row BEFORE the claim loses: the group count moved on.
+  assert.equal(await takeNextGroup(db, sunday, NOW + HOUR, 2), null);
+  assert.equal(row().groups, 1);
+  // Same UTC day (the late afternoon job): not due.
+  assert.equal(await takeNextGroup(db, row(), NOW + 3 * HOUR, 2), null);
+  assert.equal(row().groups, 1);
+
+  // Monday morning. Between the groups member 3 switched the mail off and member 6 joined.
+  data.users.find((u) => u._id === uid(3))!.newsletter = 'off';
+  data.users.push(member(6));
+  const MON = NOW + 14 * HOUR;
+  assert.equal((await findPendingIssue(db, MON))?._id, '2026-W41');
+  const g2 = await takeNextGroup(db, row(), MON, 2);
+  assert.deepEqual([ids(g2), g2?.index, g2?.more], [[4, 5], 1, true]);
+  // Monday afternoon: the same UTC day again.
+  assert.equal(await takeNextGroup(db, row(), MON + 8 * HOUR, 2), null);
+
+  // Tuesday morning: the late joiner, and the issue is closed.
+  const TUE = MON + DAY;
+  const g3 = await takeNextGroup(db, row(), TUE, 2);
+  assert.deepEqual([ids(g3), g3?.index, g3?.more], [[6], 2, false]);
+  assert.equal(await findPendingIssue(db, TUE + DAY), null);
+  assert.deepEqual([row().groups, row().cursor, row().more], [3, uid(6), false]);
+});
+
+test('an empty next group closes the issue instead of leaving it open', async () => {
+  const { db, data } = fakeDb({ users: [member(1), member(2), member(3)] });
+  await claimIssue(db, '2026-W41', NOW, false);
+  const row = () => ({ ...data[KIEZ_BRIEF_COLLECTION][0] }) as IssueDoc;
+  await takeNextGroup(db, row(), NOW, 2);
+  data.users.find((u) => u._id === uid(3))!.newsletter = 'off'; // the only one waiting leaves
+  const g2 = await takeNextGroup(db, row(), NOW + DAY, 2);
+  assert.deepEqual([g2?.recipients.length, g2?.more], [0, false]);
+  assert.deepEqual([row().more, row().cursor], [false, uid(2)]); // the cursor does not move backwards
+});
+
+test('a waiting group is dropped when the week is no longer news; a skipped issue never waits', async () => {
+  const waiting = (patch: Partial<IssueDoc>): IssueDoc => issue('2026-W41', { groups: 1, cursor: uid(2), more: true, lastGroupAt: new Date(NOW), ...patch });
+  assert.equal((await findPendingIssue(fakeDb({ [KIEZ_BRIEF_COLLECTION]: [waiting({})] }).db, NOW + 3 * DAY))?._id, '2026-W41');
+  assert.equal(await findPendingIssue(fakeDb({ [KIEZ_BRIEF_COLLECTION]: [waiting({})] }).db, NOW + 5 * DAY), null);
+  assert.equal(await findPendingIssue(fakeDb({ [KIEZ_BRIEF_COLLECTION]: [waiting({ skipped: 'quiet' })] }).db, NOW + DAY), null);
+  assert.equal(await findPendingIssue(fakeDb({ [KIEZ_BRIEF_COLLECTION]: [issue('2026-W41', { sentAt: new Date(NOW) })] }).db, NOW + DAY), null); // a row from before the groups
 });

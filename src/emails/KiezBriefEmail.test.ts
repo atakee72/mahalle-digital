@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { render } from '@react-email/render';
 import KiezBriefEmail from './KiezBriefEmail';
-import { NAME_PLACEHOLDER, UNSUB_PLACEHOLDER, type BriefData } from '../lib/newsletter/kiezBriefRules';
+import { NAME_PLACEHOLDER, UNSUB_PLACEHOLDER, VERIFY_PLACEHOLDER, type BriefData } from '../lib/newsletter/kiezBriefRules';
 
 const BASE = 'https://mahalle.example';
 const data: BriefData = {
@@ -100,4 +100,12 @@ test('the masthead icon and the wordmark open Mahalle', async () => {
 test('the footer\'s settings link leads to the profile, where the switch lives', async () => {
   assert.match(await html(), /href="https:\/\/mahalle\.example\/profile\?utm_source=kiez-brief"[^>]*>Im Profil einstellen</);
   assert.match(await html({ locale: 'en' }), />Settings in your profile</);
+});
+
+test('the confirm-your-address placeholder sits once, in a block of its own above the headline', async () => {
+  for (const out of [await html(), await html({ web: true })]) {
+    assert.equal(out.split(VERIFY_PLACEHOLDER).length - 1, 1);
+    assert.ok(out.includes(`<div>${VERIFY_PLACEHOLDER}</div>`));
+    assert.ok(out.indexOf(VERIFY_PLACEHOLDER) < out.indexOf('Das war die Woche im Kiez'));
+  }
 });

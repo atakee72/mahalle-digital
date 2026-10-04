@@ -126,11 +126,10 @@
   // ─── Kiez-Brief switch (2026-10-04) ────────────────────────────────────
   // The weekly mail's on/off lives in the Konto card (owner: the bell panel
   // was getting crowded; and there the row was hidden from unverified
-  // members, who then had nowhere to look). State here, not in PKontoCard:
+  // members, who then had nowhere to look — they get the mail too now). State here, not in PKontoCard:
   // the card is double-mounted (desktop + mobile fold). `null` = not loaded
   // (or logged out) → the row is not rendered.
   let newsMode = $state<NewsletterMode | null>(null);
-  let newsVerified = $state(false);
   let newsBusy = $state(false);
   let newsRequested = false;
 
@@ -139,7 +138,7 @@
     newsRequested = true;
     fetch('/api/profile/newsletter')
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d) { newsMode = storedNewsletterMode(d.mode); newsVerified = d.emailVerified === true; } })
+      .then((d) => { if (d) newsMode = storedNewsletterMode(d.mode); })
       .catch(() => {});
   });
 
@@ -417,7 +416,6 @@
           onCancelEmail={cancelEmailChange}
           onChangePassword={openPwPanel}
           newsletterMode={newsMode}
-          newsletterVerified={newsVerified}
           newsletterBusy={newsBusy}
           onToggleNewsletter={toggleNewsletter}
           deletionScheduledAt={profile.deletionScheduledAt}
@@ -517,7 +515,6 @@
             onCancelEmail={cancelEmailChange}
             onChangePassword={openPwPanel}
             newsletterMode={newsMode}
-            newsletterVerified={newsVerified}
             newsletterBusy={newsBusy}
             onToggleNewsletter={toggleNewsletter}
             deletionScheduledAt={profile.deletionScheduledAt}

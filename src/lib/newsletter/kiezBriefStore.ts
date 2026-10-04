@@ -6,7 +6,7 @@ import { ObjectId, type Db } from 'mongodb';
 import { PUBLIC_AUTHOR_PROJECTION } from '../publicAuthor';
 import { getAirHistory } from '../kiez/airLog';
 import {
-  windowFor, arrangeData, excerptOf, thumb, storedMailLocale, isIssueWeekKey, type MailLocale,
+  windowFor, arrangeData, excerptOf, thumb, storedMailLocale, isIssueWeekKey, groupDue, GROUP_SIZE, PENDING_MAX_AGE_MS, type MailLocale,
   type BriefData, type BriefPost, type BriefPostKind, type BriefEvent, type BriefListing, type BriefBlogPost, type BriefOfficial,
 } from './kiezBriefRules';
 
@@ -18,9 +18,20 @@ export interface IssueDoc {
   windowTo: Date;
   claimedAt: Date;
   fallback: boolean;
+  /** Mails sent so far, all groups together. */
   recipients?: number;
+  /** 'quota' only on rows older than the groups (2026-10-04): then a too-large issue was not sent at all. */
   skipped?: 'quiet' | 'quota';
+  /** When the FIRST group went out — from then on the issue has a browser page. */
   sentAt?: Date;
+  /** Groups claimed so far (0 right after the claim). Absent on rows older than the groups. */
+  groups?: number;
+  /** The id of the last member of the last claimed group; the next group starts after it. */
+  cursor?: string | null;
+  /** true while members are still waiting for their group. */
+  more?: boolean;
+  /** When the last group was claimed — the next one is due on a later UTC day. */
+  lastGroupAt?: Date;
 }
 
 /** Claim the issue BEFORE anything is rendered or sent; false = already claimed (at-most-once). */
@@ -29,6 +40,7 @@ export async function claimIssue(db: Db, week: string, nowMs: number, fallback: 
   try {
     await db.collection<IssueDoc>(KIEZ_BRIEF_COLLECTION).insertOne({
       _id: week, windowFrom: new Date(w.fromMs), windowTo: new Date(w.toMs), claimedAt: new Date(nowMs), fallback,
+      groups: 0, cursor: null, more: false,
     });
     return true;
   } catch (err) {
@@ -37,7 +49,7 @@ export async function claimIssue(db: Db, week: string, nowMs: number, fallback: 
   }
 }
 
-export async function markIssue(db: Db, week: string, patch: Partial<Pick<IssueDoc, 'recipients' | 'skipped' | 'sentAt'>>): Promise<void> {
+export async function markIssue(db: Db, week: string, patch: Partial<Pick<IssueDoc, 'recipients' | 'skipped' | 'sentAt' | 'more'>>): Promise<void> {
   await db.collection<IssueDoc>(KIEZ_BRIEF_COLLECTION).updateOne({ _id: week }, { $set: patch });
 }
 
@@ -166,13 +178,63 @@ export async function listSentIssues(db: Db, limit = 60): Promise<IssueListItem[
     .map((d) => ({ week: d._id, sentAtMs: (d.sentAt as Date).getTime() }));
 }
 
-export interface Recipient { id: string; email: string; name: string | null; locale: MailLocale }
+/** `verified` = the member confirmed the address; an unconfirmed one gets the mail WITH the „confirm it" note. */
+export interface Recipient { id: string; email: string; name: string | null; locale: MailLocale; verified: boolean }
 
-/** Verified, reachable members who did not turn the mail off. One query, allowlist projection. */
-export async function loadRecipients(db: Db): Promise<Recipient[]> {
-  const users = await db.collection('users')
-    .find({ emailVerified: true, anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, deletionScheduledAt: { $exists: false }, email: { $type: 'string' } },
-      { projection: { _id: 1, email: 1, name: 1, locale: 1 } })
+/** Who gets the mail: every reachable member who did not turn it off — confirmed address or not (owner, 2026-10-04). */
+const RECIPIENT_FILTER = { anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, deletionScheduledAt: { $exists: false }, email: { $type: 'string' } };
+
+/**
+ * Recipients in a STABLE order (by id = by joining date, oldest first). `afterId` + `limit` cut one
+ * group out of that order: a member who joins later sorts behind everyone and lands in a later
+ * group, one who unsubscribes simply drops out — nobody is skipped, nobody gets the issue twice.
+ */
+export async function loadRecipients(db: Db, opts: { afterId?: string | null; limit?: number } = {}): Promise<Recipient[]> {
+  const after = typeof opts.afterId === 'string' && ObjectId.isValid(opts.afterId) ? { _id: { $gt: new ObjectId(opts.afterId) } } : {};
+  let cursor = db.collection('users')
+    .find({ ...RECIPIENT_FILTER, ...after }, { projection: { _id: 1, email: 1, name: 1, locale: 1, emailVerified: 1 } })
+    .sort({ _id: 1 });
+  if (typeof opts.limit === 'number') cursor = cursor.limit(opts.limit);
+  const users = await cursor.toArray();
+  return users.map((u) => ({
+    id: String(u._id), email: String(u.email), name: typeof u.name === 'string' ? u.name : null,
+    locale: storedMailLocale(u.locale), verified: u.emailVerified === true,
+  }));
+}
+
+export async function countRecipients(db: Db): Promise<number> {
+  return db.collection('users').countDocuments(RECIPIENT_FILTER);
+}
+
+/** The newest issue with members still waiting for their group; null when there is none (or it is too old to be news). */
+export async function findPendingIssue(db: Db, nowMs: number): Promise<IssueDoc | null> {
+  const docs = await db.collection<IssueDoc>(KIEZ_BRIEF_COLLECTION)
+    .find({ more: true, claimedAt: { $gte: new Date(nowMs - PENDING_MAX_AGE_MS) } })
+    .sort({ claimedAt: -1 })
+    .limit(1)
     .toArray();
-  return users.map((u) => ({ id: String(u._id), email: String(u.email), name: typeof u.name === 'string' ? u.name : null, locale: storedMailLocale(u.locale) }));
+  const doc = docs[0];
+  return doc && doc.more === true && doc.skipped === undefined && doc.windowTo instanceof Date ? doc : null;
+}
+
+export interface GroupTake { index: number; recipients: Recipient[]; more: boolean }
+
+/**
+ * Take the next group of an issue: load the members after the stored cursor, then CLAIM the group
+ * with one conditional update (the row must still show the group count we read) BEFORE anything
+ * is sent — two runs can never send the same group, and a failed send is not retried.
+ * null = nothing to take: not due yet (one group per UTC day), or another run took it.
+ * An empty group is claimed too (it closes the issue: `more: false`).
+ */
+export async function takeNextGroup(db: Db, issue: Pick<IssueDoc, '_id' | 'groups' | 'cursor' | 'lastGroupAt'>, nowMs: number, size = GROUP_SIZE): Promise<GroupTake | null> {
+  const index = typeof issue.groups === 'number' ? issue.groups : 0;
+  if (index > 0 && !groupDue(issue.lastGroupAt instanceof Date ? issue.lastGroupAt.getTime() : null, nowMs)) return null;
+  const batch = await loadRecipients(db, { afterId: issue.cursor ?? null, limit: size + 1 });
+  const recipients = batch.slice(0, size);
+  const more = batch.length > size;
+  const res = await db.collection<IssueDoc>(KIEZ_BRIEF_COLLECTION).updateOne(
+    { _id: issue._id, groups: index },
+    { $set: { groups: index + 1, cursor: recipients.length ? recipients[recipients.length - 1].id : issue.cursor ?? null, more, lastGroupAt: new Date(nowMs) } },
+  );
+  return res.modifiedCount === 1 ? { index, recipients, more } : null;
 }

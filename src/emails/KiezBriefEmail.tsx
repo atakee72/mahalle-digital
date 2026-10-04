@@ -3,7 +3,7 @@ import {
 } from '@react-email/components';
 import * as React from 'react';
 import {
-  AIR_LABEL, LISTING_KIND_LABEL, LISTING_KIND_SYMBOL, MAIL_COPY, POST_KIND_LABEL, UNSUB_PLACEHOLDER, fmtPrice, newsLineFor, pairs, preheaderFor, weekLabel, withUtm,
+  AIR_LABEL, LISTING_KIND_LABEL, LISTING_KIND_SYMBOL, MAIL_COPY, POST_KIND_LABEL, UNSUB_PLACEHOLDER, VERIFY_PLACEHOLDER, fmtPrice, newsLineFor, pairs, preheaderFor, weekLabel, withUtm,
   type BriefData, type BriefEvent, type MailLocale,
 } from '../lib/newsletter/kiezBriefRules';
 
@@ -96,6 +96,8 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = fal
           </Section>
 
           <Section style={inner}>
+            {/* '' for a confirmed member, the „confirm your address" note for the others — substituted per recipient */}
+            <div>{VERIFY_PLACEHOLDER}</div>
             <Heading style={h1}>{c.title}</Heading>
             <Text style={hello}>
               <strong>{c.greeting}</strong> {c.intro}

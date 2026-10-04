@@ -15,12 +15,12 @@ async function issueForAdmin(request: Request, userId: string) {
   const data = await buildIssue();
   const baseUrl = kiezBriefBaseUrl() || new URL(request.url).origin;
   const db = await connectDB();
-  const admin = await db.collection('users').findOne({ _id: new ObjectId(userId) }, { projection: { email: 1, name: 1, locale: 1 } });
+  const admin = await db.collection('users').findOne({ _id: new ObjectId(userId) }, { projection: { email: 1, name: 1, locale: 1, emailVerified: 1 } });
   // `?lang=en|de` shows the other language; default = the admin's own stored toggle.
   const wanted = new URL(request.url).searchParams.get('lang');
   const locale = storedMailLocale(wanted === 'en' || wanted === 'de' ? wanted : admin?.locale);
   const issue = await renderIssueAll(data, baseUrl);
-  const [mine] = mailsFor(issue, [{ id: userId, email: typeof admin?.email === 'string' ? admin.email : 'preview', name: typeof admin?.name === 'string' ? admin.name : null, locale }], baseUrl, unsubSecret());
+  const [mine] = mailsFor(issue, [{ id: userId, email: typeof admin?.email === 'string' ? admin.email : 'preview', name: typeof admin?.name === 'string' ? admin.name : null, locale, verified: admin?.emailVerified === true }], baseUrl, unsubSecret());
   return { data, mine, email: typeof admin?.email === 'string' ? admin.email : null, locale };
 }
 

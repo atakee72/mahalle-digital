@@ -18,12 +18,17 @@ Code: `src/lib/newsletter/*`, `src/pages/api/cron/kiez-brief.ts`, `src/pages/api
 ## Watching a run
 
 - `gh run list --workflow=kiez-brief.yml` — GitHub starts scheduled runs 0–4 h late (mail lands 18:00 to ~22:00 Berlin). If the run never arrives, the Monday 06:00 UTC cron (`fetch-daily`) sends the issue instead (Berlin Mondays only; other days the fallback is a no-op `not-due`).
-- The route answers JSON `{ week, outcome, recipients }`; `outcome` is `sent`, `claimed-elsewhere`, `quiet`, `quota`, `not-configured` or `failed` (see the workflow log).
+- The route answers JSON `{ week, outcome, recipients }`; `outcome` is `sent` (with `group` and `more`), `claimed-elsewhere`, `quiet`, `no-recipients`, `not-configured`, `not-due` or `failed` (see the workflow log).
 - A failed batch is a Sentry issue and the week stays claimed — it is not retried.
 
-## Sentry: „more recipients than the daily mail quota allows"
+## More members than one day's quota: groups
 
-More than `MAX_RECIPIENTS` (95, in `kiezBriefRules.ts`) members qualify. Resend Free allows 100 mails per UTC day, shared with the auth mails. The week was claimed `skipped: 'quota'` and nothing went out. Upgrade the Resend plan before the next Sunday; do not raise the cap on the Free plan.
+Resend Free allows 100 mails per UTC day, shared with the login mails. An issue therefore goes out in groups of 75 (`GROUP_SIZE` in `kiezBriefRules.ts`), one group per UTC day: Sunday evening, then Monday 08:00 with the morning job, then Tuesday 08:00. Members are taken oldest first; each group is claimed in the issue's row before it is sent, so no group goes out twice and a failed group is not retried.
+
+- Watch it: the route's answer and the morning job's log name the group (`group 2 sent to 31 members`). The row shows `groups`, `more`, `recipients`.
+- Sentry warning „more members than two daily groups": more than 150 recipients — the issue now takes three days. That is the agreed moment for the paid plan; nothing is lost meanwhile.
+- A group still waiting after four days is dropped (the week is no longer news).
+- Exclude a test account or an address that bounces: `/admin/mitglieder` → the „Kiez-Brief: an" pill of that member → „aus".
 
 ## Re-sending
 

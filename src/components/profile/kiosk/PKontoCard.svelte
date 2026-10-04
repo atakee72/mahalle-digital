@@ -44,7 +44,6 @@
     onCancelEmail,
     onChangePassword,
     newsletterMode = null,
-    newsletterVerified = false,
     newsletterBusy = false,
     onToggleNewsletter,
     deletionScheduledAt = null,
@@ -62,7 +61,6 @@
     onChangePassword?: () => void;
     /** null = not loaded yet → no row. */
     newsletterMode?: 'weekly' | 'off' | null;
-    newsletterVerified?: boolean;
     newsletterBusy?: boolean;
     onToggleNewsletter?: () => void;
     deletionScheduledAt?: string | null;
@@ -179,10 +177,6 @@
         <div data-konto-newsletter-state style="font-family: var(--k-font-display); font-size: 13.5px; font-weight: 600; margin-top: 3px;">
           {$t[newsletterMode === 'off' ? 'profile.konto.newsletter.off' : 'profile.konto.newsletter.weekly']}
         </div>
-        {#if newsletterMode !== 'off' && !newsletterVerified}
-          <!-- The mail only goes to confirmed addresses: say so, or „every Sunday" is a promise we do not keep. -->
-          <div data-konto-newsletter-hint style="font-family: var(--k-font-mono); font-size: 9.5px; color: var(--k-warn); line-height: 1.5; margin-top: 3px;">{$t['profile.konto.newsletter.unverified']}</div>
-        {/if}
       </div>
       <button
         type="button"

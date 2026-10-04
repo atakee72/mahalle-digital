@@ -4,7 +4,7 @@ import { ObjectId } from 'mongodb';
 import { connectDB } from '../../lib/mongodb';
 import { buildSentIssue, renderIssue, unsubscribeUrl } from '../../lib/newsletter/kiezBrief';
 import { unsubSecret } from '../../lib/newsletter/unsubToken';
-import { personalize, storedMailLocale } from '../../lib/newsletter/kiezBriefRules';
+import { personalize, storedMailLocale, verifyNoteHtml } from '../../lib/newsletter/kiezBriefRules';
 
 // The browser view of one SENT Kiez-Brief issue („Im Browser ansehen" in the mail). Members only
 // (middleware: /kiez-brief is a gated page). The answer is the mail's own HTML — no app chrome —
@@ -29,13 +29,14 @@ export const GET: APIRoute = async ({ params, request, redirect }) => {
   if (!data) return redirect('/kiez-brief');
 
   const db = await connectDB();
-  const me = await db.collection('users').findOne({ _id: new ObjectId(userId) }, { projection: { name: 1, locale: 1 } });
+  const me = await db.collection('users').findOne({ _id: new ObjectId(userId) }, { projection: { name: 1, locale: 1, emailVerified: 1 } });
   const locale = storedMailLocale(me?.locale);
   const html = personalize(
     await renderIssue(data, '', locale, true),
     typeof me?.name === 'string' ? me.name : null,
     unsubscribeUrl('', userId, unsubSecret()),
     locale,
+    me?.emailVerified === true ? '' : verifyNoteHtml('', locale),
   );
   return new Response(html, { headers: HEADERS });
 };

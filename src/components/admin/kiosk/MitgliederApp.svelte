@@ -23,6 +23,7 @@
     role: 'user' | 'admin';
     memberType: MemberType;
     dailyLimit: number | null;
+    newsletter: 'weekly' | 'off';
   };
 
   let users = $state<AdminUserRow[]>([]);
@@ -63,7 +64,7 @@
     }
   }
 
-  type RowPatch = { verified?: boolean; memberType?: MemberType; dailyLimit?: number | null };
+  type RowPatch = { verified?: boolean; memberType?: MemberType; dailyLimit?: number | null; newsletter?: 'weekly' | 'off' };
 
   // „✓ gespeichert" beside the controls for two seconds after a successful save.
   let savedRow = $state<string | null>(null);
@@ -92,7 +93,7 @@
       if (!res.ok) throw new Error(`patch failed (${res.status})`);
       const j = await res.json();
       users = users.map((u) => (u.id === row.id
-        ? { ...u, verified: j.verified === true, memberType: j.memberType, dailyLimit: j.dailyLimit ?? null }
+        ? { ...u, verified: j.verified === true, memberType: j.memberType, dailyLimit: j.dailyLimit ?? null, newsletter: j.newsletter === 'off' ? 'off' : 'weekly' }
         : u));
       // The type selector and the limit field save without a button — say so.
       // (The verify button already changes its own label; no mark for it.)
@@ -112,6 +113,12 @@
   function toggleVerified(row: AdminUserRow) {
     const next = !row.verified;
     return patchRow(row, { verified: next }, { verified: next });
+  }
+
+  // Kiez-Brief on/off for this member (test accounts, addresses that bounce).
+  function toggleBrief(row: AdminUserRow) {
+    const next = row.newsletter === 'off' ? 'weekly' : 'off';
+    return patchRow(row, { newsletter: next }, { newsletter: next });
   }
 
   function setType(row: AdminUserRow, next: MemberType) {
@@ -275,6 +282,24 @@
                   style="font-size: 10px; font-weight: 600; color: var(--k-moss); letter-spacing: 0.06em;"
                 >{$t['admin.users.saved']}</span>
               {/if}
+              <button
+                type="button"
+                class="font-dmmono"
+                data-admin-brief={row.newsletter}
+                title={$t['admin.users.brief.title']}
+                aria-pressed={row.newsletter !== 'off'}
+                style="
+                  border: 1.5px {row.newsletter === 'off' ? 'dashed' : 'solid'} var(--k-ink); border-radius: 999px;
+                  padding: 6px 12px; font-size: 11px; font-weight: 700;
+                  cursor: pointer; min-height: 32px; background: var(--k-paper);
+                  color: {row.newsletter === 'off' ? 'var(--k-ink-mute)' : 'var(--k-ink)'};
+                  {busy.has(row.id) ? 'opacity: 0.5; cursor: wait;' : ''}
+                "
+                disabled={busy.has(row.id)}
+                onclick={() => toggleBrief(row)}
+              >
+                {row.newsletter === 'off' ? $t['admin.users.brief.off'] : $t['admin.users.brief.on']}
+              </button>
               {#if row.verified}
                 <span class="font-dmmono" style="font-size: 10px; font-weight: 600; background: var(--k-moss); color: var(--k-paper); padding: 2px 8px; border-radius: var(--k-radius-sm); border: 1px solid var(--k-ink); letter-spacing: 0.08em;">
                   {$t['admin.users.verifiedchip']}

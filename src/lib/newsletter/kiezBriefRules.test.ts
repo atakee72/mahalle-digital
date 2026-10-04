@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
   preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb, inert, personalize, LISTING_KIND_SYMBOL,
-  storedMailLocale, escapeHtml, isIssueWeekKey, newsLineFor, pairs, MAX_OFFICIAL, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
+  storedMailLocale, escapeHtml, isIssueWeekKey, newsLineFor, pairs, groupDue, utcDay, verifyNoteHtml, GROUP_SIZE, VERIFY_PLACEHOLDER, MAX_OFFICIAL, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
 } from './kiezBriefRules';
 
@@ -256,4 +256,30 @@ test('a week with only the team\'s news still has a telling subject; the prehead
   assert.equal(preheaderFor({ ...empty(), events: [e], blog: [b], official: [off] }), 'Beilage');
   assert.equal(preheaderFor({ ...empty(), events: [e], official: [off] }), 'Neue Suche');
   assert.equal(preheaderFor({ ...empty(), events: [e] }), 'Flohmarkt');
+});
+
+test('one group per quota day: the next group is due on a later UTC day', () => {
+  assert.equal(GROUP_SIZE, 75);
+  assert.equal(utcDay(SUN_18), '2026-10-11');
+  assert.equal(groupDue(null, SUN_18), true); // the first group
+  assert.equal(groupDue(SUN_18, SUN_18 + 3 * 3_600_000), false); // Sunday 21:00 CEST
+  assert.equal(groupDue(SUN_18, Date.parse('2026-10-11T23:59:59.000Z')), false);
+  assert.equal(groupDue(SUN_18, Date.parse('2026-10-12T00:00:00.000Z')), true);
+  assert.equal(groupDue(SUN_18, MON_06), true); // the Monday morning job
+});
+
+test('the confirm-your-address note: fixed copy, own link, and it only appears for an unconfirmed member', () => {
+  const de = verifyNoteHtml('https://mahalle.example');
+  assert.ok(de.includes('Deine E-Mail-Adresse ist noch nicht bestätigt.'));
+  assert.ok(de.includes('href="https://mahalle.example/verify-email?utm_source=kiez-brief"'));
+  assert.ok(de.includes('>Jetzt bestätigen →</a>'));
+  assert.ok(verifyNoteHtml('', 'en').includes('href="/verify-email?utm_source=kiez-brief"'));
+  assert.ok(verifyNoteHtml('', 'en').includes('Your e-mail address is not confirmed yet.'));
+  assert.doesNotMatch(de, /%%|<script/);
+
+  const html = `<div>${VERIFY_PLACEHOLDER}</div><p>${NAME_PLACEHOLDER}</p>`;
+  assert.equal(personalize(html, 'A', 'u', 'de'), '<div></div><p>A</p>');
+  assert.equal(personalize(html, 'A', 'u', 'de', de), `<div>${de}</div><p>A</p>`);
+  // A member cannot summon the note through the name.
+  assert.equal(personalize(html, VERIFY_PLACEHOLDER, 'u', 'de', de), `<div>${de}</div><p>${VERIFY_PLACEHOLDER}</p>`);
 });
