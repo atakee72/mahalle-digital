@@ -155,10 +155,14 @@ export const AIR_LABEL: Record<MailLocale, Record<number, string>> = {
 export function arrangeData(d: BriefData): BriefData {
   return {
     ...d,
-    posts: [...d.posts].sort((a, b) => b.dateMs - a.dateMs || a.id.localeCompare(b.id)).slice(0, MAX_POSTS),
-    events: [...d.events].sort((a, b) => a.startMs - b.startMs || a.id.localeCompare(b.id)).slice(0, MAX_EVENTS),
-    listings: [...d.listings].sort((a, b) => b.createdMs - a.createdMs || a.id.localeCompare(b.id)).slice(0, MAX_LISTINGS),
-    blog: [...d.blog].sort((a, b) => b.pubMs - a.pubMs || a.slug.localeCompare(b.slug)),
+    posts: [...d.posts].sort((a, b) => b.dateMs - a.dateMs || a.id.localeCompare(b.id)).slice(0, MAX_POSTS)
+      .map((p) => ({ ...p, title: inert(p.title), excerpt: p.excerpt === null ? null : inert(p.excerpt), author: p.author === null ? null : inert(p.author) })),
+    events: [...d.events].sort((a, b) => a.startMs - b.startMs || a.id.localeCompare(b.id)).slice(0, MAX_EVENTS)
+      .map((e) => ({ ...e, title: inert(e.title), location: e.location === null ? null : inert(e.location) })),
+    listings: [...d.listings].sort((a, b) => b.createdMs - a.createdMs || a.id.localeCompare(b.id)).slice(0, MAX_LISTINGS)
+      .map((l) => ({ ...l, title: inert(l.title) })),
+    blog: [...d.blog].sort((a, b) => b.pubMs - a.pubMs || a.slug.localeCompare(b.slug))
+      .map((b) => ({ ...b, title: inert(b.title), description: inert(b.description) })),
     air: d.air && Number.isInteger(d.air.lqi) && d.air.lqi >= 1 && d.air.lqi <= 5 ? d.air : null,
   };
 }
@@ -206,9 +210,10 @@ export function fmtEventWhen(startMs: number, allDay: boolean): string {
   return allDay ? `${day} · ganztägig` : `${day} · ${String(p.hh).padStart(2, '0')}:${String(p.mm).padStart(2, '0')}`;
 }
 
-/** „12 €" / „12,50 €"; null for exchange/gift. */
-export function fmtPrice(price: number | null): string | null {
+/** German „12 €" / „12,50 €", English „€12" / „€12.50"; null for exchange/gift. */
+export function fmtPrice(price: number | null, locale: MailLocale = 'de'): string | null {
   if (price === null || !Number.isFinite(price)) return null;
+  if (locale === 'en') return `€${Number.isInteger(price) ? String(price) : price.toFixed(2)}`;
   const s = Number.isInteger(price) ? String(price) : price.toFixed(2).replace('.', ',');
   return `${s} €`;
 }
@@ -231,15 +236,33 @@ export function excerptOf(body: unknown, max = 140): string | null {
 }
 
 /**
- * A Cloudinary URL for a fixed-size thumbnail (the mail never downloads the full photo). ONLY our
- * own upload host is allowed: a member-supplied image from any other origin would reach every
- * member's inbox as third-party content (tracking pixel) — such an image is dropped, not passed.
+ * A Cloudinary URL for a fixed-size thumbnail (the mail never downloads the full photo). ONLY
+ * images of OUR OWN account and our two upload folders pass: the forum and listing schemas accept
+ * any URL, and a foreign cloud or the `image/fetch/` proxy form would put third-party content
+ * (tracking pixel) into every member's inbox. Fails closed: no cloud name → no image.
  */
-export function thumb(url: unknown, w: number): string | null {
-  if (typeof url !== 'string' || !url.startsWith('https://res.cloudinary.com/') || !url.includes('/upload/')) return null;
-  const bare = url.replace(/\/upload\/f_auto,q_auto(?:,w_\d+,c_fill)?\//, '/upload/');
-  return bare.replace('/upload/', `/upload/f_auto,q_auto,w_${w},h_${w},c_fill/`);
+export function thumb(url: unknown, w: number, cloud: string | null | undefined): string | null {
+  if (typeof url !== 'string' || typeof cloud !== 'string' || !cloud) return null;
+  const esc = cloud.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`^https://res\\.cloudinary\\.com/${esc}/image/upload/((?:f_auto,q_auto(?:,w_\\d+,h_\\d+,c_fill|,w_\\d+,c_fill)?/)?(?:v\\d+/)?mahalle/(?:posts|listings)/[^?#\\s]+)$`);
+  const m = re.exec(url);
+  if (!m) return null;
+  return `https://res.cloudinary.com/${cloud}/image/upload/f_auto,q_auto,w_${w},h_${w},c_fill/${m[1].replace(/^f_auto,q_auto[^/]*\//, '')}`;
 }
+
+/** Member text must not be able to spell the placeholders: a zero-width space breaks every `%%`. */
+export function inert(s: string): string {
+  return s.replaceAll('%%', '%\u200b%');
+}
+
+/** The per-recipient step on finished HTML: function replacers keep `$&`, `$\``, `$'` and `$$` literal. */
+export function personalize(html: string, name: string | null, unsubUrl: string, locale: MailLocale): string {
+  const safeName = escapeHtml(name?.trim() || MAIL_COPY[locale].noName);
+  return html.replaceAll(UNSUB_PLACEHOLDER, () => unsubUrl).replaceAll(NAME_PLACEHOLDER, () => safeName);
+}
+
+/** The placeholder tile of a listing without photo: one symbol per kind, same in both languages. */
+export const LISTING_KIND_SYMBOL: Record<BriefListing['kind'], string> = { sell: '€', exchange: '⇄', gift: '♡' };
 
 /** RFC 8058 one-click headers; the mailto: is the fallback for clients without the POST path. */
 export function unsubscribeHeaders(postUrl: string, mailto: string): Record<string, string> {

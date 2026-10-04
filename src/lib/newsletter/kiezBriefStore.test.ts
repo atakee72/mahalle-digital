@@ -54,11 +54,11 @@ test('markIssue patches the claim row', async () => {
 
 test('issue data: public posts of the week with author names, next week\'s events, new listings, blog in window', async () => {
   const { db, calls } = fakeDb({
-    topics: [{ _id: 't1', title: 'Frage', author: '6abfe378539f08486ac89c2a', comments: ['c1', 'c2'], date: NOW - 2 * HOUR }],
+    topics: [{ _id: 't1', title: 'Frage', author: '6abfe378539f08486ac89c2a', comments: ['c1', 'c2'], date: NOW - 2 * HOUR, images: [{ url: 'https://res.cloudinary.com/demo/image/upload/v1/mahalle/posts/a.jpg' }] }],
     announcements: [],
     recommendations: [{ _id: 'r1', title: 'Tipp', author: 'kaputt', comments: [], date: NOW - DAY }],
     events: [{ _id: 'e1', title: 'Flohmarkt', startDate: new Date(NOW + 2 * DAY), allDay: true, location: ' Herrfurthplatz ' }],
-    listings: [{ _id: 'l1', title: 'Lampe', listingType: 'sell', price: 12.5, createdAt: new Date(NOW - 3 * DAY) }, { _id: 'l2', title: 'Stuhl', listingType: 'gift', price: 0, createdAt: new Date(NOW - HOUR) }],
+    listings: [{ _id: 'l1', title: 'Lampe', listingType: 'sell', price: 12.5, createdAt: new Date(NOW - 3 * DAY), images: ['https://res.cloudinary.com/other/image/upload/v1/mahalle/listings/b.jpg'] }, { _id: 'l2', title: 'Stuhl', listingType: 'gift', price: 0, createdAt: new Date(NOW - HOUR) }],
     users: [{ _id: '6abfe378539f08486ac89c2a', name: 'Ayşe' }],
     schillerkiez_air_daily: [],
     schillerkiez_air_log: [{ ts: new Date(NOW - HOUR), lqi: 2 }],
@@ -68,11 +68,13 @@ test('issue data: public posts of the week with author names, next week\'s event
     { slug: 'alt', title: 'Alt', description: 'd', pubDate: new Date(NOW - 30 * DAY) },
     { slug: 'entwurf', title: 'E', description: 'd', pubDate: new Date(NOW - DAY), draft: true },
   ];
-  const d = await loadIssueData(db, '2026-W41', NOW, blog);
+  const d = await loadIssueData(db, '2026-W41', NOW, blog, { cloud: 'demo' });
   assert.equal(d.week, '2026-W41');
   assert.deepEqual(d.posts.map((p) => [p.id, p.kind, p.author, p.comments]), [['t1', 'topic', 'Ayşe', 2], ['r1', 'recommendation', null, 0]]);
   assert.deepEqual(d.events, [{ id: 'e1', title: 'Flohmarkt', startMs: NOW + 2 * DAY, allDay: true, location: 'Herrfurthplatz' }]);
   assert.deepEqual(d.listings.map((l) => [l.id, l.kind, l.price]), [['l2', 'gift', null], ['l1', 'sell', 12.5]]);
+  assert.equal(d.posts[0].image, 'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_160,h_160,c_fill/v1/mahalle/posts/a.jpg');
+  assert.equal(d.listings.find((l) => l.id === 'l1')!.image, null); // another cloud: dropped
   assert.deepEqual(d.blog.map((b) => b.slug), ['neu']);
   assert.deepEqual(d.air, { lqi: 2 });
   const topics = calls.find((c) => c.collection === 'topics')!.filter;

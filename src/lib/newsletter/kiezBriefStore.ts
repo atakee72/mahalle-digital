@@ -52,7 +52,7 @@ const toMs = (v: unknown): number => {
 /** Blog posts come from the Astro content collection — the caller passes them in (no astro:content here). */
 export interface BlogInput { slug: string; title: string; description: string; pubDate: unknown; draft?: boolean; cover?: string | null }
 
-export async function loadIssueData(db: Db, week: string, nowMs: number, blog: BlogInput[]): Promise<BriefData> {
+export async function loadIssueData(db: Db, week: string, nowMs: number, blog: BlogInput[], opts: { cloud?: string | null } = {}): Promise<BriefData> {
   const w = windowFor(nowMs);
   const kinds = Object.keys(POST_COLLECTIONS) as BriefPostKind[];
   const [postLists, eventDocs, listingDocs, air] = await Promise.all([
@@ -88,7 +88,7 @@ export async function loadIssueData(db: Db, week: string, nowMs: number, blog: B
     comments: Array.isArray(doc.comments) ? doc.comments.length : 0,
     dateMs: toMs(doc.date),
     excerpt: excerptOf(doc.body),
-    image: thumb(Array.isArray(doc.images) ? doc.images[0]?.url : null, 160),
+    image: thumb(Array.isArray(doc.images) ? doc.images[0]?.url : null, 160, opts.cloud),
   }));
   const events: BriefEvent[] = eventDocs.map((e) => ({
     id: String(e._id), title: String(e.title ?? ''), startMs: toMs(e.startDate), allDay: e.allDay === true,
@@ -99,7 +99,7 @@ export async function loadIssueData(db: Db, week: string, nowMs: number, blog: B
     kind: l.listingType === 'exchange' || l.listingType === 'gift' ? l.listingType : 'sell',
     price: l.listingType === 'sell' && typeof l.price === 'number' ? l.price : null,
     createdMs: toMs(l.createdAt),
-    image: thumb(Array.isArray(l.images) ? l.images[0] : null, 160),
+    image: thumb(Array.isArray(l.images) ? l.images[0] : null, 160, opts.cloud),
   }));
   const blogPosts: BriefBlogPost[] = blog
     .filter((b) => !b.draft)

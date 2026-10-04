@@ -11,7 +11,7 @@ import { isMailerConfigured, sendMailBatch } from '../email/mailer';
 import KiezBriefEmail from '../../emails/KiezBriefEmail';
 import { makeUnsubToken, unsubSecret } from './unsubToken';
 import {
-  UNSUB_PLACEHOLDER, NAME_PLACEHOLDER, MAIL_COPY, MAIL_LOCALES, MAX_RECIPIENTS, berlinWeekday, escapeHtml, issueWeek, isQuiet,
+  personalize, MAIL_LOCALES, MAX_RECIPIENTS, berlinWeekday, issueWeek, isQuiet,
   subjectFor, unsubscribeHeaders, type BriefData, type MailLocale,
 } from './kiezBriefRules';
 import { claimIssue, loadIssueData, loadRecipients, markIssue, type BlogInput, type Recipient } from './kiezBriefStore';
@@ -41,7 +41,7 @@ async function blogPosts(): Promise<BlogInput[]> {
 /** This week's data (no claim, no send) — the admin preview and the sender share it. */
 export async function buildIssue(nowMs = Date.now()): Promise<BriefData> {
   const db = await connectDB();
-  return loadIssueData(db, issueWeek(nowMs), nowMs, await blogPosts());
+  return loadIssueData(db, issueWeek(nowMs), nowMs, await blogPosts(), { cloud: import.meta.env.CLOUD_NAME });
 }
 
 /** The mail's HTML in one language, with the unsubscribe and name placeholders still inside. */
@@ -79,9 +79,7 @@ export function mailsFor(issue: RenderedIssue, recipients: Recipient[], baseUrl:
   return recipients.map((r) => ({
     to: r.email,
     subject: issue.subject[r.locale],
-    html: issue.html[r.locale]
-      .replaceAll(UNSUB_PLACEHOLDER, unsubscribeUrl(baseUrl, r.id, secret))
-      .replaceAll(NAME_PLACEHOLDER, escapeHtml(r.name?.trim() || MAIL_COPY[r.locale].noName)),
+    html: personalize(issue.html[r.locale], r.name, unsubscribeUrl(baseUrl, r.id, secret), r.locale),
     replyTo: REPLY_TO,
     headers: unsubscribeHeaders(oneClickUrl(baseUrl, r.id, secret), REPLY_TO),
   }));
@@ -110,7 +108,7 @@ export async function sendKiezBrief(opts: { fallback?: boolean; now?: number } =
     const db = await connectDB();
     if (!(await claimIssue(db, week, nowMs, opts.fallback === true))) return { week, outcome: 'claimed-elsewhere', recipients: 0 };
 
-    const data = await loadIssueData(db, week, nowMs, await blogPosts());
+    const data = await loadIssueData(db, week, nowMs, await blogPosts(), { cloud: import.meta.env.CLOUD_NAME });
     if (isQuiet(data)) {
       await markIssue(db, week, { skipped: 'quiet', recipients: 0 });
       return { week, outcome: 'quiet', recipients: 0 };

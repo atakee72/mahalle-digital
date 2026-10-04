@@ -34,6 +34,8 @@
     isOwner: boolean;
   } = $props();
 
+  // Once per instance: the call strips ?translate=1 from the address bar.
+  const autoTranslate = wantsAutoTranslate($locale);
   // svelte-ignore state_referenced_locally
   let listing = $state(initialListing);
   let reportOpen = $state(false);
@@ -240,7 +242,7 @@
           contentId={String(listing._id)}
           accent="var(--k-wine, #b23a5b)"
           onTranslated={(t) => (translation = t)}
-          autoOpen={wantsAutoTranslate()}
+          autoOpen={autoTranslate}
         />
         {#if translation}
           <div style="padding-top: 4px;">

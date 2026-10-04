@@ -68,6 +68,8 @@
     isOfficial?: boolean;
   }>();
 
+  // Once per instance: the call strips ?translate=1 from the address bar.
+  const autoTranslate = wantsAutoTranslate($locale);
   // svelte-ignore state_referenced_locally
   let topic = $state(initialTopic);
   // svelte-ignore state_referenced_locally
@@ -883,7 +885,7 @@
             contentId={String(topic._id)}
             onTranslated={(t) => (translation = t)}
             accent="var(--k-wine, #b23a5b)"
-            autoOpen={wantsAutoTranslate()}
+            autoOpen={autoTranslate}
           />
         </div>
         <div class="space-y-3.5 mb-5 max-w-prose">

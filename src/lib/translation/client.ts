@@ -13,10 +13,20 @@ export function pickTargetLang(kioskLocale: string): string {
   return kioskLocale || 'de';
 }
 
-/** A link from the English Kiez-Brief carries `?translate=1`: open the translation on load. */
-export function wantsAutoTranslate(): boolean {
+/**
+ * A link from the English Kiez-Brief carries `?translate=1`: open the translation on load — but
+ * only when the target language is not German (a German reader would get a German→German
+ * „translation" and burn DeepL quota). Once true, the parameter leaves the address bar
+ * (history.state kept: Astro's ClientRouter needs it). Call ONCE per component instance.
+ */
+export function wantsAutoTranslate(appLocale: string): boolean {
   try {
-    return new URLSearchParams(window.location.search).get('translate') === '1';
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('translate') !== '1') return false;
+    if (pickTargetLang(appLocale) === 'de') return false;
+    url.searchParams.delete('translate');
+    history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    return true;
   } catch {
     return false;
   }

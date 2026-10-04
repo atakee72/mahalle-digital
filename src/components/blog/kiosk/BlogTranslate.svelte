@@ -51,7 +51,7 @@
     if (shown) publish(null);
   });
   // A link from the English Kiez-Brief carries ?translate=1: open the translation on load.
-  onMount(() => { if (wantsAutoTranslate()) void toggle(); });
+  onMount(() => { if (wantsAutoTranslate($locale)) void toggle(); });
 
   async function toggle() {
     error = null;

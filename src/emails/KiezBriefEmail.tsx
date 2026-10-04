@@ -3,7 +3,7 @@ import {
 } from '@react-email/components';
 import * as React from 'react';
 import {
-  AIR_LABEL, LISTING_KIND_LABEL, MAIL_COPY, POST_KIND_LABEL, UNSUB_PLACEHOLDER, fmtPrice, preheaderFor, weekLabel, withUtm,
+  AIR_LABEL, LISTING_KIND_LABEL, LISTING_KIND_SYMBOL, MAIL_COPY, POST_KIND_LABEL, UNSUB_PLACEHOLDER, fmtPrice, preheaderFor, weekLabel, withUtm,
   type BriefData, type BriefEvent, type MailLocale,
 } from '../lib/newsletter/kiezBriefRules';
 
@@ -123,13 +123,13 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de' }: KiezBri
                     <Column style={{ width: '72px', verticalAlign: 'top' }}>
                       {l.image
                         ? <Img src={l.image} width="60" height="60" alt="" style={thumbImg} />
-                        : <div style={placeholderTile}>{LISTING_KIND_LABEL[locale][l.kind].slice(0, 1)}</div>}
+                        : <div style={placeholderTile}>{LISTING_KIND_SYMBOL[l.kind]}</div>}
                     </Column>
                     <Column style={{ verticalAlign: 'top' }}>
                       <Text style={item}>
                         <span style={tag(OCHRE)}>{LISTING_KIND_LABEL[locale][l.kind]}</span><br />
                         <Link href={post(`/marketplace/${l.id}`)} style={link}>{l.title}</Link>
-                        {fmtPrice(l.price) ? <span style={meta}> · {fmtPrice(l.price)}</span> : null}
+                        {fmtPrice(l.price, locale) ? <span style={meta}> · {fmtPrice(l.price, locale)}</span> : null}
                       </Text>
                     </Column>
                   </Row>

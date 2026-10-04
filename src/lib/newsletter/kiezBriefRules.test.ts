@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
-  preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb,
+  preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb, inert, personalize, LISTING_KIND_SYMBOL,
   storedMailLocale, escapeHtml, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
 } from './kiezBriefRules';
@@ -112,13 +112,59 @@ test('an excerpt is one plain line, cut at a word, links and marks stripped', ()
   assert.ok(e.endsWith(' …') && e.length <= 143, e);
 });
 
-test('thumbnails: a Cloudinary photo gets a square fill transform, every other origin is dropped', () => {
-  assert.equal(thumb('https://res.cloudinary.com/demo/image/upload/v1/mahalle/posts/a.jpg', 120), 'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_120,h_120,c_fill/v1/mahalle/posts/a.jpg');
-  assert.equal(thumb('https://res.cloudinary.com/demo/image/upload/f_auto,q_auto/v1/a.jpg', 80), 'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_80,h_80,c_fill/v1/a.jpg');
-  assert.equal(thumb('https://example.org/x.png', 80), null); // foreign origin: never into a mail
-  assert.equal(thumb('https://evil.example/res.cloudinary.com/upload/x.png', 80), null);
-  assert.equal(thumb('http://insecure/x.png', 80), null);
-  assert.equal(thumb(null, 80), null);
+const U = 'https://res.cloudinary.com';
+const OUT = (w: number, rest: string) => `${U}/demo/image/upload/f_auto,q_auto,w_${w},h_${w},c_fill/${rest}`;
+test('thumbnails: only our own cloud and our two upload folders pass, fail closed', () => {
+  assert.equal(thumb(`${U}/demo/image/upload/v1/mahalle/posts/a.jpg`, 120, 'demo'), OUT(120, 'v1/mahalle/posts/a.jpg'));
+  assert.equal(thumb(`${U}/demo/image/upload/mahalle/listings/a.jpg`, 80, 'demo'), OUT(80, 'mahalle/listings/a.jpg'));
+  assert.equal(thumb(`${U}/demo/image/upload/f_auto,q_auto/mahalle/posts/a.jpg`, 80, 'demo'), OUT(80, 'mahalle/posts/a.jpg'));
+  assert.equal(thumb(`${U}/demo/image/upload/f_auto,q_auto/v123/mahalle/listings/a.jpg`, 80, 'demo'), OUT(80, 'v123/mahalle/listings/a.jpg'));
+  assert.equal(thumb(`${U}/other/image/upload/v1/mahalle/posts/a.jpg`, 80, 'demo'), null); // another account
+  assert.equal(thumb(`${U}/demo/image/fetch/https://evil.example/upload/x.png`, 80, 'demo'), null); // proxy form
+  assert.equal(thumb(`${U}/demo/raw/upload/v1/mahalle/posts/a.jpg`, 80, 'demo'), null);
+  assert.equal(thumb(`${U}/demo/image/upload/v1/elsewhere/a.jpg`, 80, 'demo'), null);
+  assert.equal(thumb(`${U}/demo/image/upload/v1/mahalle/avatars/a.jpg`, 80, 'demo'), null);
+  assert.equal(thumb(`${U}/demo/image/upload/v1/mahalle/posts/a.jpg`, 80, null), null);
+  assert.equal(thumb(`${U}/demo/image/upload/v1/mahalle/posts/a.jpg`, 80, ''), null);
+  assert.equal(thumb(`${U}/demo/image/upload/v1/mahalle/posts/a.jpg`, 80, undefined), null);
+  assert.equal(thumb(`${U}/demXimage/upload/v1/mahalle/posts/a.jpg`, 80, 'dem.'), null); // regex characters are literal
+  assert.equal(thumb(`${U}/d.m/image/upload/v1/mahalle/posts/a.jpg`, 80, 'd.m'), `${U}/d.m/image/upload/f_auto,q_auto,w_80,h_80,c_fill/v1/mahalle/posts/a.jpg`);
+  assert.equal(thumb('https://example.org/x.png', 80, 'demo'), null);
+  assert.equal(thumb('https://evil.example/res.cloudinary.com/demo/image/upload/mahalle/posts/x.png', 80, 'demo'), null);
+  assert.equal(thumb('http://res.cloudinary.com/demo/image/upload/mahalle/posts/x.png', 80, 'demo'), null);
+  assert.equal(thumb(null, 80, 'demo'), null);
+});
+
+test('member text cannot spell the placeholders', () => {
+  const d = { ...empty(), posts: [{ id: 'p', kind: 'topic' as const, title: '%%NAME%% hallo', author: '%%UNSUB%%', comments: 0, dateMs: 1, excerpt: '%%NAME%%', image: null }],
+    events: [{ id: 'e', title: '%%NAME%%', startMs: 1, allDay: false, location: '%%UNSUB%%' }],
+    listings: [{ id: 'l', title: '%%NAME%%', kind: 'sell' as const, price: null, createdMs: 1, image: null }],
+    blog: [{ slug: 'b', title: '%%NAME%%', description: '%%UNSUB%%', pubMs: 1, cover: null }] };
+  const a = arrangeData(d);
+  const all = JSON.stringify(a);
+  assert.ok(!all.includes('%%'));
+  assert.equal(a.posts[0].title.replaceAll('\u200b', ''), '%%NAME%% hallo'); // reads the same to a person
+  assert.equal(inert('a %% b'), 'a %\u200b% b');
+  assert.equal(arrangeData({ ...d, posts: [{ ...d.posts[0], excerpt: null, author: null }] }).posts[0].excerpt, null);
+});
+
+test('personalize: language fallback, escaping, literal replacement patterns', () => {
+  const html = '<p>%%NAME%%</p><a href="%%UNSUB%%">x</a>';
+  assert.equal(personalize(html, null, 'https://u/1', 'de'), '<p>Nachbar:in</p><a href="https://u/1">x</a>');
+  assert.equal(personalize(html, '  ', 'https://u/1', 'en'), '<p>neighbour</p><a href="https://u/1">x</a>');
+  assert.equal(personalize(html, '<b>x</b>', 'u', 'de'), '<p>&lt;b&gt;x&lt;/b&gt;</p><a href="u">x</a>');
+  assert.equal(personalize(html, '$`', 'u', 'de'), '<p>$`</p><a href="u">x</a>');
+  assert.equal(personalize(html, "$& $' $$", 'u', 'de'), '<p>$&amp; $&#39; $$</p><a href="u">x</a>');
+  assert.equal(personalize(html, '%%UNSUB%%', 'https://u/1', 'de'), '<p>%%UNSUB%%</p><a href="https://u/1">x</a>');
+  assert.equal(personalize(html, 'A', 'https://u/?a=$&b', 'de'), '<p>A</p><a href="https://u/?a=$&b">x</a>');
+});
+
+test('English prices and listing symbols', () => {
+  assert.equal(fmtPrice(12, 'en'), '€12');
+  assert.equal(fmtPrice(12.5, 'en'), '€12.50');
+  assert.equal(fmtPrice(12.5, 'de'), '12,50 €');
+  assert.equal(fmtPrice(null, 'en'), null);
+  assert.deepEqual(LISTING_KIND_SYMBOL, { sell: '€', exchange: '⇄', gift: '♡' });
 });
 
 test('the mail language follows the stored toggle and falls back to German', () => {
