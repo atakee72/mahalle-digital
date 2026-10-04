@@ -15,6 +15,15 @@ Code: `src/lib/newsletter/*`, `src/pages/api/cron/kiez-brief.ts`, `src/pages/api
    Check the Gmail/Yahoo „Abbestellen" button (one-click) and the footer link.
 5. **First real send (optional, early):** `workflow_dispatch` of `kiez-brief.yml` (`gh workflow run kiez-brief.yml`). It CLAIMS the week — Sunday's scheduled run then finds it claimed and sends nothing. Do it on a Sunday, or accept that the week's issue goes out that day.
 
+## The test copy before the send
+
+Every scheduled Sunday job first sends the issue to the admin's own address („[Vorschau] …") and a Telegram line, then waits two hours, then sends to the members.
+
+- Looks fine: do nothing.
+- Something is wrong: GitHub → Actions → the running „Kiez-Brief" job → Cancel. Sunday's send is stopped. The Monday 08:00 fallback will send the issue unless the cause is fixed (or the week is deliberately given up) before then.
+- No test copy arrived but Telegram says „Testausgabe konnte nicht verschickt werden": the members' mail still goes out as planned; look at Sentry.
+- A manual dispatch (`gh workflow run kiez-brief.yml`) skips the test copy and the wait.
+
 ## Watching a run
 
 - `gh run list --workflow=kiez-brief.yml` — GitHub starts scheduled runs 0–4 h late (mail lands 18:00 to ~22:00 Berlin). If the run never arrives, the Monday 06:00 UTC cron (`fetch-daily`) sends the issue instead (the fallback start is for Berlin Mondays only; on other days the job only sends a waiting group, see below).

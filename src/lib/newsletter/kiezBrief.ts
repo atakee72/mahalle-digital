@@ -7,16 +7,16 @@ import { render } from '@react-email/render';
 import * as Sentry from '@sentry/astro';
 import { getCollection } from 'astro:content';
 import { connectDB } from '../mongodb';
-import { isMailerConfigured, sendMailBatch } from '../email/mailer';
+import { isMailerConfigured, sendMail, sendMailBatch } from '../email/mailer';
 import { alertKiezBrief } from '../adminAlerts';
 import KiezBriefEmail from '../../emails/KiezBriefEmail';
 import { makeUnsubToken, unsubSecret } from './unsubToken';
 import {
-  personalize, verifyNoteHtml, MAIL_LOCALES, GROUP_SIZE, GROUPS_BEFORE_WARNING, berlinWeekday, groupDue, issueWeek, isQuiet, windowFor,
+  personalize, verifyNoteHtml, MAIL_LOCALES, GROUP_SIZE, GROUPS_BEFORE_WARNING, TEST_LEAD_MINUTES, berlinWeekday, groupDue, issueWeek, isQuiet, windowFor,
   subjectFor, unsubscribeHeaders, type BriefData, type MailLocale,
 } from './kiezBriefRules';
 import {
-  claimIssue, countRecipients, findPendingIssue, findSentIssue, loadIssueData, loadSentIssue, markIssue, takeNextGroup,
+  claimIssue, countRecipients, findPendingIssue, findSentIssue, issueExists, loadAdmins, loadIssueData, loadSentIssue, markIssue, takeNextGroup,
   type BlogInput, type IssueDoc, type Recipient,
 } from './kiezBriefStore';
 
@@ -211,6 +211,55 @@ async function runKiezBrief(opts: { fallback?: boolean; now?: number }): Promise
     return await sendGroup(db, claimed, nowMs, baseUrl, secret);
   } catch (err) {
     await capture(err);
+    return { week, outcome: 'failed', recipients: 0 };
+  }
+}
+
+export interface TestResult {
+  week: string;
+  outcome: 'test-sent' | 'quiet' | 'not-due' | 'already-claimed' | 'not-configured' | 'no-admin' | 'failed';
+  /** Members who will get the issue. */
+  recipients: number;
+}
+
+/**
+ * The admin's look BEFORE the members' mail (owner, 2026-10-04): the Sunday job calls this first,
+ * waits TEST_LEAD_MINUTES, then calls sendKiezBrief(). It sends the issue as it stands NOW to every
+ * admin's own address (subject „[Vorschau] …") and says so on Telegram. No claim, nothing booked:
+ * the real send compiles the issue again. Never throws — a failed test copy must not stop the send.
+ */
+export async function sendKiezBriefTest(opts: { now?: number } = {}): Promise<TestResult> {
+  const nowMs = opts.now ?? Date.now();
+  const week = issueWeek(nowMs);
+  try {
+    // Same days as the regular run: any other day `week` would name next week's issue.
+    if (![0, 1].includes(berlinWeekday(nowMs))) return { week, outcome: 'not-due', recipients: 0 };
+    const baseUrl = kiezBriefBaseUrl();
+    const secret = unsubSecret();
+    if (!baseUrl || !secret) throw new Error('kiez-brief: NEXTAUTH_URL and NEXTAUTH_SECRET are required');
+    const db = await connectDB();
+    // The week is already claimed (the Monday fallback, a second ring): there is nothing left to check.
+    if (await issueExists(db, week)) return { week, outcome: 'already-claimed', recipients: 0 };
+
+    const data = await loadIssueData(db, week, nowMs, await blogPosts(), { cloud: import.meta.env.CLOUD_NAME });
+    if (isQuiet(data)) {
+      await alertKiezBrief({ week, outcome: 'test-quiet' });
+      return { week, outcome: 'quiet', recipients: 0 };
+    }
+    if (!isMailerConfigured()) return { week, outcome: 'not-configured', recipients: 0 };
+    const admins = await loadAdmins(db);
+    if (admins.length === 0) return { week, outcome: 'no-admin', recipients: 0 };
+
+    const recipients = await countRecipients(db);
+    const rendered = await renderIssueAll(data, baseUrl);
+    for (const mail of mailsFor(rendered, admins, baseUrl, secret)) {
+      await sendMail({ ...mail, subject: `[Vorschau] ${mail.subject}` });
+    }
+    await alertKiezBrief({ week, outcome: 'test-before-send', recipients, minutes: TEST_LEAD_MINUTES });
+    return { week, outcome: 'test-sent', recipients };
+  } catch (err) {
+    await capture(err);
+    await alertKiezBrief({ week, outcome: 'test-failed' });
     return { week, outcome: 'failed', recipients: 0 };
   }
 }

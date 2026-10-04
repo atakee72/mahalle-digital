@@ -7,6 +7,13 @@ name: Kiez-Brief (weekly member mail)
 # 0–4 h late, so "Sunday evening" is the promise. The issue is claimed per ISO week inside the
 # app: if this run never arrives, the Monday 06:00 UTC cron (fetch-daily) sends it instead.
 # Requires repo secret CRON_SECRET (same value as the Vercel env).
+#
+# The scheduled job has THREE steps (2026-10-04): (1) a test copy to the admin plus a Telegram
+# line, (2) a two-hour wait so he can look at it, (3) the members' mail. So the members' mail
+# lands about two hours after the job starts (20:00 Berlin + GitHub's lateness). Cancelling the
+# run during the wait stops Sunday's send — the Monday 06:00 UTC fallback then sends unless the
+# problem is fixed first. A manual dispatch skips steps 1 and 2 and sends at once.
+# The wait must match TEST_LEAD_MINUTES in src/lib/newsletter/kiezBriefRules.ts.
 on:
   schedule:
     - cron: '0 16 * * 0'
@@ -15,7 +22,24 @@ on:
 jobs:
   send:
     runs-on: ubuntu-latest
+    # the two-hour wait plus slack
+    timeout-minutes: 150
     steps:
+      - name: Test copy to the admin, two hours before the send
+        if: github.event_name == 'schedule'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_ORIGIN: https://mahalle.digital
+        # A failed test copy must not stop the send: log the answer, never fail the step.
+        run: |
+          code=$(curl -s -o /tmp/test.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_ORIGIN/api/cron/kiez-brief-test") || true
+          cat /tmp/test.json 2>/dev/null || true; echo
+          echo "kiez-brief test copy: HTTP $code"
+      - name: Give the admin two hours to look at it
+        if: github.event_name == 'schedule'
+        run: sleep 7200
       - name: Trigger the Kiez-Brief
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

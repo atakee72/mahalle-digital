@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
   preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb, inert, personalize, LISTING_KIND_SYMBOL,
-  storedMailLocale, escapeHtml, isIssueWeekKey, newsLineFor, pairs, groupDue, utcDay, verifyNoteHtml, GROUP_SIZE, VERIFY_PLACEHOLDER, MAX_OFFICIAL, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
+  storedMailLocale, escapeHtml, isIssueWeekKey, newsLineFor, pairs, groupDue, utcDay, verifyNoteHtml, GROUP_SIZE, TEST_LEAD_MINUTES, VERIFY_PLACEHOLDER, MAX_OFFICIAL, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
 } from './kiezBriefRules';
 
@@ -283,4 +283,8 @@ test('the confirm-your-address note: fixed copy, own link, and it only appears f
   assert.equal(personalize(html, 'A', 'u', 'de', de), `<div>${de}</div><p>A</p>`);
   // A member cannot summon the note through the name.
   assert.equal(personalize(html, VERIFY_PLACEHOLDER, 'u', 'de', de), `<div>${de}</div><p>${VERIFY_PLACEHOLDER}</p>`);
+});
+
+test('the admin gets two hours with the test copy (the workflow sleeps the same 7200 s)', () => {
+  assert.equal(TEST_LEAD_MINUTES * 60, 7200);
 });

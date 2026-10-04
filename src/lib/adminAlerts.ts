@@ -165,18 +165,33 @@ export function alertSentryIssue(p: { title: string; url?: string }): Promise<vo
 }
 
 
-/** The weekly member mail: what the run did. `test` = the admin's own copy from the preview route. */
-export function alertKiezBrief(p: { week: string; outcome: 'sent' | 'quiet' | 'no-recipients' | 'failed' | 'test'; recipients?: number; group?: number; more?: boolean }): Promise<void> {
+/**
+ * The weekly member mail: what a run did. `test` = the admin's own copy from the preview route;
+ * `test-before-send` = the automatic copy the Sunday job sends first (`minutes` before the members'
+ * mail, `recipients` = how many will get it); `test-quiet` = nothing to send this week.
+ */
+export function alertKiezBrief(p: {
+  week: string;
+  outcome: 'sent' | 'quiet' | 'no-recipients' | 'failed' | 'test' | 'test-before-send' | 'test-quiet' | 'test-failed';
+  recipients?: number; group?: number; more?: boolean; minutes?: number;
+}): Promise<void> {
   const kw = `KW ${Number(p.week.slice(-2))}`;
+  const lead = p.minutes && p.minutes >= 60 ? `etwa ${Math.round(p.minutes / 60)} Stunden` : `${p.minutes ?? 0} Minuten`;
   const text =
     p.outcome === 'sent'
       ? `✉️ Kiez-Brief ${kw}: Gruppe ${p.group ?? 1} an ${p.recipients ?? 0} Mitglieder verschickt${p.more ? ' — die nächste Gruppe folgt morgen früh' : ''}\n→ ${ALERT_BASE_URL}/kiez-brief/${p.week}`
-      : p.outcome === 'test'
-        ? `✉️ Kiez-Brief ${kw}: Testausgabe an deine Adresse verschickt`
-        : p.outcome === 'quiet'
-          ? `✉️ Kiez-Brief ${kw}: ruhige Woche — nichts verschickt`
-          : p.outcome === 'no-recipients'
-            ? `✉️ Kiez-Brief ${kw}: keine Empfänger — nichts verschickt`
-            : `⚠️ Kiez-Brief ${kw}: Versand fehlgeschlagen — Näheres in Sentry`;
+      : p.outcome === 'test-before-send'
+        ? `👀 Kiez-Brief ${kw}: Die Testausgabe ist an deine Adresse gegangen — bitte ansehen! In ${lead} geht der Brief an ${p.recipients ?? 0} Mitglieder.\n→ ${ALERT_BASE_URL}/api/admin/kiez-brief/preview`
+        : p.outcome === 'test'
+          ? `👀 Kiez-Brief ${kw}: Die Testausgabe ist an deine Adresse gegangen — bitte ansehen!`
+          : p.outcome === 'test-quiet'
+            ? `✉️ Kiez-Brief ${kw}: ruhige Woche — heute geht kein Brief raus`
+            : p.outcome === 'test-failed'
+              ? `⚠️ Kiez-Brief ${kw}: Die Testausgabe konnte nicht verschickt werden — der Versand an die Mitglieder läuft trotzdem wie geplant. Näheres in Sentry`
+              : p.outcome === 'quiet'
+                ? `✉️ Kiez-Brief ${kw}: ruhige Woche — nichts verschickt`
+                : p.outcome === 'no-recipients'
+                  ? `✉️ Kiez-Brief ${kw}: keine Empfänger — nichts verschickt`
+                  : `⚠️ Kiez-Brief ${kw}: Versand fehlgeschlagen — Näheres in Sentry`;
   return sendAdminAlert({ kind: 'kiez_brief', text });
 }

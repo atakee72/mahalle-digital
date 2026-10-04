@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type { Db } from 'mongodb';
 import {
   claimIssue, markIssue, loadIssueData, loadRecipients, findSentIssue, loadSentIssue, listSentIssues, KIEZ_BRIEF_COLLECTION,
-  countRecipients, findPendingIssue, takeNextGroup,
+  countRecipients, findPendingIssue, takeNextGroup, issueExists, loadAdmins,
   type IssueDoc,
 } from './kiezBriefStore';
 
@@ -312,4 +312,13 @@ test('a waiting group is dropped when the week is no longer news; a skipped issu
   assert.equal(await findPendingIssue(fakeDb({ [KIEZ_BRIEF_COLLECTION]: [waiting({})] }).db, NOW + 5 * DAY), null);
   assert.equal(await findPendingIssue(fakeDb({ [KIEZ_BRIEF_COLLECTION]: [waiting({ skipped: 'quiet' })] }).db, NOW + DAY), null);
   assert.equal(await findPendingIssue(fakeDb({ [KIEZ_BRIEF_COLLECTION]: [issue('2026-W41', { sentAt: new Date(NOW) })] }).db, NOW + DAY), null); // a row from before the groups
+});
+
+test('the test copy goes to the admins — whatever their own switch says — and only while the week is unclaimed', async () => {
+  const { db, calls } = fakeDb({ users: [member(1, { role: 'admin', newsletter: 'off', emailVerified: false, locale: 'en' })] });
+  assert.deepEqual(await loadAdmins(db), [{ id: uid(1), email: 'm1@x.test', name: 'M1', locale: 'en', verified: false }]);
+  assert.deepEqual(calls[0].filter, { role: 'admin', anonymized: { $ne: true }, email: { $type: 'string' } });
+  assert.equal(await issueExists(db, '2026-W41'), false);
+  await claimIssue(db, '2026-W41', NOW, false);
+  assert.equal(await issueExists(db, '2026-W41'), true);
 });

@@ -240,3 +240,21 @@ export async function takeNextGroup(db: Db, issue: Pick<IssueDoc, '_id' | 'group
   );
   return res.modifiedCount === 1 ? { index, recipients, more } : null;
 }
+
+/** true once the week is claimed (sent, sending, skipped — any row). */
+export async function issueExists(db: Db, week: string): Promise<boolean> {
+  return (await db.collection<IssueDoc>(KIEZ_BRIEF_COLLECTION).findOne({ _id: week }, { projection: { _id: 1 } })) !== null;
+}
+
+/** The admins as mail recipients — the test copy before the send goes to them, whatever their own switch says. */
+export async function loadAdmins(db: Db): Promise<Recipient[]> {
+  const users = await db.collection('users')
+    .find({ role: 'admin', anonymized: { $ne: true }, email: { $type: 'string' } }, { projection: { _id: 1, email: 1, name: 1, locale: 1, emailVerified: 1 } })
+    .sort({ _id: 1 })
+    .limit(5)
+    .toArray();
+  return users.map((u) => ({
+    id: String(u._id), email: String(u.email), name: typeof u.name === 'string' ? u.name : null,
+    locale: storedMailLocale(u.locale), verified: u.emailVerified === true,
+  }));
+}

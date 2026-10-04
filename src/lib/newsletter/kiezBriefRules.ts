@@ -17,6 +17,12 @@ export function storedNewsletterMode(v: unknown): NewsletterMode {
  * the auth mails. Over the limit the API answers 429 `daily_quota_exceeded`.
  */
 export const GROUP_SIZE = 75;
+/**
+ * The admin gets a test copy this long before the members' mail (owner, 2026-10-04: „giving me
+ * time to check"). The Sunday workflow waits exactly this long between its two calls — keep
+ * `sleep` in .github/workflows/kiez-brief.yml in step with it.
+ */
+export const TEST_LEAD_MINUTES = 120;
 /** More groups than this (150 members) is the owner's line for the paid plan: the send warns, and still goes out. */
 export const GROUPS_BEFORE_WARNING = 2;
 /** A group still waiting after this long is dropped: „the week" is no longer news. */
