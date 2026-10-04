@@ -6,6 +6,7 @@ import { isMailerConfigured, sendMail } from '../../../../lib/email/mailer';
 import { buildIssue, kiezBriefBaseUrl, mailsFor, renderIssueAll } from '../../../../lib/newsletter/kiezBrief';
 import { unsubSecret } from '../../../../lib/newsletter/unsubToken';
 import { isQuiet, storedMailLocale, subjectFor } from '../../../../lib/newsletter/kiezBriefRules';
+import { alertKiezBrief } from '../../../../lib/adminAlerts';
 
 // The owner's look at THIS week's issue: GET renders the HTML in the browser (no claim, no send);
 // POST sends one copy to the admin's own address — the way to see it in a real mail client before
@@ -40,5 +41,6 @@ export const POST: APIRoute = async ({ request }) => {
   const { data, mine, email, locale } = await issueForAdmin(request, gate.userId);
   if (!email) return new Response(JSON.stringify({ error: 'no_email' }), { status: 400 });
   await sendMail({ ...mine, to: email, subject: `[Vorschau] ${subjectFor(data, locale)}` });
+  await alertKiezBrief({ week: data.week, outcome: 'test' });
   return new Response(JSON.stringify({ sent: true, to: email, quiet: isQuiet(data), locale }), { headers: { 'Content-Type': 'application/json' } });
 };

@@ -79,6 +79,9 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = fal
             ? <Link href={`${baseUrl}/kiez-brief`} target="_self" style={mutedLink}>{`← ${c.allIssues}`}</Link>
             : <Link href={url(`/kiez-brief/${data.week}`)} style={mutedLink}>{c.viewInBrowser}</Link>}
         </Text>
+        {/* '' for a confirmed member; for the others one quiet line under the top link (owner: no
+            frame, not inside the letter — „we wouldnt want to open a newsletter with a warning") */}
+        <div>{VERIFY_PLACEHOLDER}</div>
         <Container style={containerStyle}>
           {/* Masthead: the app's disc + wordmark on a rust band */}
           <Section style={mast}>
@@ -96,8 +99,6 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = fal
           </Section>
 
           <Section style={inner}>
-            {/* '' for a confirmed member, the „confirm your address" note for the others — substituted per recipient */}
-            <div>{VERIFY_PLACEHOLDER}</div>
             <Heading style={h1}>{c.title}</Heading>
             <Text style={hello}>
               <strong>{c.greeting}</strong> {c.intro}

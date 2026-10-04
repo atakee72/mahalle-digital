@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/astro';
 import { getCollection } from 'astro:content';
 import { connectDB } from '../mongodb';
 import { isMailerConfigured, sendMailBatch } from '../email/mailer';
+import { alertKiezBrief } from '../adminAlerts';
 import KiezBriefEmail from '../../emails/KiezBriefEmail';
 import { makeUnsubToken, unsubSecret } from './unsubToken';
 import {
@@ -169,6 +170,16 @@ async function sendGroup(db: Awaited<ReturnType<typeof connectDB>>, issue: Issue
  * only on a Berlin Monday, when Sunday's run never arrived, starts the issue itself. Never throws.
  */
 export async function sendKiezBrief(opts: { fallback?: boolean; now?: number } = {}): Promise<SendResult> {
+  const result = await runKiezBrief(opts);
+  // Tell the owner (Telegram, never-throw) what happened — only when something did: the daily
+  // „not due" and „already claimed" answers stay silent.
+  if (result.outcome === 'sent' || result.outcome === 'quiet' || result.outcome === 'no-recipients' || result.outcome === 'failed') {
+    await alertKiezBrief({ week: result.week, outcome: result.outcome, recipients: result.recipients, group: result.group, more: result.more });
+  }
+  return result;
+}
+
+async function runKiezBrief(opts: { fallback?: boolean; now?: number }): Promise<SendResult> {
   const nowMs = opts.now ?? Date.now();
   const week = issueWeek(nowMs);
   try {

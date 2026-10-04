@@ -312,14 +312,15 @@ export function inert(s: string): string {
 }
 
 /**
- * The note an unconfirmed member reads above the headline. Finished HTML (it is inserted by string
+ * The line an unconfirmed member reads under „Im Browser ansehen", above the letter: small, muted,
+ * no frame — a hint, not a warning (owner, 2026-10-04). Finished HTML (it is inserted by string
  * replace, after React's render): fixed copy and our own base URL only, never member input.
  */
 export function verifyNoteHtml(baseUrl: string, locale: MailLocale = 'de'): string {
   const c = MAIL_COPY[locale];
   const href = escapeHtml(withUtm(`${baseUrl}/verify-email`));
-  return `<p style="margin:0 0 14px;padding:10px 12px;border:1.5px solid #c9861b;border-radius:8px;background-color:#fbf1d8;color:#3a362e;font-family:Georgia,serif;font-size:13.5px;line-height:1.45">`
-    + `${escapeHtml(c.verifyNote)} <a href="${href}" style="color:#1b1a17;font-weight:700;text-decoration:underline">${escapeHtml(c.verifyCta)} →</a></p>`;
+  return `<p style="margin:0 0 10px;color:#7a7264;font-family:Georgia,serif;font-size:12px;line-height:1.5;text-align:center">`
+    + `${escapeHtml(c.verifyNote)} <a href="${href}" style="color:#7a7264;text-decoration:underline">${escapeHtml(c.verifyCta)} →</a></p>`;
 }
 
 /**

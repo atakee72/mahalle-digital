@@ -13,7 +13,8 @@ type AdminAlertKind =
   | 'content_new'
   | 'comment_new'
   | 'contact_relay'
-  | 'sentry_issue';
+  | 'sentry_issue'
+  | 'kiez_brief';
 
 const EMAIL_KINDS: ReadonlySet<AdminAlertKind> = new Set([
   'member_new',
@@ -161,4 +162,21 @@ export function alertSentryIssue(p: { title: string; url?: string }): Promise<vo
     kind: 'sentry_issue',
     text: `🔴 Sentry: ${trunc(p.title, 120)}${p.url ? `\n→ ${p.url}` : ''}`,
   });
+}
+
+
+/** The weekly member mail: what the run did. `test` = the admin's own copy from the preview route. */
+export function alertKiezBrief(p: { week: string; outcome: 'sent' | 'quiet' | 'no-recipients' | 'failed' | 'test'; recipients?: number; group?: number; more?: boolean }): Promise<void> {
+  const kw = `KW ${Number(p.week.slice(-2))}`;
+  const text =
+    p.outcome === 'sent'
+      ? `✉️ Kiez-Brief ${kw}: Gruppe ${p.group ?? 1} an ${p.recipients ?? 0} Mitglieder verschickt${p.more ? ' — die nächste Gruppe folgt morgen früh' : ''}\n→ ${ALERT_BASE_URL}/kiez-brief/${p.week}`
+      : p.outcome === 'test'
+        ? `✉️ Kiez-Brief ${kw}: Testausgabe an deine Adresse verschickt`
+        : p.outcome === 'quiet'
+          ? `✉️ Kiez-Brief ${kw}: ruhige Woche — nichts verschickt`
+          : p.outcome === 'no-recipients'
+            ? `✉️ Kiez-Brief ${kw}: keine Empfänger — nichts verschickt`
+            : `⚠️ Kiez-Brief ${kw}: Versand fehlgeschlagen — Näheres in Sentry`;
+  return sendAdminAlert({ kind: 'kiez_brief', text });
 }

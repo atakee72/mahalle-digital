@@ -25,6 +25,7 @@ Code: `src/lib/newsletter/*`, `src/pages/api/cron/kiez-brief.ts`, `src/pages/api
 
 Resend Free allows 100 mails per UTC calendar day (reset at midnight UTC, not a rolling 24 hours), shared with the login mails. An issue therefore goes out in groups of 75 (`GROUP_SIZE` in `kiezBriefRules.ts`), one group per UTC day: Sunday evening, then Monday 08:00 with the morning job, then Tuesday 08:00 (07:00 in winter time). Members are taken oldest first; each group is claimed in the issue's row before it is sent, so no group goes out twice and a failed group is not retried.
 
+- Telegram tells you when a group went out („Gruppe 1 an 59 Mitglieder verschickt"), when the week was quiet and when a send failed.
 - Watch it: the route's answer and the morning job's log name the group (`group 2 sent to 31 members`). The row shows `groups`, `more`, `recipients`.
 - Sentry warning „more members than two daily groups": more than 150 recipients — the issue now takes three days. That is the agreed moment for the paid plan; up to about 300 members nothing is lost meanwhile (four groups fit before the four-day cut-off).
 - A group still waiting after four days is dropped (the week is no longer news).

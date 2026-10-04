@@ -276,6 +276,7 @@ test('the confirm-your-address note: fixed copy, own link, and it only appears f
   assert.ok(verifyNoteHtml('', 'en').includes('href="/verify-email?utm_source=kiez-brief"'));
   assert.ok(verifyNoteHtml('', 'en').includes('Your e-mail address is not confirmed yet.'));
   assert.doesNotMatch(de, /%%|<script/);
+  assert.doesNotMatch(de, /border|background/); // a quiet line, no frame
 
   const html = `<div>${VERIFY_PLACEHOLDER}</div><p>${NAME_PLACEHOLDER}</p>`;
   assert.equal(personalize(html, 'A', 'u', 'de'), '<div></div><p>A</p>');

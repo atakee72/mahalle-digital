@@ -102,10 +102,12 @@ test('the footer\'s settings link leads to the profile, where the switch lives',
   assert.match(await html({ locale: 'en' }), />Settings in your profile</);
 });
 
-test('the confirm-your-address placeholder sits once, in a block of its own above the headline', async () => {
-  for (const out of [await html(), await html({ web: true })]) {
+test('the confirm-your-address placeholder sits once, under the top link and outside the letter', async () => {
+  for (const [out, top] of [[await html(), 'Im Browser ansehen'], [await html({ web: true }), 'Alle Ausgaben']] as const) {
     assert.equal(out.split(VERIFY_PLACEHOLDER).length - 1, 1);
     assert.ok(out.includes(`<div>${VERIFY_PLACEHOLDER}</div>`));
-    assert.ok(out.indexOf(VERIFY_PLACEHOLDER) < out.indexOf('Das war die Woche im Kiez'));
+    const at = out.indexOf(VERIFY_PLACEHOLDER);
+    assert.ok(out.indexOf(top) < at, 'after the top link');
+    assert.ok(at < out.indexOf('icon-192.png'), 'before the masthead — not inside the letter');
   }
 });
