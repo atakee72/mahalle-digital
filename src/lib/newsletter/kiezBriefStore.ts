@@ -6,7 +6,7 @@ import { ObjectId, type Db } from 'mongodb';
 import { PUBLIC_AUTHOR_PROJECTION } from '../publicAuthor';
 import { getAirHistory } from '../kiez/airLog';
 import {
-  windowFor, arrangeData, excerptOf, thumb, storedMailLocale, type MailLocale,
+  windowFor, arrangeData, excerptOf, thumb, storedMailLocale, isIssueWeekKey, type MailLocale,
   type BriefData, type BriefPost, type BriefPostKind, type BriefEvent, type BriefListing, type BriefBlogPost,
 } from './kiezBriefRules';
 
@@ -52,7 +52,14 @@ const toMs = (v: unknown): number => {
 /** Blog posts come from the Astro content collection — the caller passes them in (no astro:content here). */
 export interface BlogInput { slug: string; title: string; description: string; pubDate: unknown; draft?: boolean; cover?: string | null }
 
-export async function loadIssueData(db: Db, week: string, nowMs: number, blog: BlogInput[], opts: { cloud?: string | null } = {}): Promise<BriefData> {
+export interface LoadOptions {
+  /** Our Cloudinary cloud name; without it no thumbnail passes. */
+  cloud?: string | null;
+  /** false = no air line (the browser view of a past issue: „today's" reading would be the wrong day). */
+  air?: boolean;
+}
+
+export async function loadIssueData(db: Db, week: string, nowMs: number, blog: BlogInput[], opts: LoadOptions = {}): Promise<BriefData> {
   const w = windowFor(nowMs);
   const kinds = Object.keys(POST_COLLECTIONS) as BriefPostKind[];
   const [postLists, eventDocs, listingDocs, air] = await Promise.all([
@@ -71,7 +78,7 @@ export async function loadIssueData(db: Db, week: string, nowMs: number, blog: B
       .find({ ...PUBLIC, createdAt: { $gt: new Date(w.fromMs), $lte: new Date(w.toMs) }, status: { $in: ['available', 'reserved'] } },
         { projection: { title: 1, listingType: 1, price: 1, createdAt: 1, images: 1 } })
       .toArray(),
-    getAirHistory(db, new Date(nowMs)).catch(() => null),
+    opts.air === false ? null : getAirHistory(db, new Date(nowMs)).catch(() => null),
   ]);
 
   // Author names: one join through the public allowlist (tombstone-safe), never a stored name.
@@ -110,6 +117,36 @@ export async function loadIssueData(db: Db, week: string, nowMs: number, blog: B
     week, posts, events, listings, blog: blogPosts,
     air: air?.lastReading ? { lqi: air.lastReading.lqi } : null,
   });
+}
+
+/** A SENT issue by its week key; null for a malformed key and for unknown, skipped or never-sent weeks. */
+export async function findSentIssue(db: Db, week: unknown): Promise<IssueDoc | null> {
+  if (!isIssueWeekKey(week)) return null;
+  const doc = await db.collection<IssueDoc>(KIEZ_BRIEF_COLLECTION).findOne({ _id: week, sentAt: { $type: 'date' } });
+  return doc && doc.windowTo instanceof Date ? doc : null;
+}
+
+/**
+ * A sent issue for the browser view, rebuilt from TODAY's data for the window stored at its claim.
+ * Deliberately no snapshot of the mail: a post deleted since is gone here too, a member who left
+ * reads „Ehemaliges Mitglied", a sold listing is out. No air line (see LoadOptions.air).
+ */
+export async function loadSentIssue(db: Db, doc: IssueDoc, blog: BlogInput[], opts: LoadOptions = {}): Promise<BriefData> {
+  return loadIssueData(db, doc._id, doc.windowTo.getTime(), blog, { ...opts, air: false });
+}
+
+export interface IssueListItem { week: string; sentAtMs: number }
+
+/** The sent issues, newest first — the list page. Skipped (quiet, quota) and failed weeks have no `sentAt`. */
+export async function listSentIssues(db: Db, limit = 60): Promise<IssueListItem[]> {
+  const docs = await db.collection<IssueDoc>(KIEZ_BRIEF_COLLECTION)
+    .find({ sentAt: { $type: 'date' } }, { projection: { sentAt: 1 } })
+    .sort({ sentAt: -1 })
+    .limit(limit)
+    .toArray();
+  return docs
+    .filter((d) => isIssueWeekKey(d._id) && d.sentAt instanceof Date)
+    .map((d) => ({ week: d._id, sentAtMs: (d.sentAt as Date).getTime() }));
 }
 
 export interface Recipient { id: string; email: string; name: string | null; locale: MailLocale }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
   preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb, inert, personalize, LISTING_KIND_SYMBOL,
-  storedMailLocale, escapeHtml, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
+  storedMailLocale, escapeHtml, isIssueWeekKey, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
 } from './kiezBriefRules';
 
@@ -200,3 +200,17 @@ test('a name is escaped before it goes into rendered HTML', () => {
   assert.equal(escapeHtml('Ayşe'), 'Ayşe');
 });
 
+
+test('isIssueWeekKey: exactly the keys issueWeek() produces', () => {
+  for (const ok of ['2026-W41', '2026-W01', '2026-W53', '2031-W09', issueWeek(SUN_18), issueWeek(MON_06)]) assert.equal(isIssueWeekKey(ok), true, ok);
+  for (const bad of ['', '2026-W0', '2026-W00', '2026-W54', '2026-W411', '26-W41', '2026-w41', '2026W41', '2026-W41 ', '2026-W41\n', '2026-W41/x', '..', 41, null, undefined, ['2026-W41'], { $gt: '' }]) {
+    assert.equal(isIssueWeekKey(bad), false, String(bad));
+  }
+});
+
+test('the mail copy names the browser view and the list in both languages', () => {
+  assert.equal(MAIL_COPY.de.viewInBrowser, 'Im Browser ansehen');
+  assert.equal(MAIL_COPY.de.allIssues, 'Alle Ausgaben');
+  assert.equal(MAIL_COPY.en.viewInBrowser, 'View in browser');
+  assert.equal(MAIL_COPY.en.allIssues, 'All issues');
+});

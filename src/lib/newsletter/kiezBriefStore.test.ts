@@ -1,7 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Db } from 'mongodb';
-import { claimIssue, markIssue, loadIssueData, loadRecipients, KIEZ_BRIEF_COLLECTION } from './kiezBriefStore';
+import {
+  claimIssue, markIssue, loadIssueData, loadRecipients, findSentIssue, loadSentIssue, listSentIssues, KIEZ_BRIEF_COLLECTION,
+  type IssueDoc,
+} from './kiezBriefStore';
 
 const NOW = Date.parse('2026-10-11T16:00:00.000Z'); // Sunday 18:00 CEST
 const HOUR = 3_600_000;
@@ -18,8 +21,21 @@ function fakeDb(seed: Record<string, any[]> = {}) {
         calls.push({ collection: name, op: 'find', filter });
         let list = [...rows(name)];
         if (filter?._id?.$in) list = list.filter((r) => filter._id.$in.some((id: any) => String(id) === String(r._id)));
-        const cursor = { sort: () => cursor, limit: () => cursor, toArray: async () => list };
+        if (filter?.sentAt?.$type === 'date') list = list.filter((r) => r.sentAt instanceof Date);
+        const cursor = {
+          sort: (spec: Record<string, 1 | -1> = {}) => {
+            const [key, dir] = Object.entries(spec)[0] ?? [];
+            if (key) list.sort((a, b) => (Number(a[key]) - Number(b[key])) * (dir as number));
+            return cursor;
+          },
+          limit: (n: number) => { list = list.slice(0, n); return cursor; },
+          toArray: async () => list,
+        };
         return cursor;
+      },
+      findOne: async (filter: any) => {
+        calls.push({ collection: name, op: 'findOne', filter });
+        return rows(name).find((r) => r._id === filter._id && (filter.sentAt?.$type !== 'date' || r.sentAt instanceof Date)) ?? null;
       },
       insertOne: async (doc: any) => {
         if (rows(name).some((r) => r._id === doc._id)) throw Object.assign(new Error('dup'), { code: 11000 });
@@ -106,4 +122,70 @@ test('recipients: verified, not anonymized, not banned, not off, not in deletion
   assert.deepEqual(calls[0].filter, {
     emailVerified: true, anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, deletionScheduledAt: { $exists: false }, email: { $type: 'string' },
   });
+});
+
+const issue = (week: string, patch: Partial<IssueDoc> = {}): IssueDoc => ({
+  _id: week, windowFrom: new Date(NOW - 7 * DAY), windowTo: new Date(NOW), claimedAt: new Date(NOW), fallback: false, ...patch,
+});
+
+test('findSentIssue: only a sent week; skipped, unsent, unknown and malformed keys are null', async () => {
+  const { db, calls } = fakeDb({
+    [KIEZ_BRIEF_COLLECTION]: [
+      issue('2026-W41', { recipients: 12, sentAt: new Date(NOW + 60_000) }),
+      issue('2026-W40', { skipped: 'quiet', recipients: 0 }),
+      issue('2026-W39', { recipients: 0 }), // claimed, never sent (failed send or no transport)
+    ],
+  });
+  assert.equal((await findSentIssue(db, '2026-W41'))?._id, '2026-W41');
+  assert.equal(await findSentIssue(db, '2026-W40'), null);
+  assert.equal(await findSentIssue(db, '2026-W39'), null);
+  assert.equal(await findSentIssue(db, '2026-W38'), null);
+  assert.deepEqual(calls[0].filter, { _id: '2026-W41', sentAt: { $type: 'date' } });
+  const before = calls.length;
+  for (const bad of ['', '2026-W00', '2026-W54', '2026-w41', '2026-W41/..', ' 2026-W41', '../admin', undefined, null, 41, { $ne: null }]) {
+    assert.equal(await findSentIssue(db, bad), null);
+  }
+  assert.equal(calls.length, before); // a malformed key never reaches the database
+});
+
+test('loadSentIssue: the STORED window, not today\'s; no air lookup at all', async () => {
+  const LATER = NOW + 30 * DAY; // the member opens the issue a month later
+  const { db, calls } = fakeDb({
+    topics: [{ _id: 't1', title: 'Frage', author: 'x', comments: [], date: NOW - HOUR }],
+    announcements: [], recommendations: [], events: [], listings: [],
+    schillerkiez_air_log: [{ ts: new Date(LATER), lqi: 4 }],
+  });
+  const d = await loadSentIssue(db, issue('2026-W41', { sentAt: new Date(NOW) }), [{ slug: 'neu', title: 'Neu', description: 'd', pubDate: new Date(NOW - DAY) }, { slug: 'spaeter', title: 'S', description: 'd', pubDate: new Date(LATER - DAY) }], { cloud: 'demo' });
+  assert.equal(d.week, '2026-W41');
+  assert.equal(d.air, null);
+  assert.equal(calls.some((c) => c.collection.startsWith('schillerkiez_air')), false);
+  assert.deepEqual(calls.find((c) => c.collection === 'topics')!.filter.date, { $gt: NOW - 7 * DAY, $lte: NOW });
+  assert.deepEqual(calls.find((c) => c.collection === 'events')!.filter.startDate, { $gte: new Date(NOW), $lt: new Date(NOW + 7 * DAY) });
+  assert.deepEqual(d.blog.map((b) => b.slug), ['neu']); // a post published after the issue is not in it
+});
+
+test('loadSentIssue: the caller cannot switch the air line back on', async () => {
+  const { db, calls } = fakeDb({ topics: [], announcements: [], recommendations: [], events: [], listings: [], schillerkiez_air_log: [{ ts: new Date(NOW), lqi: 2 }] });
+  const d = await loadSentIssue(db, issue('2026-W41', { sentAt: new Date(NOW) }), [], { air: true });
+  assert.equal(d.air, null);
+  assert.equal(calls.some((c) => c.collection.startsWith('schillerkiez_air')), false);
+});
+
+test('listSentIssues: sent weeks only, newest first, capped', async () => {
+  const { db, calls } = fakeDb({
+    [KIEZ_BRIEF_COLLECTION]: [
+      issue('2026-W40', { sentAt: new Date(NOW - 7 * DAY) }),
+      issue('2026-W42', { sentAt: new Date(NOW + 7 * DAY) }),
+      issue('2026-W41', { skipped: 'quota', recipients: 0 }),
+      issue('2026-W39', { sentAt: new Date(NOW - 14 * DAY) }),
+    ],
+  });
+  assert.deepEqual(await listSentIssues(db), [
+    { week: '2026-W42', sentAtMs: NOW + 7 * DAY },
+    { week: '2026-W40', sentAtMs: NOW - 7 * DAY },
+    { week: '2026-W39', sentAtMs: NOW - 14 * DAY },
+  ]);
+  assert.deepEqual(calls[0].filter, { sentAt: { $type: 'date' } });
+  assert.deepEqual((await listSentIssues(db, 2)).map((i) => i.week), ['2026-W42', '2026-W40']);
+  assert.deepEqual(await listSentIssues(fakeDb().db), []);
 });

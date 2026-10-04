@@ -51,6 +51,7 @@ export const MAIL_COPY = {
     why: 'Du bekommst diesen Brief einmal die Woche, weil du Mitglied bei Mahalle bist.',
     unsubscribe: 'Abbestellen', settings: 'Mitteilungen einstellen', imprint: 'Impressum', privacy: 'Datenschutz',
     preheaderFallback: 'Neues aus dem Schillerkiez', week: 'KW',
+    viewInBrowser: 'Im Browser ansehen', allIssues: 'Alle Ausgaben',
   },
   en: {
     title: 'The week in the Kiez',
@@ -64,6 +65,7 @@ export const MAIL_COPY = {
     why: 'You get this letter once a week because you are a member of Mahalle.',
     unsubscribe: 'Unsubscribe', settings: 'Notification settings', imprint: 'Imprint', privacy: 'Privacy',
     preheaderFallback: 'News from the Schillerkiez', week: 'CW',
+    viewInBrowser: 'View in browser', allIssues: 'All issues',
   },
 } as const;
 
@@ -103,6 +105,11 @@ export function isoWeek(ms: number): string {
  */
 export function issueWeek(nowMs: number): string {
   return isoWeek(nowMs - DAY_MS);
+}
+
+/** A well-formed issue key ('2026-W41'). The browser view takes it from the address — member input. */
+export function isIssueWeekKey(v: unknown): v is string {
+  return typeof v === 'string' && /^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$/.test(v);
 }
 
 /** „KW 41" (German) / „CW 41" (English) for the subject and the masthead. */
