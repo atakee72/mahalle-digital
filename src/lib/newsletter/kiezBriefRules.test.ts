@@ -133,6 +133,13 @@ test('thumbnails: only our own cloud and our two upload folders pass, fail close
   assert.equal(thumb('https://evil.example/res.cloudinary.com/demo/image/upload/mahalle/posts/x.png', 80, 'demo'), null);
   assert.equal(thumb('http://res.cloudinary.com/demo/image/upload/mahalle/posts/x.png', 80, 'demo'), null);
   assert.equal(thumb(null, 80, 'demo'), null);
+  // a path that climbs out of our folder, plain or percent-encoded, is refused
+  for (const bad of [
+    'https://res.cloudinary.com/demo/image/upload/mahalle/posts/../../../../other/image/fetch/https://evil.example/x.png',
+    'https://res.cloudinary.com/demo/image/upload/mahalle/posts/%2e%2e/%2e%2e/x.png',
+    'https://res.cloudinary.com/demo/image/upload/mahalle/posts/a b.png',
+    'https://res.cloudinary.com/demo/image/upload/mahalle/posts/x.png?y=1',
+  ]) assert.equal(thumb(bad, 80, 'demo'), null, bad);
 });
 
 test('member text cannot spell the placeholders', () => {

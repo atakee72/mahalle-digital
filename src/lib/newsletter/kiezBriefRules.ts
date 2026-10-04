@@ -244,9 +244,11 @@ export function excerptOf(body: unknown, max = 140): string | null {
 export function thumb(url: unknown, w: number, cloud: string | null | undefined): string | null {
   if (typeof url !== 'string' || typeof cloud !== 'string' || !cloud) return null;
   const esc = cloud.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`^https://res\\.cloudinary\\.com/${esc}/image/upload/((?:f_auto,q_auto(?:,w_\\d+,h_\\d+,c_fill|,w_\\d+,c_fill)?/)?(?:v\\d+/)?mahalle/(?:posts|listings)/[^?#\\s]+)$`);
+  const re = new RegExp(`^https://res\\.cloudinary\\.com/${esc}/image/upload/((?:f_auto,q_auto(?:,w_\\d+,h_\\d+,c_fill|,w_\\d+,c_fill)?/)?(?:v\\d+/)?mahalle/(?:posts|listings)/[A-Za-z0-9_\\-./]+)$`);
   const m = re.exec(url);
-  if (!m) return null;
+  // The file part is plain letters, digits, `_ - . /` only: no `%` (encoded dots), no `..` — a
+  // path that climbs out of our folder could reach another account or the fetch proxy.
+  if (!m || m[1].includes('..')) return null;
   return `https://res.cloudinary.com/${cloud}/image/upload/f_auto,q_auto,w_${w},h_${w},c_fill/${m[1].replace(/^f_auto,q_auto[^/]*\//, '')}`;
 }
 
