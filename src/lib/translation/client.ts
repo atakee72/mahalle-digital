@@ -13,6 +13,15 @@ export function pickTargetLang(kioskLocale: string): string {
   return kioskLocale || 'de';
 }
 
+/** A link from the English Kiez-Brief carries `?translate=1`: open the translation on load. */
+export function wantsAutoTranslate(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('translate') === '1';
+  } catch {
+    return false;
+  }
+}
+
 export async function requestTranslation(
   contentType: string,
   contentId: string,

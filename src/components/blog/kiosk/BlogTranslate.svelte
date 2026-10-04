@@ -6,9 +6,9 @@
      title/standfirst through the `bl:translation` document event. Reuses the .ktr-*
      classes from global.css; the blog's accent is rust. -->
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { t, locale } from '../../../lib/kiosk-i18n';
-  import { pickTargetLang, requestBlogTranslation } from '../../../lib/translation/client';
+  import { pickTargetLang, requestBlogTranslation, wantsAutoTranslate } from '../../../lib/translation/client';
   import type { Block } from '../../../lib/blog/markdownBlocks';
 
   let {
@@ -50,6 +50,8 @@
     destroyed = true;
     if (shown) publish(null);
   });
+  // A link from the English Kiez-Brief carries ?translate=1: open the translation on load.
+  onMount(() => { if (wantsAutoTranslate()) void toggle(); });
 
   async function toggle() {
     error = null;

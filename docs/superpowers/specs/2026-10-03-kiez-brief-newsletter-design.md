@@ -24,7 +24,7 @@ Push and the bell reach only the members who allowed push; the mail reaches the 
   first mail's footer are the notice.
 - **Content:** automatic sections only, no admin text per issue.
 - **Sender:** `SENDING_FROM_EMAIL` (noreply@mahalle.digital), `Reply-To: admin@mahalle.digital`.
-- **Language:** German only (push precedent — the DE/EN toggle is client-side).
+- **Language:** German or English per member since 2026-10-04 (the toggle is synced to `users.locale`; before that German only). A greeting with the member's name opens the mail. Only the English mail's content links carry `?translate=1` (the post page opens translated into the browser language).
 - **Transport:** Resend transactional sends via the **batch endpoint** (up to 100 mails per call,
   `Idempotency-Key: kiez-brief-<ISO week>`), NOT Resend Broadcasts/Audiences — that would copy every
   member's e-mail into Resend's contact store (a second processor copy) for a hosted unsubscribe page

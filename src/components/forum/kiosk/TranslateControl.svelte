@@ -1,7 +1,7 @@
 <!-- Styles live in global.css (.ktr-*) — this component is only imported by
      other islands, and nested-island <style> blocks get orphaned in prod. -->
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { t, locale } from '../../../lib/kiosk-i18n';
   import { pickTargetLang, requestTranslation } from '../../../lib/translation/client';
 
@@ -10,11 +10,14 @@
     contentId,
     onTranslated,
     accent = 'inherit',
+    autoOpen = false,
   }: {
     contentType: string;
     contentId: string;
     onTranslated: (t: { title: string | null; body: string } | null) => void;
     accent?: string;
+    /** open the translation once on mount (a link from the English Kiez-Brief) */
+    autoOpen?: boolean;
   } = $props();
 
   // Named `phase` rather than the brief's `state` — a local variable named
@@ -29,6 +32,7 @@
   onDestroy(() => {
     destroyed = true;
   });
+  onMount(() => { if (autoOpen) void toggle(); });
 
   async function toggle() {
     error = null;

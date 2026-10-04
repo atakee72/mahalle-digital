@@ -99,8 +99,8 @@ test('a failing air lookup leaves the air line out, nothing else', async () => {
 });
 
 test('recipients: verified, not anonymized, not banned, not off, not in deletion grace, with an e-mail string', async () => {
-  const { db, calls } = fakeDb({ users: [{ _id: 'u1', email: 'a@b.c', name: 'A' }, { _id: 'u2', email: 'd@e.f' }] });
-  assert.deepEqual(await loadRecipients(db), [{ id: 'u1', email: 'a@b.c', name: 'A' }, { id: 'u2', email: 'd@e.f', name: null }]);
+  const { db, calls } = fakeDb({ users: [{ _id: 'u1', email: 'a@b.c', name: 'A', locale: 'en' }, { _id: 'u2', email: 'd@e.f' }] });
+  assert.deepEqual(await loadRecipients(db), [{ id: 'u1', email: 'a@b.c', name: 'A', locale: 'en' }, { id: 'u2', email: 'd@e.f', name: null, locale: 'de' }]);
   assert.deepEqual(calls[0].filter, {
     emailVerified: true, anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, deletionScheduledAt: { $exists: false }, email: { $type: 'string' },
   });

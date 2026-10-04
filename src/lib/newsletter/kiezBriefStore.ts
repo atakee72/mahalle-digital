@@ -6,7 +6,7 @@ import { ObjectId, type Db } from 'mongodb';
 import { PUBLIC_AUTHOR_PROJECTION } from '../publicAuthor';
 import { getAirHistory } from '../kiez/airLog';
 import {
-  windowFor, arrangeData, excerptOf, thumb,
+  windowFor, arrangeData, excerptOf, thumb, storedMailLocale, type MailLocale,
   type BriefData, type BriefPost, type BriefPostKind, type BriefEvent, type BriefListing, type BriefBlogPost,
 } from './kiezBriefRules';
 
@@ -112,13 +112,13 @@ export async function loadIssueData(db: Db, week: string, nowMs: number, blog: B
   });
 }
 
-export interface Recipient { id: string; email: string; name: string | null }
+export interface Recipient { id: string; email: string; name: string | null; locale: MailLocale }
 
 /** Verified, reachable members who did not turn the mail off. One query, allowlist projection. */
 export async function loadRecipients(db: Db): Promise<Recipient[]> {
   const users = await db.collection('users')
     .find({ emailVerified: true, anonymized: { $ne: true }, isBanned: { $ne: true }, newsletter: { $ne: 'off' }, deletionScheduledAt: { $exists: false }, email: { $type: 'string' } },
-      { projection: { _id: 1, email: 1, name: 1 } })
+      { projection: { _id: 1, email: 1, name: 1, locale: 1 } })
     .toArray();
-  return users.map((u) => ({ id: String(u._id), email: String(u.email), name: typeof u.name === 'string' ? u.name : null }));
+  return users.map((u) => ({ id: String(u._id), email: String(u.email), name: typeof u.name === 'string' ? u.name : null, locale: storedMailLocale(u.locale) }));
 }

@@ -9,7 +9,7 @@ Code: `src/lib/newsletter/*`, `src/pages/api/cron/kiez-brief.ts`, `src/pages/api
 
 1. **Repo secret present:** `gh secret list` must show `CRON_SECRET` (same value as the Vercel env; it is there).
 2. **Verify your own prod e-mail** — unverified members are skipped, the owner's account included.
-3. **Look at the issue:** open `GET /api/admin/kiez-brief/preview` in the browser (admin session). No `%%UNSUB%%` may be left in the links.
+3. **Look at the issue:** open `GET /api/admin/kiez-brief/preview` (add `?lang=en` or `?lang=de` to see the other language) in the browser (admin session). No `%%UNSUB%%` may be left in the links.
 4. **Get a copy in a real mail client:** `POST` the same route — browser console on any mahalle.digital page:
    `fetch('/api/admin/kiez-brief/preview', { method: 'POST' })` (or curl with the session cookie and `Content-Type: application/json`).
    Check the Gmail/Yahoo „Abbestellen" button (one-click) and the footer link.

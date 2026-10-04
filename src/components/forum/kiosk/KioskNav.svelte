@@ -17,11 +17,12 @@
   import { navigate } from 'astro:transitions/client';
   import { untrack, onMount } from 'svelte';
   import { NO_NEWS, type SectionNews, type VisitSection } from '../../../lib/visits/visitRules';
+  import { syncLocale } from '../../../lib/localeSync';
   import { initialMastState, nextMastState, MAST_HIDE_QUERY } from '../../../lib/nav/hideOnScroll';
 
   let { currentPath = '/', user = null } = $props<{
     currentPath?: string;
-    user?: { name?: string; image?: string | null; role?: string } | null;
+    user?: { id?: string; name?: string; image?: string | null; role?: string } | null;
   }>();
 
   // „New since your last visit" dots (one read per page load, members only). The
@@ -34,6 +35,9 @@
       .then((d) => { if (d) news = { ...NO_NEWS, ...d }; })
       .catch(() => {});
   });
+
+  // The server's copy of the DE/EN choice (mail without a browser speaks it): on load and on every toggle.
+  $effect(() => { syncLocale($locale, user?.id); });
 
   let menuOpen = $state(false);
   let bellOpen = $state(false);

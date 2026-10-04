@@ -449,6 +449,7 @@ export async function runDeletionPipeline(
           lastVisit: '',
           forumNotify: '',
           newsletter: '',
+          locale: '',
           deletionClaimedAt: '',
         },
       }

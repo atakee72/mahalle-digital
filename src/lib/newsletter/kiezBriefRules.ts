@@ -22,6 +22,50 @@ export const MAX_LISTINGS = 6;
 
 /** The placeholder the template prints for the unsubscribe link; replaced per recipient. */
 export const UNSUB_PLACEHOLDER = '%%UNSUB%%';
+/** The placeholder for the recipient's display name in the greeting; replaced per recipient, HTML-escaped. */
+export const NAME_PLACEHOLDER = '%%NAME%%';
+
+/** The mail speaks the two languages of the app's toggle; `users.locale` absent = German. */
+export const MAIL_LOCALES = ['de', 'en'] as const;
+export type MailLocale = (typeof MAIL_LOCALES)[number];
+
+export function storedMailLocale(v: unknown): MailLocale {
+  return v === 'en' ? 'en' : 'de';
+}
+
+/** A name goes into already-rendered HTML by string replace, so React's escaping does not apply. */
+export function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+export const MAIL_COPY = {
+  de: {
+    title: 'Das war die Woche im Kiez',
+    greeting: `Hallo ${NAME_PLACEHOLDER},`,
+    intro: 'das ist deine Wochenpost aus dem Schillerkiez: was war, was kommt.',
+    linksHint: null as string | null, // German mail, German posts: nothing to translate
+    noName: 'Nachbar:in',
+    forum: 'Im Forum', events: 'Nächste Woche im Kiez', market: 'Neu auf dem Markt', blog: 'In der Beilage',
+    allDay: 'ganztägig', reply: 'Antwort', replies: 'Antworten', formerMember: 'Ehemaliges Mitglied',
+    air: 'Luftqualität heute:', station: 'Station Nansenstraße', cta: 'Zum Forum',
+    why: 'Du bekommst diesen Brief einmal die Woche, weil du Mitglied bei Mahalle bist.',
+    unsubscribe: 'Abbestellen', settings: 'Mitteilungen einstellen', imprint: 'Impressum', privacy: 'Datenschutz',
+    preheaderFallback: 'Neues aus dem Schillerkiez', week: 'KW',
+  },
+  en: {
+    title: 'The week in the Kiez',
+    greeting: `Hi ${NAME_PLACEHOLDER},`,
+    intro: 'here is your weekly post from the Schillerkiez: what happened, what is coming up.',
+    linksHint: 'Every link opens the post in Mahalle, already translated.' as string | null,
+    noName: 'neighbour',
+    forum: 'In the forum', events: 'Next week in the Kiez', market: 'New on the market', blog: 'In the Beilage',
+    allDay: 'all day', reply: 'reply', replies: 'replies', formerMember: 'Former member',
+    air: 'Air quality today:', station: 'Nansenstraße station', cta: 'Open the forum',
+    why: 'You get this letter once a week because you are a member of Mahalle.',
+    unsubscribe: 'Unsubscribe', settings: 'Notification settings', imprint: 'Imprint', privacy: 'Privacy',
+    preheaderFallback: 'News from the Schillerkiez', week: 'CW',
+  },
+} as const;
 
 // ── Berlin calendar helpers (no Intl option objects shared across calls) ────────────────
 
@@ -61,9 +105,9 @@ export function issueWeek(nowMs: number): string {
   return isoWeek(nowMs - DAY_MS);
 }
 
-/** „KW 41" for the subject. */
-export function weekLabel(week: string): string {
-  return `KW ${Number(week.slice(-2))}`;
+/** „KW 41" (German) / „CW 41" (English) for the subject and the masthead. */
+export function weekLabel(week: string, locale: MailLocale = 'de'): string {
+  return `${MAIL_COPY[locale].week} ${Number(week.slice(-2))}`;
 }
 
 export interface IssueWindow {
@@ -94,13 +138,18 @@ export interface BriefData {
   air: BriefAir | null;
 }
 
-export const POST_KIND_LABEL: Record<BriefPostKind, string> = {
-  topic: 'Diskussion', announcement: 'Ankündigung', recommendation: 'Empfehlung',
+export const POST_KIND_LABEL: Record<MailLocale, Record<BriefPostKind, string>> = {
+  de: { topic: 'Diskussion', announcement: 'Ankündigung', recommendation: 'Empfehlung' },
+  en: { topic: 'Discussion', announcement: 'Announcement', recommendation: 'Recommendation' },
 };
-export const LISTING_KIND_LABEL: Record<BriefListing['kind'], string> = {
-  sell: 'Verkaufen', exchange: 'Tausch', gift: 'Verschenken',
+export const LISTING_KIND_LABEL: Record<MailLocale, Record<BriefListing['kind'], string>> = {
+  de: { sell: 'Verkaufen', exchange: 'Tausch', gift: 'Verschenken' },
+  en: { sell: 'For sale', exchange: 'Swap', gift: 'Free' },
 };
-export const AIR_LABEL: Record<number, string> = { 1: 'sehr gut', 2: 'gut', 3: 'mäßig', 4: 'schlecht', 5: 'sehr schlecht' };
+export const AIR_LABEL: Record<MailLocale, Record<number, string>> = {
+  de: { 1: 'sehr gut', 2: 'gut', 3: 'mäßig', 4: 'schlecht', 5: 'sehr schlecht' },
+  en: { 1: 'very good', 2: 'good', 3: 'moderate', 4: 'poor', 5: 'very poor' },
+};
 
 /** Order and cap the sections: newest post first, nearest event first, newest listing/blog first. */
 export function arrangeData(d: BriefData): BriefData {
@@ -124,25 +173,28 @@ function plural(n: number, one: string, many: string): string {
 }
 
 /** „Kiez-Brief · KW 41 · 3 neue Beiträge, 2 Termine" — the two biggest non-empty counts. */
-export function subjectFor(d: BriefData): string {
+export function subjectFor(d: BriefData, locale: MailLocale = 'de'): string {
+  const en = locale === 'en';
   const parts: [number, string][] = [
-    [d.posts.length, plural(d.posts.length, 'neuer Beitrag', 'neue Beiträge')],
-    [d.events.length, plural(d.events.length, 'Termin', 'Termine')],
-    [d.listings.length, plural(d.listings.length, 'neue Anzeige', 'neue Anzeigen')],
-    [d.blog.length, plural(d.blog.length, 'Beilage-Artikel', 'Beilage-Artikel')],
+    [d.posts.length, en ? plural(d.posts.length, 'new post', 'new posts') : plural(d.posts.length, 'neuer Beitrag', 'neue Beiträge')],
+    [d.events.length, en ? plural(d.events.length, 'event', 'events') : plural(d.events.length, 'Termin', 'Termine')],
+    [d.listings.length, en ? plural(d.listings.length, 'new listing', 'new listings') : plural(d.listings.length, 'neue Anzeige', 'neue Anzeigen')],
+    [d.blog.length, en ? plural(d.blog.length, 'blog article', 'blog articles') : plural(d.blog.length, 'Beilage-Artikel', 'Beilage-Artikel')],
   ];
   const named = parts.filter(([n]) => n > 0).sort((a, b) => b[0] - a[0]).slice(0, 2).map(([, s]) => s); // biggest first, stable
-  return [`Kiez-Brief · ${weekLabel(d.week)}`, ...(named.length ? [named.join(', ')] : [])].join(' · ');
+  return [`Kiez-Brief · ${weekLabel(d.week, locale)}`, ...(named.length ? [named.join(', ')] : [])].join(' · ');
 }
 
 /** The hidden preview line: the newest forum title, else the next event, else the newest listing. */
-export function preheaderFor(d: BriefData): string {
-  return d.posts[0]?.title ?? d.events[0]?.title ?? d.listings[0]?.title ?? d.blog[0]?.title ?? 'Neues aus dem Schillerkiez';
+export function preheaderFor(d: BriefData, locale: MailLocale = 'de'): string {
+  return d.posts[0]?.title ?? d.events[0]?.title ?? d.listings[0]?.title ?? d.blog[0]?.title ?? MAIL_COPY[locale].preheaderFallback;
 }
 
 /** Deep links carry the source so a visit from the mail is visible in the visitor counter later. */
-export function withUtm(href: string): string {
-  return href + (href.includes('?') ? '&' : '?') + 'utm_source=kiez-brief';
+export function withUtm(href: string, translate = false): string {
+  // `translate=1` asks the post page to open its translation on load — only the English mail
+  // sets it (a German reader of a German post needs no German→German „translation").
+  return href + (href.includes('?') ? '&' : '?') + 'utm_source=kiez-brief' + (translate ? '&translate=1' : '');
 }
 
 const WEEKDAY = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];

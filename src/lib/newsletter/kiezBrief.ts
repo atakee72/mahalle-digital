@@ -11,7 +11,8 @@ import { isMailerConfigured, sendMailBatch } from '../email/mailer';
 import KiezBriefEmail from '../../emails/KiezBriefEmail';
 import { makeUnsubToken, unsubSecret } from './unsubToken';
 import {
-  UNSUB_PLACEHOLDER, MAX_RECIPIENTS, issueWeek, berlinWeekday, isQuiet, subjectFor, unsubscribeHeaders, type BriefData,
+  UNSUB_PLACEHOLDER, NAME_PLACEHOLDER, MAIL_COPY, MAIL_LOCALES, MAX_RECIPIENTS, berlinWeekday, escapeHtml, issueWeek, isQuiet,
+  subjectFor, unsubscribeHeaders, type BriefData, type MailLocale,
 } from './kiezBriefRules';
 import { claimIssue, loadIssueData, loadRecipients, markIssue, type BlogInput, type Recipient } from './kiezBriefStore';
 
@@ -43,9 +44,22 @@ export async function buildIssue(nowMs = Date.now()): Promise<BriefData> {
   return loadIssueData(db, issueWeek(nowMs), nowMs, await blogPosts());
 }
 
-/** The mail's HTML with the unsubscribe placeholder still inside. */
-export async function renderIssue(data: BriefData, baseUrl: string): Promise<string> {
-  return render(React.createElement(KiezBriefEmail, { data, baseUrl }));
+/** The mail's HTML in one language, with the unsubscribe and name placeholders still inside. */
+export async function renderIssue(data: BriefData, baseUrl: string, locale: MailLocale = 'de'): Promise<string> {
+  return render(React.createElement(KiezBriefEmail, { data, baseUrl, locale }));
+}
+
+export interface RenderedIssue { html: Record<MailLocale, string>; subject: Record<MailLocale, string> }
+
+/** One render per language — every recipient gets the one their stored toggle names. */
+export async function renderIssueAll(data: BriefData, baseUrl: string): Promise<RenderedIssue> {
+  const html = {} as Record<MailLocale, string>;
+  const subject = {} as Record<MailLocale, string>;
+  for (const l of MAIL_LOCALES) {
+    html[l] = await renderIssue(data, baseUrl, l);
+    subject[l] = subjectFor(data, l);
+  }
+  return { html, subject };
 }
 
 export function unsubscribeUrl(baseUrl: string, userId: string, secret: string): string {
@@ -56,12 +70,18 @@ export function oneClickUrl(baseUrl: string, userId: string, secret: string): st
   return `${baseUrl}/api/newsletter/unsubscribe?t=${makeUnsubToken(userId, secret)}`;
 }
 
-/** One rendered issue → one MailInput per recipient (only the unsubscribe links differ). */
-export function mailsFor(html: string, subject: string, recipients: Recipient[], baseUrl: string, secret: string) {
+/**
+ * One rendered issue → one MailInput per recipient: their language, their unsubscribe link, their
+ * name in the greeting. The name is ESCAPED — it goes into finished HTML by string replace, past
+ * React's escaping, and names older than the 2026-09-21 rule may contain anything.
+ */
+export function mailsFor(issue: RenderedIssue, recipients: Recipient[], baseUrl: string, secret: string) {
   return recipients.map((r) => ({
     to: r.email,
-    subject,
-    html: html.replaceAll(UNSUB_PLACEHOLDER, unsubscribeUrl(baseUrl, r.id, secret)),
+    subject: issue.subject[r.locale],
+    html: issue.html[r.locale]
+      .replaceAll(UNSUB_PLACEHOLDER, unsubscribeUrl(baseUrl, r.id, secret))
+      .replaceAll(NAME_PLACEHOLDER, escapeHtml(r.name?.trim() || MAIL_COPY[r.locale].noName)),
     replyTo: REPLY_TO,
     headers: unsubscribeHeaders(oneClickUrl(baseUrl, r.id, secret), REPLY_TO),
   }));
@@ -113,8 +133,8 @@ export async function sendKiezBrief(opts: { fallback?: boolean; now?: number } =
       }
       return { week, outcome: 'not-configured', recipients: recipients.length };
     }
-    const html = await renderIssue(data, baseUrl);
-    await sendMailBatch(mailsFor(html, subjectFor(data), recipients, baseUrl, secret), `kiez-brief-${week}`);
+    const issue = await renderIssueAll(data, baseUrl);
+    await sendMailBatch(mailsFor(issue, recipients, baseUrl, secret), `kiez-brief-${week}`);
     await markIssue(db, week, { recipients: recipients.length, sentAt: new Date() });
     console.log(`[kiez-brief] ${week} sent to ${recipients.length} members`);
     return { week, outcome: 'sent', recipients: recipients.length };

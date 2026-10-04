@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
-  preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
+  preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb,
+  storedMailLocale, escapeHtml, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
 } from './kiezBriefRules';
 
@@ -118,5 +119,31 @@ test('thumbnails: a Cloudinary photo gets a square fill transform, every other o
   assert.equal(thumb('https://evil.example/res.cloudinary.com/upload/x.png', 80), null);
   assert.equal(thumb('http://insecure/x.png', 80), null);
   assert.equal(thumb(null, 80), null);
+});
+
+test('the mail language follows the stored toggle and falls back to German', () => {
+  assert.equal(storedMailLocale('en'), 'en');
+  for (const v of [undefined, null, '', 'de', 'EN', 'tr', 1]) assert.equal(storedMailLocale(v), 'de');
+});
+
+test('the English mail has an English subject, week label and preheader fallback', () => {
+  const d = { ...empty(), posts: [post('1', 1), post('2', 2)], events: [{ id: 'e', title: 'E', startMs: 1, allDay: false, location: null }] };
+  assert.equal(subjectFor(d, 'en'), 'Kiez-Brief · CW 41 · 2 new posts, 1 event');
+  assert.equal(subjectFor(d, 'de'), 'Kiez-Brief · KW 41 · 2 neue Beiträge, 1 Termin');
+  assert.equal(preheaderFor(empty(), 'en'), 'News from the Schillerkiez');
+  assert.equal(weekLabel('2026-W05', 'en'), 'CW 5');
+});
+
+test('only the English mail asks the post page to translate; the German mail has no such hint', () => {
+  assert.equal(withUtm('https://x/topics/1', true), 'https://x/topics/1?utm_source=kiez-brief&translate=1');
+  assert.equal(withUtm('https://x/topics/1'), 'https://x/topics/1?utm_source=kiez-brief');
+  assert.equal(MAIL_COPY.de.linksHint, null);
+  assert.match(MAIL_COPY.en.linksHint!, /translated/);
+  assert.ok(MAIL_COPY.de.greeting.includes(NAME_PLACEHOLDER) && MAIL_COPY.en.greeting.includes(NAME_PLACEHOLDER));
+});
+
+test('a name is escaped before it goes into rendered HTML', () => {
+  assert.equal(escapeHtml(`<b>O'Neil & "Co"</b>`), '&lt;b&gt;O&#39;Neil &amp; &quot;Co&quot;&lt;/b&gt;');
+  assert.equal(escapeHtml('Ayşe'), 'Ayşe');
 });
 

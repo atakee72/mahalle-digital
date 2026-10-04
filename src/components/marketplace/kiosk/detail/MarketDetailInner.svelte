@@ -20,6 +20,7 @@
   import KioskReportModal from '../../../forum/kiosk/KioskReportModal.svelte';
   import { t, tStr, locale } from '../../../../lib/kiosk-i18n';
   import TranslateControl from '../../../forum/kiosk/TranslateControl.svelte';
+  import { wantsAutoTranslate } from '../../../../lib/translation/client';
 
   // ─── Props ─────────────────────────────────────────────────────────────────
 
@@ -239,6 +240,7 @@
           contentId={String(listing._id)}
           accent="var(--k-wine, #b23a5b)"
           onTranslated={(t) => (translation = t)}
+          autoOpen={wantsAutoTranslate()}
         />
         {#if translation}
           <div style="padding-top: 4px;">

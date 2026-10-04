@@ -3,9 +3,9 @@ import { ObjectId } from 'mongodb';
 import { requireAdminSession } from '../../../../lib/auth';
 import { connectDB } from '../../../../lib/mongodb';
 import { isMailerConfigured, sendMail } from '../../../../lib/email/mailer';
-import { buildIssue, kiezBriefBaseUrl, mailsFor, renderIssue } from '../../../../lib/newsletter/kiezBrief';
+import { buildIssue, kiezBriefBaseUrl, mailsFor, renderIssueAll } from '../../../../lib/newsletter/kiezBrief';
 import { unsubSecret } from '../../../../lib/newsletter/unsubToken';
-import { isQuiet, subjectFor } from '../../../../lib/newsletter/kiezBriefRules';
+import { isQuiet, storedMailLocale, subjectFor } from '../../../../lib/newsletter/kiezBriefRules';
 
 // The owner's look at THIS week's issue: GET renders the HTML in the browser (no claim, no send);
 // POST sends one copy to the admin's own address — the way to see it in a real mail client before
@@ -14,8 +14,14 @@ import { isQuiet, subjectFor } from '../../../../lib/newsletter/kiezBriefRules';
 async function issueForAdmin(request: Request, userId: string) {
   const data = await buildIssue();
   const baseUrl = kiezBriefBaseUrl() || new URL(request.url).origin;
-  const [mine] = mailsFor(await renderIssue(data, baseUrl), subjectFor(data), [{ id: userId, email: 'preview', name: null }], baseUrl, unsubSecret());
-  return { data, mine }; // mine.html carries the admin's own unsubscribe link
+  const db = await connectDB();
+  const admin = await db.collection('users').findOne({ _id: new ObjectId(userId) }, { projection: { email: 1, name: 1, locale: 1 } });
+  // `?lang=en|de` shows the other language; default = the admin's own stored toggle.
+  const wanted = new URL(request.url).searchParams.get('lang');
+  const locale = storedMailLocale(wanted === 'en' || wanted === 'de' ? wanted : admin?.locale);
+  const issue = await renderIssueAll(data, baseUrl);
+  const [mine] = mailsFor(issue, [{ id: userId, email: typeof admin?.email === 'string' ? admin.email : 'preview', name: typeof admin?.name === 'string' ? admin.name : null, locale }], baseUrl, unsubSecret());
+  return { data, mine, email: typeof admin?.email === 'string' ? admin.email : null, locale };
 }
 
 export const GET: APIRoute = async ({ request }) => {
@@ -30,11 +36,9 @@ export const GET: APIRoute = async ({ request }) => {
 export const POST: APIRoute = async ({ request }) => {
   const gate = await requireAdminSession(request);
   if (!gate.ok) return gate.response;
-  const db = await connectDB();
-  const admin = await db.collection('users').findOne({ _id: new ObjectId(gate.userId) }, { projection: { email: 1 } });
-  if (!admin || typeof admin.email !== 'string') return new Response(JSON.stringify({ error: 'no_email' }), { status: 400 });
   if (!isMailerConfigured()) return new Response(JSON.stringify({ error: 'mailer_not_configured' }), { status: 503 });
-  const { data, mine } = await issueForAdmin(request, gate.userId);
-  await sendMail({ ...mine, to: admin.email, subject: `[Vorschau] ${subjectFor(data)}` });
-  return new Response(JSON.stringify({ sent: true, to: admin.email, quiet: isQuiet(data) }), { headers: { 'Content-Type': 'application/json' } });
+  const { data, mine, email, locale } = await issueForAdmin(request, gate.userId);
+  if (!email) return new Response(JSON.stringify({ error: 'no_email' }), { status: 400 });
+  await sendMail({ ...mine, to: email, subject: `[Vorschau] ${subjectFor(data, locale)}` });
+  return new Response(JSON.stringify({ sent: true, to: email, quiet: isQuiet(data), locale }), { headers: { 'Content-Type': 'application/json' } });
 };

@@ -22,6 +22,7 @@
   import MemberTypeTag from './MemberTypeTag.svelte';
   import KioskBtn from './KioskBtn.svelte';
   import TranslateControl from './TranslateControl.svelte';
+  import { wantsAutoTranslate } from '../../../lib/translation/client';
   import PostTypeChip from './PostTypeChip.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import ForumCommentList from './ForumCommentList.svelte';
@@ -882,6 +883,7 @@
             contentId={String(topic._id)}
             onTranslated={(t) => (translation = t)}
             accent="var(--k-wine, #b23a5b)"
+            autoOpen={wantsAutoTranslate()}
           />
         </div>
         <div class="space-y-3.5 mb-5 max-w-prose">
