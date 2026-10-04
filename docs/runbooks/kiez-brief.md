@@ -17,17 +17,20 @@ Code: `src/lib/newsletter/*`, `src/pages/api/cron/kiez-brief.ts`, `src/pages/api
 
 ## Watching a run
 
-- `gh run list --workflow=kiez-brief.yml` — GitHub starts scheduled runs 0–4 h late (mail lands 18:00 to ~22:00 Berlin). If the run never arrives, the Monday 06:00 UTC cron (`fetch-daily`) sends the issue instead (Berlin Mondays only; other days the fallback is a no-op `not-due`).
+- `gh run list --workflow=kiez-brief.yml` — GitHub starts scheduled runs 0–4 h late (mail lands 18:00 to ~22:00 Berlin). If the run never arrives, the Monday 06:00 UTC cron (`fetch-daily`) sends the issue instead (the fallback start is for Berlin Mondays only; on other days the job only sends a waiting group, see below).
 - The route answers JSON `{ week, outcome, recipients }`; `outcome` is `sent` (with `group` and `more`), `claimed-elsewhere`, `quiet`, `no-recipients`, `not-configured`, `not-due` or `failed` (see the workflow log).
 - A failed batch is a Sentry issue and the week stays claimed — it is not retried.
 
 ## More members than one day's quota: groups
 
-Resend Free allows 100 mails per UTC day, shared with the login mails. An issue therefore goes out in groups of 75 (`GROUP_SIZE` in `kiezBriefRules.ts`), one group per UTC day: Sunday evening, then Monday 08:00 with the morning job, then Tuesday 08:00. Members are taken oldest first; each group is claimed in the issue's row before it is sent, so no group goes out twice and a failed group is not retried.
+Resend Free allows 100 mails a day, shared with the login mails. An issue therefore goes out in groups of 75 (`GROUP_SIZE` in `kiezBriefRules.ts`), a full 24 hours apart (`GROUP_GAP_MS`): Sunday evening, then the first job a full day later (Monday evening's run if it is late enough, otherwise Tuesday 08:00), and so on. 24 hours, not „the next morning", because Resend does not say whether its day is the UTC day or a rolling 24 hours; ask their support, and if it is the UTC day, a shorter gap (Monday 08:00) is one constant away. Members are taken oldest first; each group is claimed in the issue's row before it is sent, so no group goes out twice and a failed group is not retried.
 
 - Watch it: the route's answer and the morning job's log name the group (`group 2 sent to 31 members`). The row shows `groups`, `more`, `recipients`.
-- Sentry warning „more members than two daily groups": more than 150 recipients — the issue now takes three days. That is the agreed moment for the paid plan; nothing is lost meanwhile.
+- Sentry warning „more members than two daily groups": more than 150 recipients — the issue now takes three days. That is the agreed moment for the paid plan; up to about 300 members nothing is lost meanwhile (four groups fit before the four-day cut-off).
 - A group still waiting after four days is dropped (the week is no longer news).
+- One malformed address no longer costs the whole group (the batch is sent „permissive"): Sentry warning „the provider refused some mails of a batch" names the count; find the address in Resend's log and switch that member off.
+- The row's `lastGroupSize` is the size of the last claimed group. If `recipients` did not grow by it, that group was claimed but never booked as sent (a crash or freeze between claim and send) — check Resend's log before telling anyone.
+- A manual dispatch of the workflow works on a Sunday or Monday (Berlin) only; any other day it answers `not-due`.
 - Exclude a test account or an address that bounces: `/admin/mitglieder` → the „Kiez-Brief: an" pill of that member → „aus".
 
 ## Re-sending

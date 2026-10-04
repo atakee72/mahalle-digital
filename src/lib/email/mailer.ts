@@ -146,7 +146,9 @@ export async function sendMailBatch(inputs: MailInput[], idempotencyKey: string)
   if (!smtpConfigured && RESEND_API_KEY) {
     try {
       const resend = new Resend(RESEND_API_KEY);
-      const { error } = await withTimeout(
+      // 'permissive': the provider's default ('strict') rejects ALL mails of a batch when ONE
+      // address is malformed — a typo of one member would cost a whole Kiez-Brief group.
+      const { data, error } = await withTimeout(
         resend.batch.send(
           inputs.map((input) => ({
             from: SENDING_FROM,
@@ -156,12 +158,20 @@ export async function sendMailBatch(inputs: MailInput[], idempotencyKey: string)
             ...(input.replyTo ? { replyTo: punycodeEmailDomain(input.replyTo) } : {}),
             ...(input.headers ? { headers: input.headers } : {}),
           })),
-          { idempotencyKey },
+          { idempotencyKey, batchValidation: 'permissive' },
         ),
         RESEND_TIMEOUT_MS * 3,
         'Resend batch send'
       );
       if (error) throw new Error(`Resend batch failed: ${error.name}: ${error.message}`);
+      const refused = Array.isArray(data?.errors) ? data.errors.length : 0;
+      if (refused > 0) {
+        // Fixed text (one Sentry issue), the count in `extra`, never an address.
+        Sentry.captureMessage('mailer-batch: the provider refused some mails of a batch (malformed addresses?) — the rest was sent', {
+          level: 'warning', extra: { refused, of: inputs.length },
+        });
+        try { await Sentry.flush(2000); } catch { /* best-effort */ }
+      }
       return;
     } catch (err) {
       Sentry.captureException(err, { tags: { feature: 'mailer-batch' } });

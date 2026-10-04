@@ -360,9 +360,10 @@ export const GET: APIRoute = async ({ request }) => {
   // run of this route finds the day claimed), never throws.
   await sendForumDigest();
 
-  // Monday fallback of the weekly member mail: sends only on a Berlin Monday, and only when
-  // Sunday's GitHub run never claimed the issue (the key is the ISO week of now − 24 h, so
-  // Monday morning still belongs to Sunday's issue; on other days the call is a no-op). Never throws.
+  // The weekly member mail rides this job twice: (1) on ANY day it sends the next GROUP of an
+  // issue whose members are still waiting (groups of 75, a full day apart); (2) on a Berlin Monday,
+  // when Sunday's GitHub run never claimed the issue, it starts the issue itself (the key is the
+  // ISO week of now − 24 h, so Monday morning still belongs to Sunday's issue). Never throws.
   await sendKiezBrief({ fallback: true });
 
     const openaiKey = import.meta.env.OPENAI_API_KEY;

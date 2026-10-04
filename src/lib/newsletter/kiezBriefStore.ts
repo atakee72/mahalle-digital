@@ -30,8 +30,10 @@ export interface IssueDoc {
   cursor?: string | null;
   /** true while members are still waiting for their group. */
   more?: boolean;
-  /** When the last group was claimed — the next one is due on a later UTC day. */
+  /** When the last group was claimed — the next one is due a full day later. */
   lastGroupAt?: Date;
+  /** Members of the last claimed group. `recipients` not growing by this number = that group was claimed but never booked as sent. */
+  lastGroupSize?: number;
 }
 
 /** Claim the issue BEFORE anything is rendered or sent; false = already claimed (at-most-once). */
@@ -223,7 +225,7 @@ export interface GroupTake { index: number; recipients: Recipient[]; more: boole
  * Take the next group of an issue: load the members after the stored cursor, then CLAIM the group
  * with one conditional update (the row must still show the group count we read) BEFORE anything
  * is sent — two runs can never send the same group, and a failed send is not retried.
- * null = nothing to take: not due yet (one group per UTC day), or another run took it.
+ * null = nothing to take: not due yet (a full day after the group before), or another run took it.
  * An empty group is claimed too (it closes the issue: `more: false`).
  */
 export async function takeNextGroup(db: Db, issue: Pick<IssueDoc, '_id' | 'groups' | 'cursor' | 'lastGroupAt'>, nowMs: number, size = GROUP_SIZE): Promise<GroupTake | null> {
@@ -234,7 +236,7 @@ export async function takeNextGroup(db: Db, issue: Pick<IssueDoc, '_id' | 'group
   const more = batch.length > size;
   const res = await db.collection<IssueDoc>(KIEZ_BRIEF_COLLECTION).updateOne(
     { _id: issue._id, groups: index },
-    { $set: { groups: index + 1, cursor: recipients.length ? recipients[recipients.length - 1].id : issue.cursor ?? null, more, lastGroupAt: new Date(nowMs) } },
+    { $set: { groups: index + 1, cursor: recipients.length ? recipients[recipients.length - 1].id : issue.cursor ?? null, more, lastGroupAt: new Date(nowMs), lastGroupSize: recipients.length } },
   );
   return res.modifiedCount === 1 ? { index, recipients, more } : null;
 }

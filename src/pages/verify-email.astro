@@ -16,7 +16,7 @@ const tokenValid = token ? (await findValidVerifyToken(token)) !== null : false;
 
 // Sent mode (no token) shows "check your inbox" for the logged-in user.
 if (!token) {
-  if (!session?.user?.id) return Astro.redirect('/login');
+  if (!session?.user?.id) return Astro.redirect('/login?redirect=/verify-email'); // the Kiez-Brief note's confirm link lands here logged out
   const db = await connectDB();
   const user = await db.collection('users').findOne(
     { _id: new ObjectId(session.user.id) },

@@ -10,11 +10,18 @@ export function storedNewsletterMode(v: unknown): NewsletterMode {
 }
 
 /**
- * Resend Free sends 100 mails per UTC day, shared with the login and confirmation mails. So an
- * issue goes out in GROUPS of this size, one group per UTC day: the first on Sunday evening, the
- * next with the morning job of the following day(s). 25 mails a day stay free for the auth mails.
+ * Resend Free sends 100 mails a day, shared with the login and confirmation mails. So an issue
+ * goes out in GROUPS of this size, at least GROUP_GAP_MS apart: the first on Sunday evening, the
+ * next with the first job that runs a full day later. 25 mails a day stay free for the auth mails.
  */
 export const GROUP_SIZE = 75;
+/**
+ * A full 24 hours between two groups — not „the next calendar day": the provider does not say
+ * whether its day is the UTC day or a rolling 24 h, and under a rolling count Sunday 18:00 plus
+ * Monday 08:00 would be 150 mails in one window (the batch refused, the group lost, the login
+ * mails blocked). 24 h is right under both readings.
+ */
+export const GROUP_GAP_MS = 24 * 60 * 60 * 1000;
 /** More groups than this (150 members) is the owner's line for the paid plan: the send warns, and still goes out. */
 export const GROUPS_BEFORE_WARNING = 2;
 /** A group still waiting after this long is dropped: „the week" is no longer news. */
@@ -332,14 +339,9 @@ export function personalize(html: string, name: string | null, unsubUrl: string,
     .replaceAll(NAME_PLACEHOLDER, () => safeName);
 }
 
-/** UTC calendar day of an instant — the provider's quota day. */
-export function utcDay(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10);
-}
-
-/** The next group of an issue is due on a LATER UTC day than the group before it (one group per quota day). */
+/** The next group of an issue is due a full GROUP_GAP_MS after the group before it. */
 export function groupDue(lastGroupAtMs: number | null, nowMs: number): boolean {
-  return lastGroupAtMs === null || utcDay(nowMs) > utcDay(lastGroupAtMs);
+  return lastGroupAtMs === null || nowMs - lastGroupAtMs >= GROUP_GAP_MS;
 }
 
 /** The placeholder tile of a listing without photo: one symbol per kind, same in both languages. */

@@ -165,7 +165,7 @@ async function sendGroup(db: Awaited<ReturnType<typeof connectDB>>, issue: Issue
 /**
  * Send this week's issue — one group per call, each group once. The Sunday run claims the week
  * and sends the first group. `fallback` marks the morning job (it runs every day, twice): it first
- * sends the NEXT group of an issue whose members are still waiting (one group per UTC day), and
+ * sends the NEXT group of an issue whose members are still waiting (a full day after the last), and
  * only on a Berlin Monday, when Sunday's run never arrived, starts the issue itself. Never throws.
  */
 export async function sendKiezBrief(opts: { fallback?: boolean; now?: number } = {}): Promise<SendResult> {
@@ -180,7 +180,7 @@ export async function sendKiezBrief(opts: { fallback?: boolean; now?: number } =
     if (opts.fallback === true) {
       const pending = await findPendingIssue(db, nowMs);
       if (pending) {
-        // One group per UTC day (the provider's quota day): the second run of the same day waits.
+        // A full day between two groups (the provider's quota): an earlier run waits.
         if (!groupDue(pending.lastGroupAt instanceof Date ? pending.lastGroupAt.getTime() : null, nowMs)) return { week: pending._id, outcome: 'not-due', recipients: 0 };
         return await sendGroup(db, pending, nowMs, baseUrl, secret);
       }
@@ -188,6 +188,11 @@ export async function sendKiezBrief(opts: { fallback?: boolean; now?: number } =
       // issueWeek would already point at the NEXT issue).
       if (berlinWeekday(nowMs) !== 1) return { week, outcome: 'not-due', recipients: 0 };
     }
+
+    // The regular run belongs to Sunday; GitHub may start it so late that it is Monday in Berlin.
+    // Any other day (a manual dispatch on a Wednesday) would claim NEXT week's issue with a
+    // half-week window — and Sunday's real run would then find its week taken.
+    if (opts.fallback !== true && ![0, 1].includes(berlinWeekday(nowMs))) return { week, outcome: 'not-due', recipients: 0 };
 
     if (!(await claimIssue(db, week, nowMs, opts.fallback === true))) return { week, outcome: 'claimed-elsewhere', recipients: 0 };
     const w = windowFor(nowMs);

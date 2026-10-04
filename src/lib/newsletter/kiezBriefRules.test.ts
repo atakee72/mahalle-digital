@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
   preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb, inert, personalize, LISTING_KIND_SYMBOL,
-  storedMailLocale, escapeHtml, isIssueWeekKey, newsLineFor, pairs, groupDue, utcDay, verifyNoteHtml, GROUP_SIZE, VERIFY_PLACEHOLDER, MAX_OFFICIAL, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
+  storedMailLocale, escapeHtml, isIssueWeekKey, newsLineFor, pairs, groupDue, verifyNoteHtml, GROUP_SIZE, GROUP_GAP_MS, VERIFY_PLACEHOLDER, MAX_OFFICIAL, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
 } from './kiezBriefRules';
 
@@ -258,14 +258,15 @@ test('a week with only the team\'s news still has a telling subject; the prehead
   assert.equal(preheaderFor({ ...empty(), events: [e] }), 'Flohmarkt');
 });
 
-test('one group per quota day: the next group is due on a later UTC day', () => {
+test('a full day between two groups — right whether the provider counts a UTC day or a rolling 24 h', () => {
   assert.equal(GROUP_SIZE, 75);
-  assert.equal(utcDay(SUN_18), '2026-10-11');
+  assert.equal(GROUP_GAP_MS, 24 * 3_600_000);
   assert.equal(groupDue(null, SUN_18), true); // the first group
   assert.equal(groupDue(SUN_18, SUN_18 + 3 * 3_600_000), false); // Sunday 21:00 CEST
-  assert.equal(groupDue(SUN_18, Date.parse('2026-10-11T23:59:59.000Z')), false);
-  assert.equal(groupDue(SUN_18, Date.parse('2026-10-12T00:00:00.000Z')), true);
-  assert.equal(groupDue(SUN_18, MON_06), true); // the Monday morning job
+  assert.equal(groupDue(SUN_18, MON_06), false); // Monday 08:00: a new UTC day, but only 14 h later
+  assert.equal(groupDue(SUN_18, SUN_18 + GROUP_GAP_MS - 1), false);
+  assert.equal(groupDue(SUN_18, SUN_18 + GROUP_GAP_MS), true); // Monday 18:00
+  assert.equal(groupDue(SUN_18, MON_06 + GROUP_GAP_MS), true); // Tuesday 08:00
 });
 
 test('the confirm-your-address note: fixed copy, own link, and it only appears for an unconfirmed member', () => {
