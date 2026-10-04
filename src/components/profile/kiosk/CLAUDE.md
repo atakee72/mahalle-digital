@@ -262,6 +262,9 @@ actual available width. If this profile page (or any other kiosk page that
 adopts an `order-*`-reordered single-column-below-`lg` grid) starts clipping
 content on mobile with no visible cause, check for missing `min-w-0` first.
 
+## Kiez-Brief switch in the Konto card (2026-10-04)
+The weekly mail's on/off is a third row in `PKontoCard` under PASSWORT: label „KIEZ-BRIEF (E-MAIL)", state „jeden Sonntag" / „abbestellt", action „abbestellen" / „einschalten" (same underlined text-button as „ändern"). Props `newsletterMode` (`null` = not loaded → no row), `newsletterVerified`, `newsletterBusy`, `onToggleNewsletter`; state, the one fetch of `GET /api/profile/newsletter` and the optimistic toggle live in `ProfileInner` (double-mount rule, like the e-mail and password panels). An unverified member sees the row plus a warn-coloured hint — the mail only goes to confirmed addresses. Why here and not in the bell panel, the unsubscribe page's undo step and the probe: `src/components/forum/kiosk/CLAUDE.md` → „Kiez-Brief" → „The switch lives in the PROFILE".
+
 ## E-mail change (Plan B, Task 8)
 
 Design source: `kiosk-profile-flows.jsx` §03 `EmailChangeFlow` (stages 01

@@ -96,3 +96,8 @@ test('the masthead icon and the wordmark open Mahalle', async () => {
   assert.match(out, /<a href="https:\/\/mahalle\.example\/forum\?utm_source=kiez-brief"[^>]*><img alt="Mahalle"/);
   assert.match(out, /<a href="https:\/\/mahalle\.example\/forum\?utm_source=kiez-brief"[^>]*>mahalle<\/a>/);
 });
+
+test('the footer\'s settings link leads to the profile, where the switch lives', async () => {
+  assert.match(await html(), /href="https:\/\/mahalle\.example\/profile\?utm_source=kiez-brief"[^>]*>Im Profil einstellen</);
+  assert.match(await html({ locale: 'en' }), />Settings in your profile</);
+});

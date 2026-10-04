@@ -218,7 +218,7 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = fal
             <Text style={muted}>
               {c.why}{' '}
               <Link href={UNSUB_PLACEHOLDER} style={mutedLink}>{c.unsubscribe}</Link> ·{' '}
-              <Link href={url('/forum')} style={mutedLink}>{c.settings}</Link> ·{' '}
+              <Link href={url('/profile')} style={mutedLink}>{c.settings}</Link> ·{' '}
               <Link href={`${baseUrl}/impressum`} style={mutedLink}>{c.imprint}</Link> ·{' '}
               <Link href={`${baseUrl}/datenschutz`} style={mutedLink}>{c.privacy}</Link>
             </Text>

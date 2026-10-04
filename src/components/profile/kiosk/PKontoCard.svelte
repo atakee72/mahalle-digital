@@ -3,7 +3,9 @@
   // (Plan B Task 8) opening PEmailChangePanel; PASSWORT row carries its own
   // "ändern" action (Task 9) opening PPasswordChangePanel — both mounted
   // once by ProfileInner, see that file's layout comment +
-  // src/components/profile/kiosk/CLAUDE.md. + Abmelden.
+  // src/components/profile/kiosk/CLAUDE.md. + the KIEZ-BRIEF row (the weekly
+  // mail's on/off, 2026-10-04; state and handler upstream like everything
+  // here) + Abmelden.
   // Design source: kiosk-profile.jsx (PKontoCard, PKontoRow) for the row
   // anatomy + kiosk-profile-states.jsx §08 (PMiniBanner) for the pending
   // banner rendered here whenever a change is awaiting confirmation and the
@@ -41,6 +43,10 @@
     onResendEmail,
     onCancelEmail,
     onChangePassword,
+    newsletterMode = null,
+    newsletterVerified = false,
+    newsletterBusy = false,
+    onToggleNewsletter,
     deletionScheduledAt = null,
     deletionDateLabel = null,
     onOpenDelete,
@@ -54,6 +60,11 @@
     onResendEmail?: () => Promise<void>;
     onCancelEmail?: () => Promise<void>;
     onChangePassword?: () => void;
+    /** null = not loaded yet → no row. */
+    newsletterMode?: 'weekly' | 'off' | null;
+    newsletterVerified?: boolean;
+    newsletterBusy?: boolean;
+    onToggleNewsletter?: () => void;
     deletionScheduledAt?: string | null;
     deletionDateLabel?: string | null;
     onOpenDelete?: () => void;
@@ -160,6 +171,29 @@
       >{$t['profile.konto.change']}</button>
     {/if}
   </div>
+
+  {#if newsletterMode !== null && onToggleNewsletter}
+    <div data-konto-newsletter style="display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-top: 1px dashed var(--k-rule); gap: 12px;">
+      <div style="min-width: 0;">
+        <div style="font-family: var(--k-font-mono); font-size: 9.5px; color: var(--k-ink-mute); letter-spacing: 0.14em;">{$t['profile.konto.newsletter']}</div>
+        <div data-konto-newsletter-state style="font-family: var(--k-font-display); font-size: 13.5px; font-weight: 600; margin-top: 3px;">
+          {$t[newsletterMode === 'off' ? 'profile.konto.newsletter.off' : 'profile.konto.newsletter.weekly']}
+        </div>
+        {#if newsletterMode !== 'off' && !newsletterVerified}
+          <!-- The mail only goes to confirmed addresses: say so, or „every Sunday" is a promise we do not keep. -->
+          <div data-konto-newsletter-hint style="font-family: var(--k-font-mono); font-size: 9.5px; color: var(--k-warn); line-height: 1.5; margin-top: 3px;">{$t['profile.konto.newsletter.unverified']}</div>
+        {/if}
+      </div>
+      <button
+        type="button"
+        onclick={onToggleNewsletter}
+        disabled={newsletterBusy}
+        aria-busy={newsletterBusy}
+        class="font-bricolage kiosk-tap"
+        style="flex-shrink: 0; background: none; border: none; padding: 0 0 1px; cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--k-ink); border-bottom: 2px solid var(--k-ochre); opacity: {newsletterBusy ? 0.5 : 1};"
+      >{$t[newsletterMode === 'off' ? 'profile.konto.newsletter.turnOn' : 'profile.konto.newsletter.turnOff']}</button>
+    </div>
+  {/if}
 
   <div style="display: flex; gap: 8px; margin-top: 16px;">
     <PBtn small class="kiosk-tap" onclick={handleLogout}>{$t['profile.konto.logout']}</PBtn>

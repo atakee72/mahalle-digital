@@ -147,10 +147,6 @@ const de = {
   'nc.forumNotify.each': 'jeden',
   'nc.forumNotify.off': 'aus',
   'nc.forumNotify.error': 'Die Einstellung konnte nicht gespeichert werden.',
-  'nc.newsletter.label': 'Kiez-Brief (E-Mail)',
-  'nc.newsletter.weekly': 'wöchentlich',
-  'nc.newsletter.off': 'aus',
-  'nc.newsletter.error': 'Die Einstellung konnte nicht gespeichert werden.',
   // Kiez-Brief list page (/kiez-brief) — DRAFT copy
   'kiezBrief.kicker': 'Kiez-Brief',
   'kiezBrief.title.prefix': 'Alle',
@@ -1753,6 +1749,14 @@ const de = {
   'profile.konto.password': 'PASSWORT',
   'profile.konto.change': 'ändern',
   'profile.konto.logout': 'Abmelden',
+  // Kiez-Brief switch in the Konto card — DRAFT copy
+  'profile.konto.newsletter': 'KIEZ-BRIEF (E-MAIL)',
+  'profile.konto.newsletter.weekly': 'jeden Sonntag',
+  'profile.konto.newsletter.off': 'abbestellt',
+  'profile.konto.newsletter.turnOff': 'abbestellen',
+  'profile.konto.newsletter.turnOn': 'einschalten',
+  'profile.konto.newsletter.unverified': 'Kommt erst, wenn deine E-Mail-Adresse bestätigt ist.',
+  'profile.konto.newsletter.error': 'Die Einstellung konnte nicht gespeichert werden.',
 
   'profile.email.stage1.title': 'NEUE ADRESSE',
   'profile.email.stage1.newlabel': 'NEUE E-MAIL',
@@ -2267,10 +2271,6 @@ const en: Dict = {
   'nc.forumNotify.each': 'each one',
   'nc.forumNotify.off': 'off',
   'nc.forumNotify.error': 'The setting could not be saved.',
-  'nc.newsletter.label': 'Kiez-Brief (e-mail)',
-  'nc.newsletter.weekly': 'weekly',
-  'nc.newsletter.off': 'off',
-  'nc.newsletter.error': 'The setting could not be saved.',
   // Kiez-Brief list page (/kiez-brief) — DRAFT copy
   'kiezBrief.kicker': 'Kiez-Brief',
   'kiezBrief.title.prefix': 'All',
@@ -3792,6 +3792,14 @@ const en: Dict = {
   'profile.konto.password': 'PASSWORD',
   'profile.konto.change': 'change',
   'profile.konto.logout': 'Log out',
+  // Kiez-Brief switch in the Konto card — DRAFT copy
+  'profile.konto.newsletter': 'KIEZ-BRIEF (E-MAIL)',
+  'profile.konto.newsletter.weekly': 'every Sunday',
+  'profile.konto.newsletter.off': 'unsubscribed',
+  'profile.konto.newsletter.turnOff': 'unsubscribe',
+  'profile.konto.newsletter.turnOn': 'turn on',
+  'profile.konto.newsletter.unverified': 'Arrives once your e-mail address is confirmed.',
+  'profile.konto.newsletter.error': 'The setting could not be saved.',
 
   'profile.email.stage1.title': 'NEW ADDRESS',
   'profile.email.stage1.newlabel': 'NEW EMAIL',

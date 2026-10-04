@@ -1,7 +1,9 @@
 ---
 // Unsubscribe landing page of the Kiez-Brief (the link in the mail's footer). Works without a
 // login — the link may be opened anywhere. The token names the member; a valid one asks for
-// confirmation (GET) and turns the mail off on the button's POST, an invalid one gets a neutral answer (no oracle).
+// confirmation (GET) and turns the mail off on the button's POST, an invalid one gets a neutral
+// answer (no oracle). The „Abbestellt." page offers the way back at once (owner, 2026-10-04:
+// „by mistake? turn it on again") — a second POST of the same token with `undo=1`.
 import { ObjectId } from 'mongodb';
 import LandingLayout from '../../layouts/LandingLayout.astro';
 import { connectDB } from '../../lib/mongodb';
@@ -10,34 +12,52 @@ import { unsubSecret, verifyUnsubToken } from '../../lib/newsletter/unsubToken';
 const url = new URL(Astro.request.url);
 const isPost = Astro.request.method === 'POST';
 let token = url.searchParams.get('t');
+let undo = false;
 if (isPost) {
   try {
-    const field = (await Astro.request.formData()).get('t');
+    const form = await Astro.request.formData();
+    const field = form.get('t');
     if (typeof field === 'string' && field) token = field;
+    undo = form.get('undo') === '1';
   } catch {
     /* no readable body — fall back to the query token */
   }
 }
 const userId = verifyUnsubToken(token, unsubSecret());
-// A GET only asks (mail link scanners prefetch links); the POST of the button acts.
-const done = Boolean(userId) && isPost;
+// A GET only asks (mail link scanners prefetch links); the POST of a button acts.
+const state: 'invalid' | 'ask' | 'done' | 'restored' = !userId ? 'invalid' : !isPost ? 'ask' : undo ? 'restored' : 'done';
 if (userId && isPost) {
   const db = await connectDB();
-  await db.collection('users').updateOne({ _id: new ObjectId(userId) }, { $set: { newsletter: 'off' } });
+  await db.collection('users').updateOne(
+    { _id: new ObjectId(userId) },
+    undo ? { $unset: { newsletter: '' } } : { $set: { newsletter: 'off' } },
+  );
 }
 Astro.response.headers.set('Cache-Control', 'no-store');
 ---
 
 <LandingLayout title="Kiez-Brief abbestellen | Mahalle" description="Kiez-Brief abbestellen.">
-  <div class="lgl-wrap">
+  <div class="lgl-wrap" data-unsub-state={state}>
     <a href="/" class="lgl-back font-dmmono">← Mahalle</a>
-    {done ? (
+    {state === 'done' ? (
       <>
         <h1 class="font-bricolage">Abbestellt.</h1>
         <p>Du bekommst den Kiez-Brief nicht mehr. Deine Mitteilungen in der App bleiben, wie sie sind.</p>
-        <p>Wieder einschalten kannst du ihn jederzeit in Mahalle: Glocke antippen, dann „Kiez-Brief · wöchentlich".</p>
+        <p>Versehentlich abbestellt? Dann schalte ihn gleich wieder ein:</p>
+        <form method="POST" action="/newsletter/abmelden">
+          <input type="hidden" name="t" value={token ?? ''} />
+          <input type="hidden" name="undo" value="1" />
+          <button type="submit" class="lgl-btn font-dmmono">Wieder einschalten</button>
+        </form>
+        <p class="lgl-later">Später geht das auch in Mahalle: im Profil unter „Konto".</p>
       </>
-    ) : userId ? (
+    ) : state === 'restored' ? (
+      <>
+        <h1 class="font-bricolage">Wieder eingeschaltet.</h1>
+        <p>Du bekommst den Kiez-Brief weiter, einmal die Woche.</p>
+        <p>Ein- und ausschalten kannst du ihn jederzeit in Mahalle: im Profil unter „Konto".</p>
+      </>
+    ) : state === 'ask' ? (
       <>
         <h1 class="font-bricolage">Kiez-Brief abbestellen?</h1>
         <p>Du bekommst den Kiez-Brief dann nicht mehr. Deine Mitteilungen in der App bleiben, wie sie sind.</p>
@@ -49,7 +69,7 @@ Astro.response.headers.set('Cache-Control', 'no-store');
     ) : (
       <>
         <h1 class="font-bricolage">Dieser Link ist ungültig.</h1>
-        <p>Den Kiez-Brief stellst du in Mahalle ein: Glocke antippen, dann „Kiez-Brief · aus".</p>
+        <p>Den Kiez-Brief stellst du in Mahalle ein: im Profil unter „Konto".</p>
       </>
     )}
   </div>
@@ -60,5 +80,6 @@ Astro.response.headers.set('Cache-Control', 'no-store');
   .lgl-back { display: inline-block; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--k-ink-soft); margin-bottom: 18px; }
   .lgl-wrap h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 20px; }
   .lgl-wrap p { font-size: 15px; line-height: 1.55; color: var(--k-ink-soft); margin: 0 0 12px; }
+  .lgl-wrap p.lgl-later { margin-top: 18px; font-size: 13px; }
   .lgl-btn { margin-top: 8px; min-height: 44px; padding: 0 22px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; background: var(--k-ink); color: var(--k-paper); border: 0; cursor: pointer; }
 </style>

@@ -31,6 +31,7 @@
   import { formatDdMm, formatDdMmYyyy, type ChronikData, type ProfileMe, type ProfileStanding } from '../../../lib/profile/profileShared';
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { showSuccess, showError } from '../../../utils/toast';
+  import { storedNewsletterMode, type NewsletterMode } from '../../../lib/newsletter/kiezBriefRules';
   import ProfileTitleBlock from './ProfileTitleBlock.svelte';
   import ProfileSkeleton from './states/ProfileSkeleton.svelte';
   import PCard from './atoms/PCard.svelte';
@@ -120,6 +121,47 @@
   function retryStanding() {
     standingRequested = false;
     standingError = false;
+  }
+
+  // ─── Kiez-Brief switch (2026-10-04) ────────────────────────────────────
+  // The weekly mail's on/off lives in the Konto card (owner: the bell panel
+  // was getting crowded; and there the row was hidden from unverified
+  // members, who then had nowhere to look). State here, not in PKontoCard:
+  // the card is double-mounted (desktop + mobile fold). `null` = not loaded
+  // (or logged out) → the row is not rendered.
+  let newsMode = $state<NewsletterMode | null>(null);
+  let newsVerified = $state(false);
+  let newsBusy = $state(false);
+  let newsRequested = false;
+
+  $effect(() => {
+    if (!profile || newsRequested) return;
+    newsRequested = true;
+    fetch('/api/profile/newsletter')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) { newsMode = storedNewsletterMode(d.mode); newsVerified = d.emailVerified === true; } })
+      .catch(() => {});
+  });
+
+  async function toggleNewsletter() {
+    if (newsBusy || newsMode === null) return;
+    const previous = newsMode;
+    const next: NewsletterMode = previous === 'off' ? 'weekly' : 'off';
+    newsMode = next; // optimistic
+    newsBusy = true;
+    try {
+      const res = await fetch('/api/profile/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: next }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+    } catch {
+      newsMode = previous;
+      showError($t['profile.konto.newsletter.error']);
+    } finally {
+      newsBusy = false;
+    }
   }
 
   // ─── E-mail change (Task 8) ────────────────────────────────────────────
@@ -374,6 +416,10 @@
           onResendEmail={resendEmailChange}
           onCancelEmail={cancelEmailChange}
           onChangePassword={openPwPanel}
+          newsletterMode={newsMode}
+          newsletterVerified={newsVerified}
+          newsletterBusy={newsBusy}
+          onToggleNewsletter={toggleNewsletter}
           deletionScheduledAt={profile.deletionScheduledAt}
           deletionDateLabel={deletionDateLabel}
           onOpenDelete={openDeleteModal}
@@ -470,6 +516,10 @@
             onResendEmail={resendEmailChange}
             onCancelEmail={cancelEmailChange}
             onChangePassword={openPwPanel}
+            newsletterMode={newsMode}
+            newsletterVerified={newsVerified}
+            newsletterBusy={newsBusy}
+            onToggleNewsletter={toggleNewsletter}
             deletionScheduledAt={profile.deletionScheduledAt}
             deletionDateLabel={deletionDateLabel}
             onOpenDelete={openDeleteModal}
