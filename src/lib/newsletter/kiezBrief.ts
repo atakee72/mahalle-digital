@@ -14,7 +14,7 @@ import {
   personalize, MAIL_LOCALES, MAX_RECIPIENTS, berlinWeekday, issueWeek, isQuiet,
   subjectFor, unsubscribeHeaders, type BriefData, type MailLocale,
 } from './kiezBriefRules';
-import { claimIssue, loadIssueData, loadRecipients, markIssue, type BlogInput, type Recipient } from './kiezBriefStore';
+import { claimIssue, findSentIssue, loadIssueData, loadRecipients, loadSentIssue, markIssue, type BlogInput, type Recipient } from './kiezBriefStore';
 
 const REPLY_TO = 'admin@mahalle.digital';
 
@@ -44,9 +44,17 @@ export async function buildIssue(nowMs = Date.now()): Promise<BriefData> {
   return loadIssueData(db, issueWeek(nowMs), nowMs, await blogPosts(), { cloud: import.meta.env.CLOUD_NAME });
 }
 
-/** The mail's HTML in one language, with the unsubscribe and name placeholders still inside. */
-export async function renderIssue(data: BriefData, baseUrl: string, locale: MailLocale = 'de'): Promise<string> {
-  return render(React.createElement(KiezBriefEmail, { data, baseUrl, locale }));
+/** A sent issue for the browser view (rebuilt from today's data, see loadSentIssue); null = no such sent issue. */
+export async function buildSentIssue(week: unknown): Promise<BriefData | null> {
+  const db = await connectDB();
+  const doc = await findSentIssue(db, week);
+  if (!doc) return null;
+  return loadSentIssue(db, doc, await blogPosts(), { cloud: import.meta.env.CLOUD_NAME });
+}
+
+/** The mail's HTML in one language, with the unsubscribe and name placeholders still inside. `web` = the browser view. */
+export async function renderIssue(data: BriefData, baseUrl: string, locale: MailLocale = 'de', web = false): Promise<string> {
+  return render(React.createElement(KiezBriefEmail, { data, baseUrl, locale, web }));
 }
 
 export interface RenderedIssue { html: Record<MailLocale, string>; subject: Record<MailLocale, string> }

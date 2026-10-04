@@ -9,10 +9,12 @@ import {
 
 interface KiezBriefEmailProps {
   data: BriefData;
-  /** Absolute origin (NEXTAUTH_URL) — never hardcode the domain here. */
+  /** Absolute origin (NEXTAUTH_URL) for the mail — never hardcode the domain here. '' for the browser view (relative links). */
   baseUrl: string;
   /** The member's stored app language (users.locale); German when absent. */
   locale?: MailLocale;
+  /** true = the browser view (/kiez-brief/<week>): the top line links to the list instead of to itself. */
+  web?: boolean;
 }
 
 const POST_PATH = { topic: 'topics', announcement: 'announcements', recommendation: 'recommendations' } as const;
@@ -52,8 +54,8 @@ function berlin(ms: number, locale: MailLocale) {
 // excerpts) stays as written; in the English mail the post links ask the page to open translated.
 // Images are optional garnish: Gmail/Outlook show them only after the reader allows images,
 // so every row reads complete without them. Reads well linearised on purpose (Resend derives
-// the text part from this HTML).
-export default function KiezBriefEmail({ data, baseUrl, locale = 'de' }: KiezBriefEmailProps) {
+// the text part from this HTML). The same markup is the browser view (`web`): only the top line differs.
+export default function KiezBriefEmail({ data, baseUrl, locale = 'de', web = false }: KiezBriefEmailProps) {
   const c = MAIL_COPY[locale];
   const url = (path: string) => withUtm(`${baseUrl}${path}`);
   /** content links: the English mail asks the post page for its translation */
@@ -61,9 +63,18 @@ export default function KiezBriefEmail({ data, baseUrl, locale = 'de' }: KiezBri
   const abs = (src: string) => (src.startsWith('http') ? src : `${baseUrl}${src}`);
   return (
     <Html lang={locale}>
-      <Head />
+      <Head>
+        {/* phones open the browser view: without it the 520 px card renders on a 980 px canvas */}
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{`Kiez-Brief · ${weekLabel(data.week, locale)}`}</title>
+      </Head>
       <Preview>{preheaderFor(data, locale)}</Preview>
       <Body style={bodyStyle}>
+        <Text style={topLine}>
+          {web
+            ? <Link href={`${baseUrl}/kiez-brief`} target="_self" style={mutedLink}>{`← ${c.allIssues}`}</Link>
+            : <Link href={url(`/kiez-brief/${data.week}`)} style={mutedLink}>{c.viewInBrowser}</Link>}
+        </Text>
         <Container style={containerStyle}>
           {/* Masthead: the app's disc + wordmark on a rust band */}
           <Section style={mast}>
@@ -204,6 +215,7 @@ function EventRow({ e, href, locale }: { e: BriefEvent; href: string; locale: Ma
 
 const bodyStyle = { backgroundColor: PAPER, fontFamily: 'Georgia, serif', padding: '24px 12px' };
 const containerStyle = { backgroundColor: '#f7f0de', border: `1.5px solid ${INK}`, borderRadius: '12px', maxWidth: '520px', overflow: 'hidden' as const };
+const topLine = { color: '#7a7264', fontSize: '12px', textAlign: 'center' as const, margin: '0 0 10px' };
 const mast = { backgroundColor: RUST, padding: '14px 24px', borderBottom: `1.5px solid ${INK}` };
 const wordmark = { color: PAPER, fontFamily: 'Georgia, serif', fontSize: '22px', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, lineHeight: '1.1' };
 const mastKicker = { color: PAPER, fontFamily: 'Menlo, Consolas, monospace', fontSize: '9px', letterSpacing: '0.14em', margin: '2px 0 0', opacity: 0.85 };
