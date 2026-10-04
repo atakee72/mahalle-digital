@@ -13,12 +13,15 @@
     title,
     accent = 'var(--k-ochre)',
     open: initialOpen = false,
+    hint,
     badge,
     children,
   }: {
     title: string;
     accent?: string;
     open?: boolean;
+    // What is inside, shown beside the title while the fold is CLOSED.
+    hint?: string;
     badge?: Snippet;
     children?: Snippet;
   } = $props();
@@ -45,11 +48,14 @@
       background: none; border: none; cursor: pointer; text-align: left;
     "
   >
-    <span style="display: flex; align-items: center; gap: 8px;">
+    <span style="display: flex; align-items: center; gap: 8px; min-width: 0;">
       <span class="font-bricolage" style="font-size: 14.5px; font-weight: 800;">{title}</span>
       {#if badge}{@render badge()}{/if}
+      {#if hint && !open}
+        <span class="font-dmmono" style="font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--k-ink-mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{hint}</span>
+      {/if}
     </span>
-    <span class="font-dmmono" style="font-size: 12px; color: var(--k-ink-mute);">{open ? '▴' : '▾'}</span>
+    <span class="font-dmmono" style="font-size: 12px; color: var(--k-ink-mute); flex-shrink: 0; padding-left: 8px;">{open ? '▴' : '▾'}</span>
   </button>
   {#if open}
     <div style="padding: 0 16px 16px; border-top: 1px dashed var(--k-rule); padding-top: 12px;">

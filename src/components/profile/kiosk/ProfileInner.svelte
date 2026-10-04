@@ -312,6 +312,37 @@
       ? 'var(--k-success)'
       : 'var(--k-warn)'
   );
+
+  // Phones (2026-10-04, owner: „you have to scroll all the way down"): Moderation and Konto sit
+  // ABOVE the archive, folded. They open by themselves only when there is something to see:
+  // Moderation with a warning or rejected content, Konto with a pending e-mail change or a
+  // scheduled deletion — or when the visitor came for the account: `/profile#konto`, or the
+  // Kiez-Brief's „Im Profil einstellen" link (`?utm_source=kiez-brief`, also in mails already sent).
+  const cameForAccount =
+    typeof window !== 'undefined' &&
+    (window.location.hash === '#konto' ||
+      new URLSearchParams(window.location.search).get('utm_source') === 'kiez-brief');
+  let accountScrolled = false;
+  $effect(() => {
+    if (!cameForAccount || accountScrolled || !profile) return;
+    accountScrolled = true;
+    // Blocks above (moderation standing, the verify banner) arrive a moment later and push the
+    // card down — align again twice, unless the visitor has started to scroll by then.
+    let touched = false;
+    const stop = () => { touched = true; };
+    const opts = { once: true, passive: true } as const;
+    window.addEventListener('wheel', stop, opts);
+    window.addEventListener('touchstart', stop, opts);
+    window.addEventListener('keydown', stop, opts);
+    const align = () => {
+      if (touched) return;
+      const target = [...document.querySelectorAll<HTMLElement>('[data-konto-anchor]')].find((el) => el.offsetParent !== null);
+      target?.scrollIntoView({ block: 'start' });
+    };
+    requestAnimationFrame(align);
+    setTimeout(align, 500);
+    setTimeout(align, 1500);
+  });
 </script>
 
 {#if !loggedIn}
@@ -356,8 +387,9 @@
       col 1 = identity → moderation → konto (rows 1–3), col 2 = archiv
       (spans all 3 rows). Below lg the same grid collapses to a single
       implicit column and `order-*` utilities re-sequence it to the
-      ProfileOwnMobile stack: identity → archiv → moderation fold → konto
-      fold. PIdentityCard and PActivityLedger hold internal state (edit/
+      phone stack: identity → chronik → moderation fold → konto fold →
+      archiv (since 2026-10-04; the design source had the archive before the
+      folds). PIdentityCard and PActivityLedger hold internal state (edit/
       avatar, own fetch) so each is mounted exactly ONCE and just moves via
       CSS; PModerationCard/PKontoCard are stateless/props-driven, so their
       desktop-card and mobile-fold ("bare" prop, wrapped in PMobileFold)
@@ -406,7 +438,7 @@
       </div>
 
       <!-- Konto — desktop card (lg+ only) -->
-      <div class="hidden min-w-0 lg:block lg:col-start-1 lg:row-start-3">
+      <div data-konto-anchor class="hidden min-w-0 scroll-mt-24 lg:block lg:col-start-1 lg:row-start-3">
         <PKontoCard
           email={profile.email}
           pendingEmail={profile.pendingEmail}
@@ -469,21 +501,30 @@
         trying to align Chronik/Archiv to the left column's per-card grid
         rows (identity/moderation/konto), which would leave a dead gap
         under a short Chronik strip whenever the identity card's row is
-        taller than it. On mobile this single order-2 slot still lands
-        directly after the identity card and before Archiv, since Chronik
-        is nested ahead of Archiv inside it.
+        taller than it.
       -->
-      <div class="order-2 min-w-0 flex flex-col gap-5 lg:col-start-2 lg:row-start-1 lg:row-span-3">
+      <!--
+        Below lg the wrapper dissolves (`contents`) and its two children are
+        grid items of their own: Chronik stays second, the archive goes LAST
+        (order-7) — after the Moderation and Konto folds and the e-mail /
+        password panels (order-3 … 6). From lg the wrapper is the right
+        column's flex stack again (the children's `order` is reset there).
+      -->
+      <div class="contents min-w-0 lg:flex lg:flex-col lg:gap-5 lg:col-start-2 lg:row-start-1 lg:row-span-3">
         {#if showChronik && initialChronik}
-          <PChronikStrip chronik={initialChronik} />
+          <div class="order-2 min-w-0 lg:order-none">
+            <PChronikStrip chronik={initialChronik} />
+          </div>
         {/if}
-        <PActivityLedger />
+        <div class="order-7 min-w-0 lg:order-none">
+          <PActivityLedger />
+        </div>
       </div>
 
       <!-- Moderation — mobile fold (below lg only) -->
       <div class="order-3 min-w-0 lg:hidden">
         {#if standing}
-          <PMobileFold title={$t['profile.mod.title']} accent={modAccent} open>
+          <PMobileFold title={$t['profile.mod.title']} accent={modAccent} open={standing.strikes > 0 || standing.rejected.length > 0}>
             {#snippet badge()}
               <PStrikeDots strikes={standing.strikes} />
             {/snippet}
@@ -504,8 +545,12 @@
       </div>
 
       <!-- Konto — mobile fold (below lg only) -->
-      <div class="order-4 min-w-0 lg:hidden">
-        <PMobileFold title={$t['profile.konto.title']} open>
+      <div data-konto-anchor class="order-4 min-w-0 scroll-mt-20 lg:hidden">
+        <PMobileFold
+          title={$t['profile.konto.title']}
+          hint={$t['profile.konto.fold.hint']}
+          open={cameForAccount || !!profile.pendingEmail || !!profile.deletionScheduledAt}
+        >
           <PKontoCard
             email={profile.email}
             pendingEmail={profile.pendingEmail}

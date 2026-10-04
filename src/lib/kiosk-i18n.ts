@@ -1752,6 +1752,7 @@ const de = {
   'profile.mod.loadfailed': 'Moderations-Stand konnte nicht geladen werden.',
 
   'profile.konto.title': 'Konto',
+  'profile.konto.fold.hint': 'E-Mail · Passwort · Kiez-Brief',
   'profile.konto.email': 'E-MAIL',
   'profile.konto.password': 'PASSWORT',
   'profile.konto.change': 'ändern',
@@ -3801,6 +3802,7 @@ const en: Dict = {
   'profile.mod.loadfailed': 'Moderation standing could not be loaded.',
 
   'profile.konto.title': 'Account',
+  'profile.konto.fold.hint': 'e-mail · password · Kiez-Brief',
   'profile.konto.email': 'E-MAIL',
   'profile.konto.password': 'PASSWORD',
   'profile.konto.change': 'change',

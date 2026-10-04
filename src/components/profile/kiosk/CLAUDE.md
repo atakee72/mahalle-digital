@@ -196,10 +196,31 @@ serves both breakpoints:
   (`lg:row-start-1 lg:row-span-3`). Moderation/Konto desktop cards are
   `hidden lg:block`.
 - **Mobile (`<lg`)**: the grid collapses to a single implicit column;
-  `order-{1,2,3,4}` re-sequences it to identity → archiv → moderation fold
-  → konto fold (matching `ProfileOwnMobile`, NOT the desktop DOM order).
+  `order-*` re-sequences it to identity (1) → Chronik (2) → moderation fold
+  (3) → konto fold (4) → e-mail / password panel (5, 6) → archiv (7).
   Moderation/Konto mobile folds are plain elements with `lg:hidden`
   (`PMobileFold` itself also carries `lg:hidden` internally, belt-and-braces).
+- **Folds above the archive, closed (2026-10-04, owner: „if you wanna
+  see/change your account info, you have to scroll all the way down")**:
+  until then the phone order was identity → Chronik → archiv → moderation →
+  konto (the design source's `ProfileOwnMobile`), both folds open — the
+  account sat under a list that grows with every post. Now the archive is
+  last and both folds start CLOSED, two slim bars under the Chronik. The
+  right-column wrapper is `contents` below `lg`, so Chronik and archive are
+  grid items of their own there (`order-2` / `order-7`, reset with
+  `lg:order-none`); from `lg` it is the flex stack as before — the desktop
+  is unchanged. A fold opens by itself only when there is something to see:
+  Moderation with a strike or rejected content (and the load-failed variant),
+  Konto with a pending e-mail change or a scheduled deletion — or when the
+  visitor came for the account: `/profile#konto`, or the Kiez-Brief's „Im
+  Profil einstellen" link (`?utm_source=kiez-brief`, so mails already sent
+  work too). In that case the page also scrolls to the visible
+  `[data-konto-anchor]` (phone fold or desktop card; aligned again after
+  0.5 s and 1.5 s because the moderation fold and the banners above arrive
+  late, never once the visitor has scrolled). `PMobileFold` has a `hint`
+  prop: the closed Konto bar prints „E-Mail · Passwort · Kiez-Brief"
+  (`profile.konto.fold.hint`). `open` is read once at mount. Probe:
+  `scratchpad/profile/fold-probe.cjs` (16 checks, 390 px + desktop).
 
 **Why `PIdentityCard`/`PActivityLedger` are single-mounted but
 `PModerationCard`/`PKontoCard` are double-mounted**: the former hold real
