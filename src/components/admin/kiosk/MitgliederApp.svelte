@@ -190,7 +190,7 @@
   });
 </script>
 
-<div style="max-width: 880px; margin: 0 auto; padding: 26px 18px 60px;">
+<div style="max-width: 1040px; margin: 0 auto; padding: 26px 18px 60px;">
   <!-- Title block -->
   <div style="margin-bottom: 18px;">
     <div class="font-dmmono" style="font-size: 10px; color: var(--k-accent); letter-spacing: 0.14em;">
@@ -267,6 +267,9 @@
                 {#if row.role === 'admin'}
                   <span class="font-dmmono" style="font-size: 9px; font-weight: 600; background: var(--k-accent); color: var(--k-paper); padding: 1px 6px; border-radius: 999px; letter-spacing: 0.08em;">{$t['admin.users.adminchip']}</span>
                 {/if}
+                {#if row.verified}
+                  <span data-admin-verified class="font-dmmono" style="font-size: 9px; font-weight: 600; background: var(--k-moss); color: var(--k-paper); padding: 1px 7px; border-radius: var(--k-radius-sm); border: 1px solid var(--k-ink); letter-spacing: 0.08em; white-space: nowrap;">{$t['admin.users.verifiedchip']}</span>
+                {/if}
               </div>
               {#if row.email}
                 <a
@@ -280,14 +283,20 @@
                 {tStr($t['admin.users.since'], { d: fmtDate(row.createdAt) })}
                 &nbsp;·&nbsp;
                 {row.emailVerified ? $t['admin.users.emailok'] : $t['admin.users.emailno']}
+                {#if savedRow === row.id}
+                  &nbsp;·&nbsp;
+                  <span role="status" data-admin-saved style="font-weight: 600; color: var(--k-moss);">{$t['admin.users.saved']}</span>
+                {/if}
               </div>
             </div>
 
-            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+            <!-- Phones: the controls flow and wrap. From lg: four fixed columns (type · limit · Kiez-Brief ·
+                 verify) so every row has the same shape; the limit column stays empty unless Initiative. -->
+            <div data-admin-controls class="flex flex-wrap items-center gap-2.5 lg:grid lg:grid-cols-[214px_158px_128px_112px]">
               <label class="font-dmmono" style="display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute);">
                 {$t['admin.users.type.label']}
                 <select
-                  class="font-bricolage"
+                  class="font-bricolage lg:min-w-0 lg:flex-1"
                   data-admin-type
                   style="border: 1.5px solid var(--k-ink); border-radius: var(--k-radius-sm); background: var(--k-paper); color: var(--k-ink); font-size: 12px; padding: 5px 6px; min-height: 32px;"
                   disabled={busy.has(row.id)}
@@ -300,7 +309,7 @@
                 </select>
               </label>
               {#if row.memberType === 'organisation'}
-                <label class="font-dmmono" style="display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute);">
+                <label class="font-dmmono" style="display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute); white-space: nowrap;">
                   {$t['admin.users.limit.label']}
                   <input
                     type="number"
@@ -318,14 +327,8 @@
                     onchange={(e) => setLimit(row, e.currentTarget as HTMLInputElement)}
                   />
                 </label>
-              {/if}
-              {#if savedRow === row.id}
-                <span
-                  class="font-dmmono"
-                  role="status"
-                  data-admin-saved
-                  style="font-size: 10px; font-weight: 600; color: var(--k-moss); letter-spacing: 0.06em;"
-                >{$t['admin.users.saved']}</span>
+              {:else}
+                <span class="hidden lg:block" aria-hidden="true"></span>
               {/if}
               <button
                 type="button"
@@ -335,7 +338,7 @@
                 aria-pressed={row.newsletter !== 'off'}
                 style="
                   border: 1.5px {row.newsletter === 'off' ? 'dashed' : 'solid'} var(--k-ink); border-radius: 999px;
-                  padding: 6px 12px; font-size: 11px; font-weight: 700;
+                  padding: 6px 12px; font-size: 11px; font-weight: 700; white-space: nowrap;
                   cursor: pointer; min-height: 32px; background: var(--k-paper);
                   color: {row.newsletter === 'off' ? 'var(--k-ink-mute)' : 'var(--k-ink)'};
                   {busy.has(row.id) ? 'opacity: 0.5; cursor: wait;' : ''}
@@ -345,17 +348,12 @@
               >
                 {row.newsletter === 'off' ? $t['admin.users.brief.off'] : $t['admin.users.brief.on']}
               </button>
-              {#if row.verified}
-                <span class="font-dmmono" style="font-size: 10px; font-weight: 600; background: var(--k-moss); color: var(--k-paper); padding: 2px 8px; border-radius: var(--k-radius-sm); border: 1px solid var(--k-ink); letter-spacing: 0.08em;">
-                  {$t['admin.users.verifiedchip']}
-                </span>
-              {/if}
               <button
                 type="button"
                 class="font-dmmono"
                 style="
                   border: 1.5px solid var(--k-ink); border-radius: 999px;
-                  padding: 6px 14px; font-size: 11px; font-weight: 700;
+                  padding: 6px 14px; font-size: 11px; font-weight: 700; white-space: nowrap;
                   cursor: pointer; min-height: 32px;
                   {row.verified
                     ? 'background: var(--k-paper); color: var(--k-ink);'
