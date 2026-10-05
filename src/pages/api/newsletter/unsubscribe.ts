@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
-import { ObjectId } from 'mongodb';
-import { connectDB } from '../../../lib/mongodb';
+import { setOwnNewsletterMode } from '../../../lib/newsletter/preference';
 import { unsubSecret, verifyUnsubToken } from '../../../lib/newsletter/unsubToken';
 import { clientIpFrom, consumeRateLimit, hashIp } from '../../../lib/auth/rateLimit';
 
@@ -16,7 +15,6 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const userId = verifyUnsubToken(token, unsubSecret());
   if (!userId) return new Response(null, { status: 400 });
 
-  const db = await connectDB();
-  await db.collection('users').updateOne({ _id: new ObjectId(userId) }, { $set: { newsletter: 'off' } });
+  await setOwnNewsletterMode(userId, 'off', 'one-click');
   return new Response(null, { status: 200 });
 };

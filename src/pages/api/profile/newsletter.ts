@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { ObjectId } from 'mongodb';
 import { connectDB } from '../../../lib/mongodb';
 import { NEWSLETTER_MODES, storedNewsletterMode } from '../../../lib/newsletter/kiezBriefRules';
+import { setOwnNewsletterMode } from '../../../lib/newsletter/preference';
 
 // The member's Kiez-Brief preference (users.newsletter; absent = 'weekly').
 // Not ban-gated: turning a mail off must always be possible.
@@ -35,10 +36,6 @@ export const POST: APIRoute = async ({ request }) => {
   if (!parsed.success) return json({ error: 'Invalid mode' }, 400);
   const { mode } = parsed.data;
 
-  const db = await connectDB();
-  await db.collection('users').updateOne(
-    { _id: new ObjectId(session.user.id) },
-    mode === 'weekly' ? { $unset: { newsletter: '' } } : { $set: { newsletter: mode } },
-  );
+  await setOwnNewsletterMode(session.user.id, mode, 'profile');
   return json({ mode });
 };

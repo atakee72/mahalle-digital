@@ -195,3 +195,16 @@ export function alertKiezBrief(p: {
                   : `⚠️ Kiez-Brief ${kw}: Versand fehlgeschlagen — Näheres in Sentry`;
   return sendAdminAlert({ kind: 'kiez_brief', text });
 }
+
+/**
+ * A member switched the Kiez-Brief off or on again by themselves — in the profile, on the mail's
+ * unsubscribe page or with the mail program's own button. Never sent for the admin's pill.
+ */
+export function alertKiezBriefChoice(p: {
+  name: string; handle: string | null; change: 'off' | 'on'; via: 'profile' | 'link' | 'one-click';
+}): Promise<void> {
+  const at = p.handle ? ` (@${p.handle})` : '';
+  const via = p.via === 'profile' ? 'im Profil' : p.via === 'link' ? 'über den Abmelde-Link' : 'über das Mail-Programm';
+  const what = p.change === 'off' ? '📭 Kiez-Brief abbestellt' : '📬 Kiez-Brief wieder abonniert';
+  return sendAdminAlert({ kind: 'kiez_brief', text: `${what}: ${trunc(p.name)}${at} — ${via}` });
+}

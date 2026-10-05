@@ -9,6 +9,15 @@ export function storedNewsletterMode(v: unknown): NewsletterMode {
   return v === 'off' ? 'off' : 'weekly';
 }
 
+/** Where a member switched the Kiez-Brief: the profile, the mail's unsubscribe page, the mail program's own button. */
+export type NewsletterVia = 'profile' | 'link' | 'one-click';
+
+/** What a member's own switch changed — `null` when the stored choice already was `next` (a repeated click). */
+export function newsletterChange(before: unknown, next: NewsletterMode): 'off' | 'on' | null {
+  if (storedNewsletterMode(before) === next) return null;
+  return next === 'off' ? 'off' : 'on';
+}
+
 /**
  * Resend Free sends 100 mails per UTC calendar day (00:00–24:00 UTC, reset at midnight UTC — NOT
  * a rolling 24 hours; their docs, checked 2026-10-04), shared with the login and confirmation

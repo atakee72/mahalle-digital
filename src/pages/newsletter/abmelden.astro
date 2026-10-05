@@ -4,9 +4,8 @@
 // confirmation (GET) and turns the mail off on the button's POST, an invalid one gets a neutral
 // answer (no oracle). The „Abbestellt." page offers the way back at once (owner, 2026-10-04:
 // „by mistake? turn it on again") — a second POST of the same token with `undo=1`.
-import { ObjectId } from 'mongodb';
 import LandingLayout from '../../layouts/LandingLayout.astro';
-import { connectDB } from '../../lib/mongodb';
+import { setOwnNewsletterMode } from '../../lib/newsletter/preference';
 import { unsubSecret, verifyUnsubToken } from '../../lib/newsletter/unsubToken';
 
 const url = new URL(Astro.request.url);
@@ -26,13 +25,7 @@ if (isPost) {
 const userId = verifyUnsubToken(token, unsubSecret());
 // A GET only asks (mail link scanners prefetch links); the POST of a button acts.
 const state: 'invalid' | 'ask' | 'done' | 'restored' = !userId ? 'invalid' : !isPost ? 'ask' : undo ? 'restored' : 'done';
-if (userId && isPost) {
-  const db = await connectDB();
-  await db.collection('users').updateOne(
-    { _id: new ObjectId(userId) },
-    undo ? { $unset: { newsletter: '' } } : { $set: { newsletter: 'off' } },
-  );
-}
+if (userId && isPost) await setOwnNewsletterMode(userId, undo ? 'weekly' : 'off', 'link');
 Astro.response.headers.set('Cache-Control', 'no-store');
 ---
 

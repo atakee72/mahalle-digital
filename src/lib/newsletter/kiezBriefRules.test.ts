@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  storedNewsletterMode, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
+  storedNewsletterMode, newsletterChange, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
   preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb, inert, personalize, LISTING_KIND_SYMBOL,
   storedMailLocale, escapeHtml, isIssueWeekKey, newsLineFor, pairs, groupDue, utcDay, verifyNoteHtml, GROUP_SIZE, TEST_LEAD_MINUTES, VERIFY_PLACEHOLDER, MAX_OFFICIAL, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
@@ -16,6 +16,16 @@ const post = (id: string, h: number): BriefData['posts'][number] => ({ id, kind:
 test('the stored preference falls back to weekly', () => {
   assert.equal(storedNewsletterMode('off'), 'off');
   for (const v of [undefined, null, '', 'weekly', 'OFF', 1]) assert.equal(storedNewsletterMode(v), 'weekly');
+});
+
+test('a switch counts as a change only when the stored choice differs', () => {
+  for (const v of [undefined, null, '', 'weekly']) assert.equal(newsletterChange(v, 'off'), 'off');
+  assert.equal(newsletterChange('off', 'weekly'), 'on');
+});
+
+test('a repeated click on the same choice is no change', () => {
+  assert.equal(newsletterChange('off', 'off'), null);
+  for (const v of [undefined, null, 'weekly']) assert.equal(newsletterChange(v, 'weekly'), null);
 });
 
 test('ISO week of a Berlin day, around the year boundary too', () => {
