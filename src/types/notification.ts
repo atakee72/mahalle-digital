@@ -1,6 +1,6 @@
 import type { ObjectId } from 'mongodb';
 
-export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention' | 'admin_hint' | 'blog' | 'forum';
+export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention' | 'admin_hint' | 'blog' | 'forum' | 'event_moved';
 
 export interface NotificationTarget {
   /** The page kind the row deep-links to (mirrors the href, not necessarily
@@ -25,6 +25,13 @@ export interface NotificationMeta {
   sourceId?: string;
   /** blog + forum digest: how many posts this one notification stands for (set only when > 1). */
   count?: number;
+  /** event_moved: what the author changed, and the event's NEW time and place — the row and the
+   *  push text are built from these (see src/lib/calendar/eventMove.ts), nothing rendered is stored. */
+  change?: 'date' | 'place' | 'both';
+  startISO?: string;
+  endISO?: string;
+  allDay?: boolean;
+  place?: string;
 }
 
 /** DB shape — one doc per recipient per event. */

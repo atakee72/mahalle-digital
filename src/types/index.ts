@@ -214,6 +214,14 @@ export interface Event {
   editHistory?: EditHistory[];
   isEdited?: boolean;
   lastEditedAt?: Date;
+  // „verschoben" (2026-10-06): set by the edit route when the author moved the date or time —
+  // drives the tag in the calendar; `movedFromStart` is the FIRST start („ursprünglich"). Both are
+  // unset again when the event is moved back to that start.
+  movedAt?: Date;
+  movedFromStart?: Date;
+  // A move whose edit the moderation held back: the people who plan to come are told when the
+  // admin approves it (processReviewAction), then the field is unset.
+  moveNoticeOwed?: 'date' | 'place' | 'both';
   // Moderation fields
   moderationStatus?: 'approved' | 'pending' | 'rejected';
   isUserReported?: boolean;
@@ -224,6 +232,13 @@ export interface Event {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+/** What „kopieren" carries from an event into the create form — content only: no date is kept,
+ *  and nothing that belongs to the old event (answers, likes, saves, moderation state). */
+export type EventCopySource = Pick<
+  Event,
+  'title' | 'body' | 'category' | 'startDate' | 'endDate' | 'allDay' | 'location' | 'capacity' | 'visibility' | 'tags'
+>;
 
 // News Types (Newsboard)
 export interface NewsItem {
