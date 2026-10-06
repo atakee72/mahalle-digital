@@ -8,11 +8,19 @@
 // Drag-select on the calendar's month grid lands here with prefill
 // query params (?from=YYYY-MM-DD&to=YYYY-MM-DD&allDay=1) — the inner
 // component reads them in onMount.
+//
+// „kopieren" (2026-10-06): ?copy=<event id> loads one of the member's OWN events
+// and hands its content to the form — without the date. Not the member's event,
+// a rejected one or a bad id → back to the calendar.
 
 import KioskLayout from '../../layouts/KioskLayout.astro';
 import EventComposePage from '../../components/calendar/kiosk/compose/EventComposePage.svelte';
 import { getSession } from 'auth-astro/server';
+import { ObjectId } from 'mongodb';
+import { connectDB } from '../../lib/mongodb';
+import { isOwner } from '../../utils/authHelpers';
 import { isUserBanned } from '../../lib/auth/banGuard';
+import type { EventCopySource } from '../../types';
 
 const session = await getSession(Astro.request);
 
@@ -26,8 +34,33 @@ if (await isUserBanned(session.user.id)) {
   return Astro.redirect('/', 302);
 }
 
+let copyFrom: EventCopySource | undefined;
+const copyId = Astro.url.searchParams.get('copy');
+if (copyId !== null) {
+  if (!ObjectId.isValid(copyId)) return Astro.redirect('/calendar', 302);
+  const db = await connectDB();
+  const source = await db.collection('events').findOne(
+    { _id: new ObjectId(copyId) },
+    {
+      projection: {
+        title: 1, body: 1, category: 1, startDate: 1, endDate: 1, allDay: 1, location: 1,
+        capacity: 1, visibility: 1, tags: 1, author: 1, moderationStatus: 1
+      }
+    }
+  );
+  if (!source || !isOwner(source.author, session.user.id) || source.moderationStatus === 'rejected') {
+    return Astro.redirect('/calendar', 302);
+  }
+  // Allowlist + Date → string across the SSR boundary.
+  copyFrom = JSON.parse(JSON.stringify({
+    title: source.title, body: source.body, category: source.category,
+    startDate: source.startDate, endDate: source.endDate, allDay: source.allDay,
+    location: source.location, capacity: source.capacity, visibility: source.visibility,
+    tags: source.tags
+  }));
+}
 ---
 
 <KioskLayout title="Mahalle · neuer Termin" description="Erstelle einen neuen Termin im Mahalle-Kalender." page="calendar">
-  <EventComposePage client:only="svelte" />
+  <EventComposePage client:only="svelte" copyFrom={copyFrom} />
 </KioskLayout>

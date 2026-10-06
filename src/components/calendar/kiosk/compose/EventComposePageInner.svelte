@@ -28,7 +28,7 @@
     RateLimitError
   } from '../../../../lib/calendarMutations';
   import { eventDraft, type EventDraftValues } from '../../../../lib/eventDraftStore';
-  import { t } from '../../../../lib/kiosk-i18n';
+  import { t, tStr } from '../../../../lib/kiosk-i18n';
   import {
     berlinDayOf,
     berlinTodayISO,
@@ -37,18 +37,25 @@
     isLegacyUtcAllDay
   } from '../../../../lib/calendar/berlinDay';
   import { showToast, showSuccess } from '../../../../utils/toast';
-  import type { EventCategory, Event as EventDoc } from '../../../../types';
+  import type { EventCategory, Event as EventDoc, EventCopySource } from '../../../../types';
 
   let {
     mode = 'create',
-    initialEvent
+    initialEvent,
+    copyFrom
   } = $props<{
     mode?: 'create' | 'edit';
     initialEvent?: EventDoc;
+    copyFrom?: EventCopySource;
   }>();
 
   // svelte-ignore state_referenced_locally
   const isEditing = mode === 'edit';
+  // „kopieren": a new event from an old one's content. Like edit mode it leaves the
+  // draft store alone — the member's own unfinished draft must survive a copy.
+  // svelte-ignore state_referenced_locally
+  const isCopy = !isEditing && !!copyFrom;
+  const usesDraft = !isEditing && !isCopy;
 
   // ─── Initial values — computed synchronously at script-top.
   // This component runs client-only (`client:only="svelte"` on the
@@ -63,36 +70,47 @@
     return { start: berlinDayOf(start), end: berlinDayOf(end) };
   }
 
+  // The form values of a stored event — shared by edit mode and „kopieren".
+  function valuesOf(source: EventCopySource): EventComposeValues {
+    const start = new Date(source.startDate as any);
+    const end = new Date(source.endDate as any);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dateStr = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const timeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const allDayDays = source.allDay ? allDayPrefill(start, end) : null;
+    return {
+      title: source.title ?? '',
+      body: source.body ?? '',
+      category: (source.category ?? 'kiez') as EventCategory,
+      // All-day: the stored bounds are Berlin day bounds (since 2026-09-27) —
+      // read the civil day in Berlin, never the browser's local date. Rows
+      // stored before the fix (UTC midnight → 23:59:59Z) carry the meant day
+      // in their UTC date, so read that until the repair script has run.
+      startDate: allDayDays ? allDayDays.start : dateStr(start),
+      startTime: source.allDay ? '00:00' : timeStr(start),
+      endDate: allDayDays ? allDayDays.end : dateStr(end),
+      endTime: source.allDay ? '23:59' : timeStr(end),
+      allDay: !!source.allDay,
+      location: source.location ?? '',
+      capacity: source.capacity ?? null,
+      visibility: (source.visibility ?? 'public') as 'public' | 'private',
+      tags: source.tags ?? []
+    };
+  }
+
+  // A copy keeps everything but the DAY: the member must choose the new one, so nobody
+  // publishes the same event twice on the old date. A source that ran over several days
+  // opens with „mehrtägig" ticked, so the copy cannot shrink to one day unnoticed.
+  // svelte-ignore state_referenced_locally
+  const copyValues = isCopy && copyFrom ? valuesOf(copyFrom) : null;
+  const copyMultiDay = copyValues ? copyValues.startDate !== copyValues.endDate : undefined;
+
   function computeInitialValues(): Partial<EventComposeValues> {
     // Edit mode wins outright — populate from the existing event,
     // never read URL prefill or draft store.
-    if (isEditing && initialEvent) {
-      const start = new Date(initialEvent.startDate as any);
-      const end = new Date(initialEvent.endDate as any);
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const dateStr = (d: Date) =>
-        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      const timeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      const allDayDays = initialEvent.allDay ? allDayPrefill(start, end) : null;
-      return {
-        title: initialEvent.title ?? '',
-        body: initialEvent.body ?? '',
-        category: (initialEvent.category ?? 'kiez') as EventCategory,
-        // All-day: the stored bounds are Berlin day bounds (since 2026-09-27) —
-        // read the civil day in Berlin, never the browser's local date. Rows
-        // stored before the fix (UTC midnight → 23:59:59Z) carry the meant day
-        // in their UTC date, so read that until the repair script has run.
-        startDate: allDayDays ? allDayDays.start : dateStr(start),
-        startTime: initialEvent.allDay ? '00:00' : timeStr(start),
-        endDate: allDayDays ? allDayDays.end : dateStr(end),
-        endTime: initialEvent.allDay ? '23:59' : timeStr(end),
-        allDay: !!initialEvent.allDay,
-        location: initialEvent.location ?? '',
-        capacity: initialEvent.capacity ?? null,
-        visibility: (initialEvent.visibility ?? 'public') as 'public' | 'private',
-        tags: initialEvent.tags ?? []
-      };
-    }
+    if (isEditing && initialEvent) return valuesOf(initialEvent);
+    if (copyValues) return { ...copyValues, startDate: '', endDate: '' };
 
     const search =
       typeof window !== 'undefined'
@@ -183,7 +201,7 @@
   // Skipped entirely in edit mode: drafts are scoped to the create flow.
   let draftTimer: ReturnType<typeof setTimeout> | null = null;
   $effect(() => {
-    if (isEditing) return;
+    if (!usesDraft) return;
     const snapshot: EventDraftValues = {
       title: values.title,
       body: values.body,
@@ -271,7 +289,7 @@
         ? await edit.mutateAsync({ id: String(initialEvent._id), input: payload })
         : await create.mutateAsync(payload);
 
-      if (!isEditing) eventDraft.clearDraft();
+      if (usesDraft) eventDraft.clearDraft();
       modalOpen = false;
 
       // Toast: dispatched onto window now, but the full-page redirect
@@ -318,7 +336,7 @@
   }
 
   function onDiscard() {
-    if (!isEditing) eventDraft.clearDraft();
+    if (usesDraft) eventDraft.clearDraft();
     if (typeof window !== 'undefined') window.location.href = '/calendar';
   }
 </script>
@@ -334,11 +352,20 @@
     </div>
   {/if}
 
+  {#if isCopy}
+    <div class="px-4 md:px-9 lg:px-10 pt-5">
+      <p class="font-bricolage text-sm px-3.5 py-2 rounded-md border" style="color: var(--k-ink); background: color-mix(in srgb, var(--k-teal) 14%, transparent); border-color: var(--k-teal);" role="status" data-copy-notice>
+        {tStr($t['cal.compose.copy.notice'] as string, { title: copyFrom?.title ?? '' })}
+      </p>
+    </div>
+  {/if}
+
   <div
     class="grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-0 min-h-[calc(100vh-180px)]"
   >
     <EventComposeForm
       {initialValues}
+      initialMultiDay={copyMultiDay}
       onChange={handleChange}
       showBreadcrumb={true}
       editing={isEditing}
