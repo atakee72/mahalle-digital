@@ -33,6 +33,7 @@
   import { confirmAction, showError } from '../../../utils/toast';
   import { isLiveNow } from '../../../lib/calendar/eventTime';
   import { moveWhenLabel } from '../../../lib/calendar/eventMove';
+  import { berlinDayOf, berlinDayStart } from '../../../lib/calendar/berlinDay';
   import { now } from '../../../lib/calendar/nowTicker';
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { createUserProfilesQuery } from '../../../lib/userProfilesQueries';
@@ -121,12 +122,16 @@
     return null;
   });
 
-  // „verschoben": the start before the author's latest move, for the line under the new time.
-  const movedFromLabel = $derived(
-    event?.movedAt && event?.movedFromStart
-      ? moveWhenLabel(event.movedFromStart as any, event.movedFromStart as any, !!event.allDay, $locale === 'en' ? 'en' : 'de')
-      : null
-  );
+  // „verschoben": the event's FIRST start, for the line under the new time. Whether that start
+  // was a whole day is read from the start itself (Berlin midnight), not from the event's current
+  // all-day flag — the author may have changed that too.
+  const movedFromLabel = $derived.by(() => {
+    if (!event?.movedAt || !event?.movedFromStart) return null;
+    const from = new Date(event.movedFromStart as any);
+    if (isNaN(from.getTime())) return null;
+    const wholeDay = berlinDayStart(berlinDayOf(from)).getTime() === from.getTime();
+    return moveWhenLabel(from, from, wholeDay, $locale === 'en' ? 'en' : 'de');
+  });
 
   // Edit allowed only when the event is approved and not warning-labelled
   // — mirrors the API gate at /api/events/edit/[id].ts and the forum's

@@ -243,7 +243,9 @@
     if (v.title.trim().length < 5) return 'Titel zu kurz (mind. 5 Zeichen).';
     if (v.title.length > 200) return 'Titel zu lang.';
     if (v.body.trim().length < 10) return 'Beschreibung zu kurz (mind. 10 Zeichen).';
-    if (!v.startDate || !v.endDate) return 'Datum fehlt.';
+    if (!v.startDate) return 'Datum fehlt.';
+    // „mehrtägig" with a start but no end (a copy of a several-day event opens that way)
+    if (!v.endDate) return 'Enddatum fehlt.';
     return null;
   }
 
