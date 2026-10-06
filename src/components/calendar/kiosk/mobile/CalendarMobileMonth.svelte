@@ -40,6 +40,7 @@
   import type { EventCategory, Event as EventDoc } from '../../../../types';
   import DragSelectPin from '../DragSelectPin.svelte';
   import StatusBadge from '../../../forum/kiosk/StatusBadge.svelte';
+  import MovedTag from '../MovedTag.svelte';
 
   // Moderation badge precedence — same as forum cards.
   function inferBadge(ev: EventDoc) {
@@ -653,6 +654,7 @@
                   <span class="font-bricolage font-bold text-[13px] leading-[1.2] truncate">
                     {ev.title}
                   </span>
+                  {#if ev.movedAt}<MovedTag />{/if}
                   {#if badge}
                     <StatusBadge state={badge} size="sm" />
                   {/if}

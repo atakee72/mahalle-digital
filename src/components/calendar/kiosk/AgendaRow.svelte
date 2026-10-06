@@ -15,6 +15,7 @@
   import StatusBadge from '../../forum/kiosk/StatusBadge.svelte';
   import type { Event as EventDoc, EventCategory } from '../../../types';
   import NewMark from '../../forum/kiosk/NewMark.svelte';
+  import MovedTag from './MovedTag.svelte';
 
   let {
     ev,
@@ -165,6 +166,7 @@
             {span} {$t['cal.span.days']}
           </span>
         {/if}
+        {#if ev.movedAt}<MovedTag invert />{/if}
         {#if inferredBadge}
           <StatusBadge state={inferredBadge} size="sm" />
         {/if}
@@ -263,6 +265,7 @@
             {span} {$t['cal.span.days']}
           </span>
         {/if}
+        {#if ev.movedAt}<MovedTag />{/if}
         {#if inferredBadge}
           <StatusBadge state={inferredBadge} size="sm" />
         {/if}

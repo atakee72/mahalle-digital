@@ -24,6 +24,7 @@
   import MemberTypeTag from '../../forum/kiosk/MemberTypeTag.svelte';
   import KioskBtn from '../../forum/kiosk/KioskBtn.svelte';
   import StatusBadge from '../../forum/kiosk/StatusBadge.svelte';
+  import MovedTag from './MovedTag.svelte';
   import OwnStatusBanner from '../../forum/kiosk/states/OwnStatusBanner.svelte';
   import KioskReportModal from '../../forum/kiosk/KioskReportModal.svelte';
 
@@ -31,6 +32,7 @@
   import { generateGoogleCalendarUrl, downloadIcsFile } from '../../../utils/calendarExport';
   import { confirmAction, showError } from '../../../utils/toast';
   import { isLiveNow } from '../../../lib/calendar/eventTime';
+  import { moveWhenLabel } from '../../../lib/calendar/eventMove';
   import { now } from '../../../lib/calendar/nowTicker';
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { createUserProfilesQuery } from '../../../lib/userProfilesQueries';
@@ -118,6 +120,13 @@
     if (event?.moderationStatus === 'pending') return 'pending' as const;
     return null;
   });
+
+  // „verschoben": the start before the author's latest move, for the line under the new time.
+  const movedFromLabel = $derived(
+    event?.movedAt && event?.movedFromStart
+      ? moveWhenLabel(event.movedFromStart as any, event.movedFromStart as any, !!event.allDay, $locale === 'en' ? 'en' : 'de')
+      : null
+  );
 
   // Edit allowed only when the event is approved and not warning-labelled
   // — mirrors the API gate at /api/events/edit/[id].ts and the forum's
@@ -392,6 +401,7 @@
               <span class="text-[10px] tracking-[0.08em]">{($t['cal.team'] as string)?.toUpperCase()}</span>
             {/if}
           </div>
+          {#if event.movedAt}<MovedTag size="md" />{/if}
           {#if inferredBadge}
             <StatusBadge state={inferredBadge} size="md" />
           {/if}
@@ -438,6 +448,11 @@
                 </span>
               {/if}
             </div>
+            {#if movedFromLabel}
+              <div class="font-dmmono text-[11px] text-ink-mute mt-0.5" data-moved-from>
+                {tStr($t['cal.moved.from'] as string, { when: movedFromLabel })}
+              </div>
+            {/if}
           </div>
 
           {#if event.location}
@@ -669,6 +684,16 @@
                 >
                   🗑 {$t['cal.detail.delete.label']}
                 </button>
+                {#if event.moderationStatus !== 'rejected'}
+                  <a
+                    href={`/events/create?copy=${event._id}`}
+                    title={$t['cal.detail.copy.tooltip'] as string}
+                    class="hover:text-wine"
+                    data-event-copy
+                  >
+                    ❐ {$t['cal.detail.copy.label']}
+                  </a>
+                {/if}
                 <a
                   href={canEdit ? `/events/edit/${event._id}` : undefined}
                   title={canEdit ? $t['detail.edit.tooltip'] : $t['detail.edit.blocked']}

@@ -3,7 +3,8 @@
   // Structural sibling of AvatarMenu.svelte (outside-click a tick late,
   // Escape, dual html+body scroll-lock on mobile) with ONE deliberate
   // deviation per CD's motion spec: close is INSTANT — no 140ms exit fade.
-  import { t, tStr } from '../../../lib/kiosk-i18n';
+  import { t, tStr, locale } from '../../../lib/kiosk-i18n';
+  import { moveWhenLabel } from '../../../lib/calendar/eventMove';
   import type { NotificationItem } from '../../../types/notification';
   import { detectPushState, subscribeToPush, unsubscribeFromPush, type PushUiState } from '../../../lib/pushClient';
   import { showError } from '../../../utils/toast';
@@ -223,6 +224,7 @@
     blog: { g: '¶', c: 'var(--k-rust, #a3552e)' },
     forum: { g: '✦', c: 'var(--k-wine, #b23a5b)' },
     admin_hint: { g: '!', c: 'var(--k-plum, #6f2f59)' },
+    event_moved: { g: '↦', c: 'var(--k-ink)' },
   };
 
   function rowText(it: NotificationItem): string {
@@ -249,6 +251,14 @@
       case 'forum': {
         const n = it.meta?.count ?? 1;
         return n > 1 ? tStr($t['nc.forum.many'], { n: String(n) }) : tStr($t['nc.forum.one'], { title });
+      }
+      case 'event_moved': {
+        const actor = it.actorName ?? $t['nc.tombstone'];
+        const m = it.meta ?? {};
+        const when = m.startISO ? moveWhenLabel(m.startISO, m.endISO ?? m.startISO, m.allDay === true, $locale === 'en' ? 'en' : 'de') : '';
+        const place = m.place ?? '';
+        const key = m.change === 'place' && place ? 'nc.event.moved.place' : m.change === 'both' && place ? 'nc.event.moved.both' : 'nc.event.moved.date';
+        return tStr($t[key], { actor, title, when, place });
       }
       case 'market_contact':
         return tStr($t['nc.market'], { title });

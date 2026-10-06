@@ -33,11 +33,14 @@
 
   let {
     initialValues,
+    initialMultiDay,
     onChange,
     showBreadcrumb = false,
     editing = false
   } = $props<{
     initialValues?: Partial<EventComposeValues>;
+    /** „kopieren" opens without dates, so the several-days state cannot be read from them. */
+    initialMultiDay?: boolean;
     onChange: (v: EventComposeValues) => void;
     showBreadcrumb?: boolean;
     editing?: boolean;
@@ -99,9 +102,10 @@
   // 'mehrtägig' checkbox in the When section.
   // svelte-ignore state_referenced_locally
   let multiDay = $state(
-    !!(initialValues?.startDate &&
-      initialValues?.endDate &&
-      initialValues.startDate !== initialValues.endDate)
+    initialMultiDay ??
+      !!(initialValues?.startDate &&
+        initialValues?.endDate &&
+        initialValues.startDate !== initialValues.endDate)
   );
 
   // Single source of truth for date sync. Reactive on multiDay,
@@ -225,7 +229,7 @@
     </div>
     <input
       type="text"
-      bind:value={title}
+      bind:value={title} data-ev-field="title"
       maxlength="80"
       placeholder={$t['cal.compose.field.title.placeholder']}
       class="w-full min-h-[44px] appearance-none bg-paper-warm border-[1.5px] border-ink rounded-md px-3 py-2 font-bricolage text-[15px] text-ink placeholder:text-ink-mute/55 outline-none focus:border-wine"
@@ -253,7 +257,7 @@
         </span>
         <input
           type="date"
-          bind:value={startDate}
+          bind:value={startDate} data-ev-field="date"
           class="w-full min-h-[44px] appearance-none bg-paper border border-ink rounded-sm px-3 py-1.5 font-bricolage text-[14px]"
         />
       </label>
@@ -263,7 +267,7 @@
         </span>
         <input
           type="time"
-          bind:value={startTime}
+          bind:value={startTime} data-ev-field="start"
           disabled={allDay}
           class="w-full min-h-[44px] appearance-none bg-paper border border-ink rounded-sm px-3 py-1.5 font-bricolage text-[14px] disabled:opacity-50"
         />
@@ -274,7 +278,7 @@
         </span>
         <input
           type="time"
-          bind:value={endTime}
+          bind:value={endTime} data-ev-field="end"
           disabled={allDay}
           class="w-full min-h-[44px] appearance-none bg-paper border border-ink rounded-sm px-3 py-1.5 font-bricolage text-[14px] disabled:opacity-50"
         />
@@ -287,7 +291,7 @@
         </span>
         <input
           type="date"
-          bind:value={endDate}
+          bind:value={endDate} data-ev-field="endDate"
           min={startDate}
           class="w-full min-h-[44px] appearance-none bg-paper border border-ink rounded-sm px-3 py-1.5 font-bricolage text-[14px]"
         />
@@ -296,14 +300,19 @@
 
     <div class="flex gap-3.5 mt-2 font-dmmono text-[11px] text-ink-mute">
       <label class="inline-flex items-center gap-1">
-        <input type="checkbox" bind:checked={allDay} />
+        <input type="checkbox" bind:checked={allDay} data-ev-field="allDay" />
         {$t['cal.compose.field.allDay']}
       </label>
       <label class="inline-flex items-center gap-1">
-        <input type="checkbox" bind:checked={multiDay} />
+        <input type="checkbox" bind:checked={multiDay} data-ev-field="multiDay" />
         {$t['cal.compose.field.multiDay']}
       </label>
     </div>
+    {#if editing}
+      <p class="mt-2 font-instrument italic text-[12.5px] leading-snug text-ink-mute" data-move-hint>
+        {$t['cal.compose.move.hint']}
+      </p>
+    {/if}
   </div>
 
   <!-- 04 · Where -->
@@ -318,7 +327,7 @@
     </div>
     <input
       type="text"
-      bind:value={location}
+      bind:value={location} data-ev-field="location"
       maxlength="200"
       placeholder={$t['cal.compose.field.location.placeholder']}
       class="w-full min-h-[44px] appearance-none bg-paper-warm border-[1.5px] border-ink rounded-md px-3 py-2 font-bricolage text-[14px] text-ink placeholder:text-ink-mute/55 outline-none focus:border-wine"
@@ -337,7 +346,7 @@
       <span class="font-bricolage text-[14px] font-bold text-wine" aria-hidden="true">*</span>
     </div>
     <textarea
-      bind:value={body}
+      bind:value={body} data-ev-field="body"
       rows="5"
       maxlength="5000"
       placeholder={$t['cal.compose.field.body.placeholder']}
@@ -364,7 +373,7 @@
           type="number"
           min="1"
           max="10000"
-          bind:value={capacity}
+          bind:value={capacity} data-ev-field="capacity"
           placeholder={$t['cal.compose.field.capacity.placeholder']}
           class="w-full min-h-[44px] appearance-none bg-paper border border-ink rounded-sm px-3 py-1.5 font-bricolage text-[14px]"
         />
