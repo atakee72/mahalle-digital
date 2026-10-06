@@ -58,6 +58,22 @@ export async function notify(input: NotifyInput): Promise<void> {
   }
 }
 
+/** One notification each for a known list of members (event moved). The actor is skipped.
+ *  `push: false` writes the bell rows without ringing phones (the caller's flood brake). */
+export async function notifyUsers(userIds: string[], input: Omit<NotifyInput, 'userId'>, opts: { push?: boolean } = {}): Promise<void> {
+  try {
+    const ids = [...new Set(userIds)].filter((id) => id && id !== input.actorId);
+    if (!ids.length) return;
+    const db = await connectDB();
+    const now = new Date();
+    const docs: NotificationDoc[] = ids.map((userId) => ({ userId, ...input, createdAt: now, readAt: null }));
+    await db.collection<NotificationDoc>('notifications').insertMany(docs, { ordered: false });
+    if (opts.push !== false) await sendPushToUsers(ids, buildPushPayload(input.type, input.target, input.meta));
+  } catch (err) {
+    await capture(err);
+  }
+}
+
 /** Broadcast to every member (all non-anonymized users) except the actor. */
 export async function notifyAllMembers(input: Omit<NotifyInput, 'userId'>): Promise<void> {
   try {

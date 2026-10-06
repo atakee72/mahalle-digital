@@ -9,6 +9,7 @@ import { notify, commentTarget, moderationTarget } from './notifications';
 import { notifyMentionsOnApproval } from './mentions/mentionsStore';
 import { notifyForumSubscribersOnApproval } from './forum/forumNotify';
 import { invalidateKiezKontext } from './kiez/kontext';
+import { sendOwedMoveNotice } from './calendar/eventMoveNotify';
 
 const MAX_STRIKES = 3;
 
@@ -171,6 +172,9 @@ export async function processReviewAction(
       await notifyMentionsOnApproval(db, flaggedContent);
       // „Every new forum post" members hear about a held post now (never throws).
       await notifyForumSubscribersOnApproval(flaggedContent, hasWarning);
+      // An event whose move was held back with its edit: the people who plan to come hear it now
+      // (at most once, never throws — see src/lib/calendar/eventMoveNotify.ts).
+      await sendOwedMoveNotice(db, flaggedContent);
     }
 
     // Handle strike system on rejection

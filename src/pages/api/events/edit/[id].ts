@@ -13,6 +13,8 @@ import {
 } from '../../../../lib/moderation';
 import { requireMemberSession } from '../../../../lib/auth';
 import { alertModerationFlagged } from '../../../../lib/adminAlerts';
+import { moveChange, originalStart } from '../../../../lib/calendar/eventMove';
+import { tellAboutMove } from '../../../../lib/calendar/eventMoveNotify';
 
 export const PUT: APIRoute = async ({ request, params }) => {
   try {
@@ -126,13 +128,35 @@ export const PUT: APIRoute = async ({ request, params }) => {
       updateFields.rejectionReason = null;
     }
 
+    // „Termin verschoben": did this edit change when or where? (pure rules: lib/calendar/eventMove.ts)
+    const moved = moveChange(existingEvent, {
+      startDate: updateFields.startDate ?? existingEvent.startDate,
+      endDate: updateFields.endDate ?? existingEvent.endDate,
+      allDay: allDay ?? existingEvent.allDay,
+      location: location ?? existingEvent.location
+    });
+    // The tag names the FIRST start as „ursprünglich"; an event moved back to it loses the tag.
+    let backAtOriginal = false;
+    if (moved === 'date' || moved === 'both') {
+      const original = originalStart(existingEvent, updateFields.startDate ?? existingEvent.startDate);
+      if (original) {
+        updateFields.movedAt = new Date();
+        updateFields.movedFromStart = original;
+      } else {
+        backAtOriginal = true;
+      }
+    }
+    // A held edit hides the event, so the notice waits for the admin's approval.
+    if (moved && mergedResult) updateFields.moveNoticeOwed = moved;
+
     const updateResult = await eventsCollection.findOneAndUpdate(
       { _id: new ObjectId(eventId) },
       {
         $set: updateFields,
         $push: {
           editHistory: editHistoryEntry
-        }
+        },
+        ...(backAtOriginal ? { $unset: { movedAt: '', movedFromStart: '' } } : {})
       },
       { returnDocument: 'after' }
     );
@@ -142,6 +166,12 @@ export const PUT: APIRoute = async ({ request, params }) => {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Everyone who answered or saved the event hears about the move (never throws; a held edit
+    // is announced on approval instead).
+    if (moved && !mergedResult) {
+      await tellAboutMove(db, updateResult, moved, userId);
     }
 
     // Write a new flagged content record so the admin queue surfaces the edit.

@@ -16,6 +16,7 @@ import webpush from 'web-push';
 import * as Sentry from '@sentry/astro';
 import { connectDB } from './mongodb';
 import type { NotificationMeta, NotificationTarget, NotificationType } from '../types/notification';
+import { movePushBody, moveWhenLabel } from './calendar/eventMove';
 
 export interface PushPayload {
   title: string;
@@ -82,6 +83,11 @@ export function buildPushPayload(
         ? `${meta?.count} neue Beitr\u00e4ge im Forum`
         : `Neu im Forum: \u201a${t}\u2018`;
       break;
+    case 'event_moved': {
+      const when = meta?.startISO ? moveWhenLabel(meta.startISO, meta.endISO ?? meta.startISO, meta.allDay === true, 'de') : '';
+      body = movePushBody(meta?.change, t, when, meta?.place ?? '');
+      break;
+    }
     case 'moderation': {
       const noun = meta?.contentKind === 'comment' ? 'Kommentar' : 'Beitrag';
       if (meta?.outcome === 'rejected') body = `Dein ${noun} wurde abgelehnt — Details in deinem Profil`;
