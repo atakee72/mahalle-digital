@@ -18,6 +18,10 @@
 
   let topOffset = $state(0);
   let progress = $state(0); // 0..1
+  // „Übersetzung anzeigen": BlogTranslate announces the translated title (or null on the way back),
+  // the same event BlogArticleHeader listens to.
+  let trTitle = $state<string | null>(null);
+  const shownTitle = $derived(trTitle || title);
 
   onMount(() => {
     const header = document.querySelector('header');
@@ -37,11 +41,17 @@
       });
     };
 
+    const onTr = (e: Event) => {
+      trTitle = (e as CustomEvent<{ title: string } | null>).detail?.title ?? null;
+    };
+    document.addEventListener('bl:translation', onTr);
+
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', measure);
     onScroll();
 
     return () => {
+      document.removeEventListener('bl:translation', onTr);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', measure);
       if (raf) cancelAnimationFrame(raf);
@@ -69,7 +79,7 @@
     <span
       class="flex-1 text-center truncate"
       style="font-size: 13px; font-weight: 700; letter-spacing: -0.01em;"
-    >Die <i class="font-instrument" style="font-weight: 400; color: var(--k-rust);">Beilage</i> · {title}</span>
+    data-bl-readbar-title>Die <i class="font-instrument" style="font-weight: 400; color: var(--k-rust);">Beilage</i> · {shownTitle}</span>
     {#if done}
       <span class="font-dmmono whitespace-nowrap bl-read-done" style="font-size: 10px; color: var(--k-ink-mute);">{$t['blog.readbar.done']}</span>
     {:else}
