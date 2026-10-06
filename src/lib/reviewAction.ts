@@ -175,7 +175,7 @@ export async function processReviewAction(
       await notifyForumSubscribersOnApproval(flaggedContent, hasWarning);
       // An event whose move was held back with its edit: the people who plan to come hear it now
       // (at most once, never throws — see src/lib/calendar/eventMoveNotify.ts).
-      await sendOwedMoveNotice(db, flaggedContent);
+      await sendOwedMoveNotice(db, flaggedContent, hasWarning);
     }
 
     // Handle strike system on rejection

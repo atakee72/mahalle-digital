@@ -31,13 +31,17 @@ function allDayDays(f: MoveFacts): string {
     ? `${start.toISOString().slice(0, 10)}..${end.toISOString().slice(0, 10)}`
     : `${berlinDayOf(start)}..${berlinDayOf(end)}`;
 }
+const DAY_MS = 24 * 60 * 60 * 1000;
+const runsADay = (f: MoveFacts): boolean => ms(f.endDate) - ms(f.startDate) >= DAY_MS;
 const placeOf = (s: string | null | undefined): string => (s ?? '').trim().replace(/\s+/g, ' ');
 
 /**
  * What an edit changed for the people who plan to come — `null` when nothing they need to know.
  * „date" = the start moved (by the minute), the last DAY moved (Berlin), or timed ↔ all-day; an
- * end TIME that only got longer or shorter is not a move, and all-day events are compared by
- * their days, never by their stored instants. „place" = a new, non-empty place (case and spacing
+ * end TIME that only got longer or shorter is not a move — also when it slips past midnight
+ * (18:00–23:00 → 18:00–00:30): for a timed event the last day counts only when the event runs
+ * a day or longer, before or after the edit. All-day events are compared by their days, never
+ * by their stored instants. „place" = a new, non-empty place (case and spacing
  * ignored); removing the place tells nobody.
  */
 export function moveChange(before: MoveFacts, after: MoveFacts): MoveChange | null {
@@ -48,7 +52,8 @@ export function moveChange(before: MoveFacts, after: MoveFacts): MoveChange | nu
     !!before.allDay !== !!after.allDay ||
     (after.allDay
       ? allDayDays(before) !== allDayDays(after)
-      : minuteOf(before.startDate) !== minuteOf(after.startDate) || berlinDayOf(before.endDate) !== berlinDayOf(after.endDate)));
+      : minuteOf(before.startDate) !== minuteOf(after.startDate) ||
+        ((runsADay(before) || runsADay(after)) && berlinDayOf(before.endDate) !== berlinDayOf(after.endDate))));
   const next = placeOf(after.location);
   const place = next !== '' && next.toLowerCase() !== placeOf(before.location).toLowerCase();
   if (date && place) return 'both';
@@ -66,9 +71,10 @@ export function originalStart(existing: { startDate: Instant; movedFromStart?: I
 }
 
 /**
- * A member keeps ONE unread row per event, and it must tell the whole story: when an older notice
- * about the same event is still unread, the new one replaces it — and says „both" unless the two
- * are about the same thing (the row always prints the event's CURRENT time and place).
+ * A member keeps ONE row per event, and it must tell the whole story: every older notice about the
+ * same event is replaced by the new one. When an older one was still UNREAD, the new row says
+ * „both" unless the two are about the same thing (the row always prints the event's CURRENT time
+ * and place); a notice the member had read needs no folding.
  */
 export function mergeChange(unreadBefore: (MoveChange | undefined)[], change: MoveChange): MoveChange {
   return unreadBefore.some((c) => c !== undefined && c !== change) ? 'both' : change;
@@ -119,7 +125,7 @@ export function moveWhenLabel(startISO: Instant, endISO: Instant, allDay: boolea
   if (allDay) return severalDays ? `${first} – ${dayLabel(endISO, locale)}` : `${first} · ${locale === 'en' ? 'all day' : 'ganztägig'}`;
   const p = berlinParts(startISO);
   const timed = `${first}, ${p.hh}:${p.mm}`;
-  return severalDays && ms(endISO) - ms(startISO) >= 24 * 60 * 60 * 1000 ? `${timed} – ${dayLabel(endISO, locale)}` : timed;
+  return severalDays && ms(endISO) - ms(startISO) >= DAY_MS ? `${timed} – ${dayLabel(endISO, locale)}` : timed;
 }
 
 /** The bell row's link: the calendar opens on the NEW day with the event's detail view. */

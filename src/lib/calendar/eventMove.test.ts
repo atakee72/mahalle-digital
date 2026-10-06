@@ -45,6 +45,19 @@ test('„ursprünglich" is the first start; back at it the event is not moved an
   assert.equal(originalStart({ startDate: first }, first), null);
 });
 
+test('an end that only slips past midnight is not a move; a new last day of a long event is', () => {
+  // 18:00–20:00 → 18:00–00:30 the next day, and back
+  const late = { ...base, endDate: '2026-10-14T22:30:00.000Z' };
+  assert.equal(moveChange(base, late), null);
+  assert.equal(moveChange(late, base), null);
+  // a festival Fri 18:00 → Sun 12:00 that now ends on Monday
+  const fest = { ...base, startDate: '2026-10-16T16:00:00.000Z', endDate: '2026-10-18T10:00:00.000Z' };
+  assert.equal(moveChange(fest, { ...fest, endDate: '2026-10-19T10:00:00.000Z' }), 'date');
+  // a short event stretched to more than a day, and a long one cut short
+  assert.equal(moveChange(base, { ...base, endDate: '2026-10-15T18:00:00.000Z' }), 'date');
+  assert.equal(moveChange({ ...base, endDate: '2026-10-15T18:00:00.000Z' }, base), 'date');
+});
+
 test('a new last day and a switch to all-day are date moves', () => {
   assert.equal(moveChange(base, { ...base, endDate: '2026-10-15T18:00:00.000Z' }), 'date');
   assert.equal(moveChange(base, { ...base, allDay: true }), 'date');

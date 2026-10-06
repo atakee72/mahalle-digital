@@ -25,12 +25,13 @@ interface MovedEvent {
 /**
  * Sends the notice; returns how many members were told. EVERY move reaches the bell — a move that
  * is saved but not shown would leave people with a wrong date. Two things keep an author who
- * corrects (or abuses) the date from flooding people: a member's older UNREAD notice about the
- * same event is removed and folded into the new one (mergeChange), so the bell holds one unread
- * row per event with the CURRENT time and place; and the PUSH is sent for the first
- * MOVE_PUSHES_PER_HOUR moves of an event per hour only — after that the row still updates, silently.
+ * corrects (or abuses) the date from flooding people: a member's older notices about the same
+ * event are replaced by the new one (an unread one is folded in, see mergeChange), so the bell
+ * holds ONE row per event with the CURRENT time and place and never an outdated date; and the
+ * PUSH is sent for the first MOVE_PUSHES_PER_HOUR moves of an event per hour only — after that
+ * the row still updates, silently. `quiet` writes the rows without any push.
  */
-export async function tellAboutMove(db: Db, event: MovedEvent, change: MoveChange, authorId: string): Promise<number> {
+export async function tellAboutMove(db: Db, event: MovedEvent, change: MoveChange, authorId: string, opts: { quiet?: boolean } = {}): Promise<number> {
   try {
     const eventId = String(event._id);
     const saved = await db.collection('savedEvents').find({ eventId }, { projection: { userId: 1 } }).toArray();
@@ -38,9 +39,10 @@ export async function tellAboutMove(db: Db, event: MovedEvent, change: MoveChang
     if (!recipients.length) return 0;
 
     const rows = db.collection('notifications');
-    const unread = await rows
-      .find({ type: 'event_moved', 'target.contentId': eventId, userId: { $in: recipients }, readAt: null }, { projection: { userId: 1, 'meta.change': 1 } })
+    const older = await rows
+      .find({ type: 'event_moved', 'target.contentId': eventId, userId: { $in: recipients } }, { projection: { userId: 1, 'meta.change': 1, readAt: 1 } })
       .toArray();
+    const unread = older.filter((o) => !o.readAt);
 
     const startISO = new Date(event.startDate).toISOString();
     const base = {
@@ -64,12 +66,13 @@ export async function tellAboutMove(db: Db, event: MovedEvent, change: MoveChang
         actorId: authorId,
         target: moveTarget(eventId, String(event.title ?? ''), startISO),
         meta: { change: merged, ...base },
-      }, { push: !brake.limited });
+      }, { push: !brake.limited && !opts.quiet });
       written = written && ok;
     }
-    // The older unread rows go only now, and only when every new row was written: a failed
-    // write must not cost a member the notice they already had.
-    if (written && unread.length) await rows.deleteMany({ _id: { $in: unread.map((u) => u._id) } });
+    // The older rows (read ones too — they print a date that is no longer true) go only now,
+    // and only when every new row was written: a failed write must not cost a member the notice
+    // they already had.
+    if (written && older.length) await rows.deleteMany({ _id: { $in: older.map((o) => o._id) } });
     return recipients.length;
   } catch (err) {
     console.error('[eventMove] notice failed:', err);
@@ -87,8 +90,10 @@ export async function tellAboutMove(db: Db, event: MovedEvent, change: MoveChang
  * An edit that moved the event was held back by the moderation: nobody could see the event, so
  * nobody was told. Called when the admin approves — claims the owed notice (unset-and-read in one
  * step, so two parallel reviews send it once) and sends it with the event's CURRENT time and place.
+ * Approved WITH A WARNING: the bell row only — a warning-labelled title must not reach lock screens
+ * (the forum's notifications skip warned content for the same reason).
  */
-export async function sendOwedMoveNotice(db: Db, flagged: Pick<FlaggedContent, 'contentType' | 'contentId'>): Promise<void> {
+export async function sendOwedMoveNotice(db: Db, flagged: Pick<FlaggedContent, 'contentType' | 'contentId'>, hasWarning = false): Promise<void> {
   try {
     if (flagged.contentType !== 'event' || !flagged.contentId || !ObjectId.isValid(String(flagged.contentId))) return;
     const event = await db.collection('events').findOneAndUpdate(
@@ -97,7 +102,7 @@ export async function sendOwedMoveNotice(db: Db, flagged: Pick<FlaggedContent, '
       { returnDocument: 'before' },
     );
     if (!event) return;
-    await tellAboutMove(db, event as unknown as MovedEvent, event.moveNoticeOwed as MoveChange, String(event.author));
+    await tellAboutMove(db, event as unknown as MovedEvent, event.moveNoticeOwed as MoveChange, String(event.author), { quiet: hasWarning });
   } catch (err) {
     console.error('[eventMove] owed notice failed:', err);
   }
