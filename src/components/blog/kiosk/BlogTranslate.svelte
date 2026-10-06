@@ -110,6 +110,11 @@
         <blockquote><p>{b.text}</p></blockquote>
       {:else if b.kind === 'p'}
         <p>{b.text}</p>
+      {:else if b.kind === 'pics'}
+        <!-- a guide post's step pictures, same markup as the MDX (`.bl-steps` in blog.css) -->
+        <div class="bl-steps" class:bl-steps--wide={b.wide}>
+          {#each b.pics as pic, j (j)}<img src={pic.src} alt={pic.alt} width={pic.width} height={pic.height} loading="lazy" />{/each}
+        </div>
       {/if}
     {/each}
   </div>

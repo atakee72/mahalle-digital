@@ -84,3 +84,71 @@ test('withTexts does not mutate its input', () => {
   withTexts(blocks, ['Paragraph']);
   assert.deepEqual(blocks, [{ kind: 'p', text: 'Absatz' }]);
 });
+
+test('a bl-steps group keeps its pictures in place', () => {
+  const md = [
+    '1. Tippe oben rechts.',
+    '2. Wähle „Installieren“.',
+    '',
+    '<div class="bl-steps">',
+    '  <img src="/assets/blog/install/android-1-menue.svg" alt="Zeichnung: die drei Punkte" width="320" height="400" loading="lazy" />',
+    '  <img src="/assets/blog/install/mitteilungen-glocke.png" alt="" width="320" height="400" loading="lazy" />',
+    '</div>',
+    '',
+    'Danach geht es weiter.',
+  ].join('\n');
+  assert.deepEqual(parseBlocks(md), [
+    { kind: 'ol', items: ['Tippe oben rechts.', 'Wähle „Installieren“.'] },
+    {
+      kind: 'pics',
+      wide: false,
+      pics: [
+        { src: '/assets/blog/install/android-1-menue.svg', alt: 'Zeichnung: die drei Punkte', width: 320, height: 400 },
+        { src: '/assets/blog/install/mitteilungen-glocke.png', alt: '', width: 320, height: 400 },
+      ],
+    },
+    { kind: 'p', text: 'Danach geht es weiter.' },
+  ]);
+});
+
+test('bl-steps--wide is carried, foreign and odd picture sources are dropped', () => {
+  const md = [
+    '<div class="bl-steps bl-steps--wide">',
+    '  <img src="/assets/blog/install/desktop-1.svg" alt="Breit" width="560" height="300" />',
+    '  <img src="https://example.org/x.png" alt="fremd" />',
+    '  <img src="/assets/../secret.png" alt="hoch" />',
+    '  <img src="/assets/blog/x.svg?y=1" alt="query" />',
+    '  <img src="javascript:alert(1)" alt="js" />',
+    '</div>',
+    '<div class="bl-steps">',
+    '  <img src="//evil.example/a.png" alt="nur fremd" />',
+    '</div>',
+    '<div class="andere">',
+    'Text in einem anderen Kasten.',
+    '</div>',
+  ].join('\n');
+  assert.deepEqual(parseBlocks(md), [
+    { kind: 'pics', wide: true, pics: [{ src: '/assets/blog/install/desktop-1.svg', alt: 'Breit', width: 560, height: 300 }] },
+    { kind: 'p', text: 'Text in einem anderen Kasten.' },
+  ]);
+});
+
+test('picture alt texts travel through blockTexts and withTexts, empty ones stay empty', () => {
+  const blocks = parseBlocks(
+    'Vorher.\n\n<div class="bl-steps">\n<img src="/assets/a.svg" alt="Eins" />\n<img src="/assets/b.svg" alt="" />\n<img src="/assets/c.svg" alt="Drei" />\n</div>\n\nNachher.'
+  );
+  assert.deepEqual(blockTexts(blocks), ['Vorher.', 'Eins', 'Drei', 'Nachher.']);
+  const tr = withTexts(blocks, ['Before.', 'One', 'Three', 'After.']);
+  assert.deepEqual(tr, [
+    { kind: 'p', text: 'Before.' },
+    { kind: 'pics', wide: false, pics: [{ src: '/assets/a.svg', alt: 'One' }, { src: '/assets/b.svg', alt: '' }, { src: '/assets/c.svg', alt: 'Three' }] },
+    { kind: 'p', text: 'After.' },
+  ]);
+  assert.throws(() => withTexts(blocks, ['Before.', 'One', 'After.']));
+});
+
+test('an unclosed bl-steps group still yields its pictures', () => {
+  assert.deepEqual(parseBlocks('<div class="bl-steps">\n<img src="/assets/a.svg" alt="A" />'), [
+    { kind: 'pics', wide: false, pics: [{ src: '/assets/a.svg', alt: 'A' }] },
+  ]);
+});
