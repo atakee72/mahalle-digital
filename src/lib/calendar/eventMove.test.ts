@@ -99,7 +99,20 @@ test('all-day and multi-day events read without a clock time', () => {
   assert.equal(moveWhenLabel('2026-10-13T22:00:00.000Z', '2026-10-14T21:59:59.999Z', true, 'de'), 'Mi., 14. Okt. · ganztägig');
   assert.equal(moveWhenLabel('2026-10-13T22:00:00.000Z', '2026-10-14T21:59:59.999Z', true, 'en'), 'Wed 14 Oct · all day');
   assert.equal(moveWhenLabel('2026-10-13T22:00:00.000Z', '2026-10-16T21:59:59.999Z', true, 'de'), 'Mi., 14. Okt. – Fr., 16. Okt.');
-  assert.equal(moveWhenLabel('2026-10-14T16:00:00.000Z', '2026-10-15T10:00:00.000Z', false, 'en'), 'Wed 14 Oct – Thu 15 Oct');
+});
+
+test('a timed event always reads with its start time', () => {
+  // runs past midnight (22:00 → 01:00): the start says it all
+  assert.equal(moveWhenLabel('2026-10-14T20:00:00.000Z', '2026-10-14T23:00:00.000Z', false, 'de'), 'Mi., 14. Okt., 22:00');
+  assert.equal(moveWhenLabel('2026-10-14T16:00:00.000Z', '2026-10-15T10:00:00.000Z', false, 'en'), 'Wed 14 Oct, 18:00');
+  // a day or longer: the last day is named too
+  assert.equal(moveWhenLabel('2026-10-14T16:00:00.000Z', '2026-10-16T10:00:00.000Z', false, 'de'), 'Mi., 14. Okt., 18:00 – Fr., 16. Okt.');
+  assert.equal(moveWhenLabel('2026-10-14T16:00:00.000Z', '2026-10-15T16:00:00.000Z', false, 'en'), 'Wed 14 Oct, 18:00 – Thu 15 Oct');
+});
+
+test('a stored date that is not a date is never a date move and never throws', () => {
+  assert.equal(moveChange({ ...base, startDate: 'kaputt' }, { ...base }), null);
+  assert.equal(moveChange({ ...base }, { ...base, endDate: 'kaputt', location: 'Warthestraße 5' }), 'place');
 });
 
 test('the link opens the calendar on the new Berlin day', () => {

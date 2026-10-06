@@ -41,7 +41,6 @@ export async function tellAboutMove(db: Db, event: MovedEvent, change: MoveChang
     const unread = await rows
       .find({ type: 'event_moved', 'target.contentId': eventId, userId: { $in: recipients }, readAt: null }, { projection: { userId: 1, 'meta.change': 1 } })
       .toArray();
-    if (unread.length) await rows.deleteMany({ _id: { $in: unread.map((u) => u._id) } });
 
     const startISO = new Date(event.startDate).toISOString();
     const base = {
@@ -58,14 +57,19 @@ export async function tellAboutMove(db: Db, event: MovedEvent, change: MoveChang
       const merged = mergeChange(unread.filter((u) => u.userId === userId).map((u) => u.meta?.change as MoveChange | undefined), change);
       byChange.set(merged, [...(byChange.get(merged) ?? []), userId]);
     }
+    let written = true;
     for (const [merged, userIds] of byChange) {
-      await notifyUsers(userIds, {
+      const ok = await notifyUsers(userIds, {
         type: 'event_moved',
         actorId: authorId,
         target: moveTarget(eventId, String(event.title ?? ''), startISO),
         meta: { change: merged, ...base },
       }, { push: !brake.limited });
+      written = written && ok;
     }
+    // The older unread rows go only now, and only when every new row was written: a failed
+    // write must not cost a member the notice they already had.
+    if (written && unread.length) await rows.deleteMany({ _id: { $in: unread.map((u) => u._id) } });
     return recipients.length;
   } catch (err) {
     console.error('[eventMove] notice failed:', err);

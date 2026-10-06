@@ -93,7 +93,8 @@ export async function processReviewAction(
         { _id: new ObjectId(flaggedContent.contentId) },
         {
           $set: updateData,
-          $unset: { isUserReported: '' }
+          // a rejected event's held move is not announced later (see sendOwedMoveNotice)
+          $unset: { isUserReported: '', ...(isRejection && flaggedContent.contentType === 'event' ? { moveNoticeOwed: '' } : {}) }
         }
       );
 

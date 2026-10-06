@@ -41,11 +41,14 @@ const placeOf = (s: string | null | undefined): string => (s ?? '').trim().repla
  * ignored); removing the place tells nobody.
  */
 export function moveChange(before: MoveFacts, after: MoveFacts): MoveChange | null {
+  // a stored date that is not a date cannot be compared (and Intl throws on it): no date move
+  const readable = [before.startDate, before.endDate, after.startDate, after.endDate].every((v) => Number.isFinite(ms(v)));
   const date =
+    readable && (
     !!before.allDay !== !!after.allDay ||
     (after.allDay
       ? allDayDays(before) !== allDayDays(after)
-      : minuteOf(before.startDate) !== minuteOf(after.startDate) || berlinDayOf(before.endDate) !== berlinDayOf(after.endDate));
+      : minuteOf(before.startDate) !== minuteOf(after.startDate) || berlinDayOf(before.endDate) !== berlinDayOf(after.endDate)));
   const next = placeOf(after.location);
   const place = next !== '' && next.toLowerCase() !== placeOf(before.location).toLowerCase();
   if (date && place) return 'both';
@@ -103,15 +106,20 @@ function dayLabel(v: Instant, locale: MoveLocale): string {
   return locale === 'en' ? `${WD_EN[p.wd]} ${p.d} ${MON_EN[p.m - 1]}` : `${WD_DE[p.wd]}, ${p.d}. ${MON_DE[p.m - 1]}`;
 }
 
-/** „Mi., 14. Okt., 18:00" · „Mi., 14. Okt. · ganztägig" · „Mi., 14. Okt. – Fr., 16. Okt." (Berlin time). */
+/**
+ * „Mi., 14. Okt., 18:00" · „Mi., 14. Okt. · ganztägig" · „Mi., 14. Okt. – Fr., 16. Okt." (all-day,
+ * several days) · „Mi., 14. Okt., 18:00 – Fr., 16. Okt." (timed, a day or longer). Berlin time.
+ * A timed event that only runs past midnight (22:00 – 01:00) reads by its start alone.
+ */
 export function moveWhenLabel(startISO: Instant, endISO: Instant, allDay: boolean, locale: MoveLocale): string {
   // a broken date must cost the row its time, never the whole bell panel (Intl throws on it)
   if (!Number.isFinite(ms(startISO)) || !Number.isFinite(ms(endISO))) return '';
   const first = dayLabel(startISO, locale);
-  if (berlinDayOf(startISO) !== berlinDayOf(endISO)) return `${first} – ${dayLabel(endISO, locale)}`;
-  if (allDay) return `${first} · ${locale === 'en' ? 'all day' : 'ganztägig'}`;
+  const severalDays = berlinDayOf(startISO) !== berlinDayOf(endISO);
+  if (allDay) return severalDays ? `${first} – ${dayLabel(endISO, locale)}` : `${first} · ${locale === 'en' ? 'all day' : 'ganztägig'}`;
   const p = berlinParts(startISO);
-  return `${first}, ${p.hh}:${p.mm}`;
+  const timed = `${first}, ${p.hh}:${p.mm}`;
+  return severalDays && ms(endISO) - ms(startISO) >= 24 * 60 * 60 * 1000 ? `${timed} – ${dayLabel(endISO, locale)}` : timed;
 }
 
 /** The bell row's link: the calendar opens on the NEW day with the event's detail view. */
