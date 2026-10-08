@@ -10,6 +10,14 @@
   import AuthPrimaryBtn from './primitives/AuthPrimaryBtn.svelte';
   import AuthBanner from './primitives/AuthBanner.svelte';
   import AuthStrength from './primitives/AuthStrength.svelte';
+  import type { RegisterInvite } from './registerInvite';
+
+  // Personal invitation link (2026-10-07): the page resolved `?invite=` server-side. A valid
+  // code rides along in the POST; a dead one shows the notice and the form registers without it.
+  let { invite = null }: { invite?: RegisterInvite | null } = $props();
+  let inviteCode = $state(invite && 'code' in invite ? invite.code : '');
+  let inviteDead = $state(invite !== null && 'dead' in invite);
+  const inviterName = $derived(invite && 'code' in invite && inviteCode ? invite.inviterName : '');
 
   let name = $state('');
   // Optional one-time handle choice; empty → the server assigns the automatic one.
@@ -75,7 +83,7 @@
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: cleanName, email: email.trim(), password, ...(chosen ? { handle: chosen } : {}), memberType }),
+        body: JSON.stringify({ name: cleanName, email: email.trim(), password, ...(chosen ? { handle: chosen } : {}), memberType, ...(inviteCode ? { inviteCode } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -84,6 +92,9 @@
         if (code === 'name_protected') { nameErr = $t['auth.err.nameProtected']; status = 'idle'; return; }
         if (code === 'member_type_invalid') { memberTypeErr = $t['auth.err.memberType']; status = 'idle'; return; }
         if (code === 'password_weak') { pwErr = $t['auth.err.pwWeak']; status = 'idle'; return; }
+        // The link died between page load and submit (used up, renewed, inviter paused): drop
+        // the code, say so, and let the same form go through as a plain registration.
+        if (code === 'invite_invalid') { inviteCode = ''; inviteDead = true; status = 'idle'; return; }
         // 409 is ALSO the e-mail-taken status — the handle codes must be read first.
         if (code === 'handle_taken') { handleErr = $t['auth.err.handleTaken']; status = 'idle'; return; }
         if (code === 'handle_invalid') { handleErr = $t['auth.err.handleInvalid']; status = 'idle'; return; }
@@ -124,6 +135,15 @@
     {$t['auth.register.title.a']}<span class="font-instrument" style="font-style:italic; font-weight:400; color:var(--k-accent);">{$t['auth.register.title.accent']}</span>{$t['auth.register.title.b']}
   </h1>
 
+  {#if inviterName}
+    <div data-register-invite="ok">
+      <AuthBanner kind="info" title={tStr($t['auth.register.invite.title'], { name: inviterName })} body={tStr($t['auth.register.invite.body'], { name: inviterName })} />
+    </div>
+  {:else if inviteDead}
+    <div data-register-invite="dead">
+      <AuthBanner kind="warn" title={$t['auth.register.invite.dead.title']} body={$t['auth.register.invite.dead.body']} />
+    </div>
+  {/if}
   {#if emailTaken}
     <AuthBanner kind="danger" title={$t['auth.err.emailTakenTitle']} body={$t['auth.err.emailTakenBody']}
       action={$t['auth.err.emailTakenAction']} onaction={() => (window.location.href = '/login')} />

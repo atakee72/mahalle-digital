@@ -1,10 +1,29 @@
 ---
 import AuthLayout from '../layouts/AuthLayout.astro';
 import AuthRegisterInner from '../components/auth/kiosk/AuthRegisterInner.svelte';
+import { connectDB } from '../lib/mongodb';
+import { resolveInvite } from '../lib/invites/invites';
+import type { RegisterInvite } from '../components/auth/kiosk/registerInvite';
 // Session-varying (logged-in members are bounced to /forum) — parity with reset/verify.
 Astro.response.headers.set('Cache-Control', 'no-store, must-revalidate');
+
+// Personal invitation link: /register?invite=<code>. Checked here so the visitor sees who
+// invited them (or that the link is dead) before typing; the register route checks again on
+// submit. A database hiccup must not take the register page down → plain form, no notice.
+let invite: RegisterInvite | null = null;
+const rawInvite = Astro.url.searchParams.get('invite');
+if (rawInvite !== null) {
+  try {
+    const inv = await resolveInvite(await connectDB(), rawInvite);
+    invite = inv.ok
+      ? { code: String(rawInvite).trim().toLowerCase(), inviterName: inv.inviter.name, inviterHandle: inv.inviter.handle }
+      : { dead: true };
+  } catch {
+    invite = null;
+  }
+}
 ---
 
 <AuthLayout title="Registrieren">
-  <AuthRegisterInner client:only="svelte" />
+  <AuthRegisterInner client:only="svelte" invite={invite} />
 </AuthLayout>
