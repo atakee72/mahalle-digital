@@ -105,6 +105,15 @@ async function main() {
     { handle: 1 },
     { unique: true, partialFilterExpression: { handle: { $type: 'string' } }, name: 'users_handle_unique' });
 
+  // users_inviteCode_unique (2026-10-07) — a member's personal invitation code; the register
+  // page looks it up. PARTIAL for the same reason as the handle index: most documents have no
+  // code (minted on first eligible read; tombstones lose it). The lookup works without the
+  // index too (a neighbourhood-sized collection) — this makes the collision guard in
+  // src/lib/invites/invites.ts real.
+  await ensureIndex(db, 'users',
+    { inviteCode: 1 },
+    { unique: true, partialFilterExpression: { inviteCode: { $type: 'string' } }, name: 'users_inviteCode_unique' });
+
   // users_email_unique — closes the check-then-act race that let two accounts
   // share an address (register, e-mail-change start/confirm, and register-vs-
   // confirm across flows).

@@ -12,10 +12,11 @@ import { isAdminLookalike } from "../../../lib/profile/protectedNamesStore";
 import { alertNewMember } from "../../../lib/adminAlerts";
 import { parseMemberType } from "../../../lib/members/memberType";
 import { isAcceptablePassword } from "../../../lib/auth/passwordRule";
+import { resolveInvite } from "../../../lib/invites/invites";
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
     try {
-        const { name: rawName, email, password, handle: rawHandle, memberType: rawMemberType } = await request.json();
+        const { name: rawName, email, password, handle: rawHandle, memberType: rawMemberType, inviteCode: rawInvite } = await request.json();
         // Whitespace collapsed, invisible characters stripped — a name of only
         // spaces / zero-width characters ends up '' and is refused right below.
         const name = cleanDisplayName(rawName);
@@ -104,6 +105,23 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         // Connect to MongoDB using singleton (moved up 2026-09-21: the protected-
         // name check needs it, and it must run BEFORE the OpenAI calls below).
         const db = await connectDB();
+
+        // Personal invitation link (2026-10-07). Optional: without a code this is a plain
+        // registration — the open door stays. With one, the code must still be usable (issuer
+        // eligible, budget left) or the form is told so and resubmits without it; a code is
+        // never silently dropped, the inviter counts on being named. Checked here, before any
+        // paid moderation call.
+        let inviter: { _id: unknown; name: string; handle: string | null } | null = null;
+        if (rawInvite !== undefined && rawInvite !== null && rawInvite !== '') {
+            const inv = await resolveInvite(db, rawInvite);
+            if (!inv.ok) {
+                return new Response(
+                    JSON.stringify({ error: 'invite_invalid' }),
+                    { status: 400, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+            inviter = inv.inviter;
+        }
 
         // Nobody poses as the team: official-sounding names and lookalikes of an
         // admin's own display name are refused (after both rate limits).
@@ -227,6 +245,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
                     ...(chosenHandle ? { handleChosen: true } : {}),
                     // person stores nothing — the absent field IS „person".
                     ...(memberType !== 'person' ? { memberType } : {}),
+                    // The redemption record: who invited this account, and when (the budget window reads it).
+                    ...(inviter ? { invitedBy: inviter._id, invitedAt: new Date() } : {}),
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                 });
@@ -278,7 +298,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         // verification mail so a slow Telegram can't delay the user's own
         // signup email. finalHandle is captured in the retry loop above — no
         // extra DB read (a failing read would 500 a succeeded registration).
-        await alertNewMember({ name, handle: finalHandle, memberType });
+        await alertNewMember({ name, handle: finalHandle, memberType, invitedBy: inviter ? (inviter.handle ?? inviter.name) : null });
 
         return new Response(
             JSON.stringify({

@@ -99,13 +99,15 @@ const MEMBER_TYPE_WORD: Record<'organisation' | 'business', string> = {
   business: 'Gewerbe',
 };
 
-export function alertNewMember(p: { name: string; handle: string; memberType?: 'person' | 'organisation' | 'business' }): Promise<void> {
+export function alertNewMember(p: { name: string; handle: string; memberType?: 'person' | 'organisation' | 'business'; invitedBy?: string | null }): Promise<void> {
   const typ = p.memberType === 'organisation' || p.memberType === 'business'
     ? ` — als ${MEMBER_TYPE_WORD[p.memberType]}`
     : '';
+  // The inviter's handle (or name) when the account came through a personal invitation link.
+  const via = p.invitedBy ? ` — eingeladen von ${trunc(p.invitedBy, 40)}` : '';
   return sendAdminAlert({
     kind: 'member_new',
-    text: `🆕 Neues Mitglied: ${trunc(p.name)} (@${p.handle})${typ}`,
+    text: `🆕 Neues Mitglied: ${trunc(p.name)} (@${p.handle})${typ}${via}`,
   });
 }
 

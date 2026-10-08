@@ -450,6 +450,10 @@ export async function runDeletionPipeline(
           forumNotify: '',
           newsletter: '',
           locale: '',
+          inviteCode: '',
+          invitesPaused: '',
+          invitedBy: '',
+          invitedAt: '',
           deletionClaimedAt: '',
         },
       }
