@@ -39,6 +39,8 @@
   import PIdentityCard from './PIdentityCard.svelte';
   import PModerationCard from './PModerationCard.svelte';
   import PKontoCard from './PKontoCard.svelte';
+  import PInviteCard from './PInviteCard.svelte';
+  import type { InviteState } from '../../../lib/invites/inviteRules';
   import PEmailChangePanel from './PEmailChangePanel.svelte';
   import PPasswordChangePanel from './PPasswordChangePanel.svelte';
   import PDeleteAccountModal from './PDeleteAccountModal.svelte';
@@ -141,6 +143,47 @@
       .then((d) => { if (d) newsMode = storedNewsletterMode(d.mode); })
       .catch(() => {});
   });
+
+  // ─── Einladen card (2026-10-07) ────────────────────────────────────────
+  // Same shape as the Kiez-Brief switch: the card is double-mounted, so the one fetch of
+  // GET /api/profile/invite and the renew call live here. `null` = not loaded.
+  let inviteState = $state<InviteState | null>(null);
+  let inviteFailed = $state(false);
+  let inviteBusy = $state(false);
+  let inviteRequested = $state(false);
+
+  $effect(() => {
+    if (!profile || inviteRequested) return;
+    inviteRequested = true;
+    inviteFailed = false;
+    fetch('/api/profile/invite')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: InviteState) => { inviteState = d; })
+      .catch(() => { inviteFailed = true; });
+  });
+
+  function retryInvite() {
+    inviteRequested = false;
+  }
+
+  async function regenerateInvite() {
+    if (inviteBusy) return;
+    inviteBusy = true;
+    try {
+      const res = await fetch('/api/profile/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'regenerate' }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      inviteState = await res.json();
+      showSuccess($t['profile.invite.renewed']);
+    } catch {
+      showError($t['profile.invite.renewFailed']);
+    } finally {
+      inviteBusy = false;
+    }
+  }
 
   async function toggleNewsletter() {
     if (newsBusy || newsMode === null) return;
@@ -457,18 +500,30 @@
         />
       </div>
 
+      <!-- Einladen — desktop card (lg+ only), under Konto -->
+      <div class="hidden min-w-0 lg:block lg:col-start-1 lg:row-start-4">
+        <PInviteCard
+          invite={inviteState}
+          failed={inviteFailed}
+          busy={inviteBusy}
+          memberName={profile.name}
+          onRegenerate={regenerateInvite}
+          onRetry={retryInvite}
+        />
+      </div>
+
       <!--
         E-mail change panel (Task 8) — SINGLE mount, own grid slot directly
         below the Konto card/fold on both breakpoints. See this file's
         "E-mail change" comment block above + PEmailChangePanel.svelte's
         header for why it can't be mounted inside PKontoCard itself (that
         component is double-mounted; a stateful panel would desync).
-        `lg:row-start-4` sits under Konto's `lg:row-start-3` in the same
-        column — the right column's `lg:row-span-3` only reserves rows 1–3,
-        so this doesn't force Archiv taller.
+        `lg:row-start-5` sits under the Einladen card's `lg:row-start-4` in
+        the same column — the right column's `lg:row-span-3` only reserves
+        rows 1–3, so this doesn't force Archiv taller.
       -->
       {#if emailPanelOpen}
-        <div class="order-5 min-w-0 lg:col-start-1 lg:row-start-4">
+        <div class="order-6 min-w-0 lg:col-start-1 lg:row-start-5">
           <PEmailChangePanel
             pendingEmail={profile.pendingEmail}
             onStarted={handleEmailStarted}
@@ -482,12 +537,12 @@
       <!--
         Password change panel (Task 9) — same single-mount reasoning as the
         e-mail panel above. Own grid slot one row further down
-        (`lg:row-start-5` / `order-6`) so it never collides with the e-mail
+        (`lg:row-start-6` / `order-7`) so it never collides with the e-mail
         panel's slot when both happen to be open at once; still inside the
         left column, still below the right column's `lg:row-span-3` reserve.
       -->
       {#if pwPanelOpen}
-        <div class="order-6 min-w-0 lg:col-start-1 lg:row-start-5">
+        <div class="order-7 min-w-0 lg:col-start-1 lg:row-start-6">
           <PPasswordChangePanel email={profile.email} onClose={closePwPanel} />
         </div>
       {/if}
@@ -506,8 +561,8 @@
       <!--
         Below lg the wrapper dissolves (`contents`) and its two children are
         grid items of their own: Chronik stays second, the archive goes LAST
-        (order-7) — after the Moderation and Konto folds and the e-mail /
-        password panels (order-3 … 6). From lg the wrapper is the right
+        (order-8) — after the Moderation, Konto and Einladen folds and the
+        e-mail / password panels (order-3 … 7). From lg the wrapper is the right
         column's flex stack again (the children's `order` is reset there).
       -->
       <div class="contents min-w-0 lg:flex lg:flex-col lg:gap-5 lg:col-start-2 lg:row-start-1 lg:row-span-3">
@@ -516,7 +571,7 @@
             <PChronikStrip chronik={initialChronik} />
           </div>
         {/if}
-        <div class="order-7 min-w-0 lg:order-none">
+        <div class="order-8 min-w-0 lg:order-none">
           <PActivityLedger />
         </div>
       </div>
@@ -566,6 +621,21 @@
             deletionDateLabel={deletionDateLabel}
             onOpenDelete={openDeleteModal}
             onCancelDeletion={cancelDeletionRequest}
+            bare
+          />
+        </PMobileFold>
+      </div>
+
+      <!-- Einladen — mobile fold (below lg only), closed like the other folds -->
+      <div data-invite-anchor class="order-5 min-w-0 lg:hidden">
+        <PMobileFold title={$t['profile.invite.title']} hint={$t['profile.invite.fold.hint']}>
+          <PInviteCard
+            invite={inviteState}
+            failed={inviteFailed}
+            busy={inviteBusy}
+            memberName={profile.name}
+            onRegenerate={regenerateInvite}
+            onRetry={retryInvite}
             bare
           />
         </PMobileFold>
