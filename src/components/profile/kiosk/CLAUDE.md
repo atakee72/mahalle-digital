@@ -35,6 +35,9 @@ PIdentityCard            — avatar + name/handle/since + verified + stats +
 PModerationCard          — §02 standing display (stateless, `bare` prop)
 PKontoCard                — §03 email/password rows + logout + "ändern" action
                             + §08 pending banner (stateless, `bare` prop)
+PInviteCard               — §04 Einladen: personal invitation link, QR, share /
+                            mailto / copy, budget, invitees, renew (stateless,
+                            `bare` prop; see "Einladen card" below)
 PEmailChangePanel         — e-mail change stages 01/02 (STATEFUL, single
                             mount; see "E-mail change" below)
 PChronikStrip             — Kiez-Chronik tenure strip (stateless, SSR-only
@@ -285,6 +288,9 @@ content on mobile with no visible cause, check for missing `min-w-0` first.
 
 ## Kiez-Brief switch in the Konto card (2026-10-04)
 The weekly mail's on/off is a third row in `PKontoCard` under PASSWORT: label „KIEZ-BRIEF (E-MAIL)", state „jeden Sonntag" / „abbestellt", action „abbestellen" / „einschalten" (same underlined text-button as „ändern"). Props `newsletterMode` (`null` = not loaded → no row), `newsletterBusy`, `onToggleNewsletter`; state, the one fetch of `GET /api/profile/newsletter` and the optimistic toggle live in `ProfileInner` (double-mount rule, like the e-mail and password panels). (A warn-coloured hint for unverified members existed for one hour on 2026-10-04 and left again: since that afternoon the mail goes to unconfirmed addresses too, with its own note inside the mail.) Why here and not in the bell panel, the unsubscribe page's undo step and the probe: `src/components/forum/kiosk/CLAUDE.md` → „Kiez-Brief" → „The switch lives in the PROFILE".
+
+## Einladen card (personal invitation link, 2026-10-07)
+`PInviteCard.svelte` — §04 under Konto on desktop (`lg:row-start-4`; the e-mail and password panels moved to rows 5/6), a closed `PMobileFold` „Einladen" after the Konto fold on phones (`order-5`, hint `profile.invite.fold.hint`; panels `order-6/7`, archive `order-8`). Stateless and double-mounted like PKontoCard: the one fetch of `GET /api/profile/invite`, `retryInvite()` and `regenerateInvite()` (POST `{ action: 'regenerate' }`, confirm dialog first — the old link dies at once, printed cards included) live in `ProfileInner`. Prop is `invite`, NOT `state` — a prop named `state` shadows the `$state` rune (svelte-check: „Cannot use 'state' as a store"). No `<style>` block (reachable only through ProfileInner). What it shows: a blocked member reads WHY (`[data-invite-block]`: unverified / too_new with the unlock date / paused / paused_all / banned) and gets no code; otherwise the link as selectable text (`[data-invite-url]`, built from the trusted `NEXTAUTH_URL` — on the local build it reads `localhost:3000`, not the probe's origin), a 96 px QR (`[data-invite-qr]`, server SVG via `{@html}` of OUR string), „Teilen" only where `navigator.share` exists (decided after mount; headless has none), „per E-Mail" = `<a href="mailto:…">` with subject + body prefilled (`inviteMailto`; the member's own mail program, no recipient field of ours), „Link kopieren" (clipboard + toast), the budget line `[data-invite-left]` („5 von 5 frei", warn-coloured „0 von 5 frei · wieder ab dd.mm.yyyy" when exhausted), the invitees list (`[data-invite-invitees]`, name · @handle · date) and „neuen Link erzeugen" (`[data-invite-renew]`, 5/h via `invitecode:<userId>`). Rules + store + probe: `src/components/auth/kiosk/CLAUDE.md` → „Personal invitation links".
 
 ## E-mail change (Plan B, Task 8)
 
