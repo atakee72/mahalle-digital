@@ -100,7 +100,8 @@ export type InviteState = {
 
 /**
  * Redemptions inside the rolling window → what is left. `nextFreeAt` is set only when
- * nothing is left: the moment the oldest redemption in the window falls out of it.
+ * nothing is left: the moment the member is back UNDER the cap (the redemption that
+ * leaves the window first among the newest INVITE_USES; with exactly the cap, the oldest).
  * Unreadable dates are ignored (they cannot be inside the window).
  */
 export function inviteBudget(redeemedAt: unknown[], now: Date): InviteBudget {
@@ -112,7 +113,7 @@ export function inviteBudget(redeemedAt: unknown[], now: Date): InviteBudget {
   const used = inWindow.length;
   const left = Math.max(0, INVITE_USES - used);
   const nextFreeAt = left === 0 && inWindow.length > 0
-    ? new Date(inWindow[0].getTime() + INVITE_WINDOW_DAYS * DAY_MS)
+    ? new Date(inWindow[inWindow.length - INVITE_USES].getTime() + INVITE_WINDOW_DAYS * DAY_MS)
     : null;
   return { used: Math.min(used, INVITE_USES), left, nextFreeAt };
 }

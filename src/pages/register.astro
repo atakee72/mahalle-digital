@@ -11,8 +11,10 @@ Astro.response.headers.set('Cache-Control', 'no-store, must-revalidate');
 // Personal invitation link: /register?invite=<code>. Checked here so the visitor sees who
 // invited them (or that the link is dead) before typing; the register route checks again on
 // submit. A malformed code is dead without touching the database. A database hiccup must not
-// take the register page down: the lookup gets 2.5 s (connectDB() alone may retry for ~20 s),
-// then the plain form renders with no notice (invite = null); the submit check still applies.
+// take the register page down: the lookup gets 2.5 s (connectDB() alone may retry for ~20 s).
+// A slow or failed lookup keeps the code in the form WITHOUT a banner (empty inviterName) and
+// the route decides on submit (valid: recorded; dead: 400 invite_invalid, dead banner) - a
+// code is never silently dropped. invite = null only when there is no ?invite= at all.
 let invite: RegisterInvite | null = null;
 const rawInvite = Astro.url.searchParams.get('invite');
 if (rawInvite !== null) {
@@ -29,12 +31,12 @@ if (rawInvite !== null) {
         new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), 2500); }),
       ]);
       invite = inv === null
-        ? null
+        ? { code, inviterName: '' }
         : inv.ok
-          ? { code, inviterName: inv.inviter.name, inviterHandle: inv.inviter.handle }
+          ? { code, inviterName: inv.inviter.name }
           : { dead: true };
     } catch {
-      invite = null;
+      invite = { code, inviterName: '' };
     } finally {
       clearTimeout(timer);
     }

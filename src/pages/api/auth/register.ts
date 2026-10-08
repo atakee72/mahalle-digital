@@ -298,7 +298,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         // verification mail so a slow Telegram can't delay the user's own
         // signup email. finalHandle is captured in the retry loop above — no
         // extra DB read (a failing read would 500 a succeeded registration).
-        await alertNewMember({ name, handle: finalHandle, memberType, invitedBy: inviter ? (inviter.handle ?? inviter.name) : null });
+        await alertNewMember({ name, handle: finalHandle, memberType, invitedBy: inviter ? (inviter.handle ? '@' + inviter.handle : inviter.name) : null });
 
         return new Response(
             JSON.stringify({

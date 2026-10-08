@@ -139,7 +139,7 @@
       <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--k-rule);">
         <div class="font-dmmono" style="font-size: 9.5px; color: var(--k-ink-mute); letter-spacing: 0.14em;">{$t['profile.invite.invitees']}</div>
         <ul data-invite-invitees style="list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px;">
-          {#each invite.invitees as person (person.handle ?? person.name + person.joinedAt)}
+          {#each invite.invitees as person, i (person.handle ?? `${person.name}-${person.joinedAt}-${i}`)}
             <li class="font-bricolage" style="font-size: 12.5px; display: flex; gap: 8px; align-items: baseline; min-width: 0;">
               <span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{person.name || '—'}</span>
               {#if person.handle}<span class="font-dmmono" style="font-size: 10px; color: var(--k-ink-mute);">@{person.handle}</span>{/if}

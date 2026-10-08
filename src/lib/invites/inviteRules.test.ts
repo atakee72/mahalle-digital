@@ -70,7 +70,7 @@ test('inviteBudget: more than the cap never reports a negative rest', () => {
   const b = inviteBudget([1, 2, 3, 4, 5, 6].map(days), NOW);
   assert.equal(b.left, 0);
   assert.equal(b.used, INVITE_USES);
-  assert.equal(b.nextFreeAt?.toISOString(), days(-24).toISOString());
+  assert.equal(b.nextFreeAt?.toISOString(), days(-25).toISOString());
 });
 
 test('inviteBudget: a redemption dated in the future is not counted', () => {
