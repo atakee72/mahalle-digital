@@ -29,6 +29,11 @@
     memberType: MemberType;
     dailyLimit: number | null;
     newsletter: 'weekly' | 'off';
+    /** Who issued the invitation link this member came through (null = plain registration). */
+    invitedBy: { name: string; handle: string | null } | null;
+    /** How many members came through this member's link. */
+    invited: number;
+    invitesPaused: boolean;
   };
 
   let users = $state<AdminUserRow[]>([]);
@@ -95,7 +100,7 @@
     }
   }
 
-  type RowPatch = { verified?: boolean; memberType?: MemberType; dailyLimit?: number | null; newsletter?: 'weekly' | 'off' };
+  type RowPatch = { verified?: boolean; memberType?: MemberType; dailyLimit?: number | null; newsletter?: 'weekly' | 'off'; invitesPaused?: boolean };
 
   // „✓ gespeichert" beside the controls for two seconds after a successful save.
   let savedRow = $state<string | null>(null);
@@ -124,7 +129,7 @@
       if (!res.ok) throw new Error(`patch failed (${res.status})`);
       const j = await res.json();
       users = users.map((u) => (u.id === row.id
-        ? { ...u, verified: j.verified === true, memberType: j.memberType, dailyLimit: j.dailyLimit ?? null, newsletter: j.newsletter === 'off' ? 'off' : 'weekly' }
+        ? { ...u, verified: j.verified === true, memberType: j.memberType, dailyLimit: j.dailyLimit ?? null, newsletter: j.newsletter === 'off' ? 'off' : 'weekly', invitesPaused: j.invitesPaused === true }
         : u));
       // The type selector and the limit field save without a button — say so.
       // (The verify button already changes its own label; no mark for it.)
@@ -150,6 +155,12 @@
   function toggleBrief(row: AdminUserRow) {
     const next = row.newsletter === 'off' ? 'weekly' : 'off';
     return patchRow(row, { newsletter: next }, { newsletter: next });
+  }
+
+  // Invitations on/off for this member (their personal link stops working while paused).
+  function toggleInvites(row: AdminUserRow) {
+    const next = !row.invitesPaused;
+    return patchRow(row, { invitesPaused: next }, { invitesPaused: next });
   }
 
   function setType(row: AdminUserRow, next: MemberType) {
@@ -190,7 +201,7 @@
   });
 </script>
 
-<div style="max-width: 1040px; margin: 0 auto; padding: 26px 18px 60px;">
+<div style="max-width: 1160px; margin: 0 auto; padding: 26px 18px 60px;">
   <!-- Title block -->
   <div style="margin-bottom: 18px;">
     <div class="font-dmmono" style="font-size: 10px; color: var(--k-accent); letter-spacing: 0.14em;">
@@ -282,17 +293,30 @@
               <div class="font-dmmono" style="font-size: 10px; color: var(--k-ink-mute); margin-top: 3px; letter-spacing: 0.05em;">
                 {tStr($t['admin.users.since'], { d: fmtDate(row.createdAt) })}
                 &nbsp;·&nbsp;
-                {row.emailVerified ? $t['admin.users.emailok'] : $t['admin.users.emailno']}
+                <span style="white-space: nowrap;">{row.emailVerified ? $t['admin.users.emailok'] : $t['admin.users.emailno']}</span>
                 {#if savedRow === row.id}
                   &nbsp;·&nbsp;
                   <span role="status" data-admin-saved style="font-weight: 600; color: var(--k-moss);">{$t['admin.users.saved']}</span>
                 {/if}
               </div>
+              <!-- The invite tree, on its own line so the meta line above keeps its shape:
+                   who issued the link this member came through · how many came through theirs. -->
+              {#if row.invitedBy || row.invited > 0}
+                <div data-admin-invite-line class="font-dmmono" style="font-size: 10px; color: var(--k-ink-mute); margin-top: 3px; letter-spacing: 0.05em;">
+                  {#if row.invitedBy}
+                    <span data-admin-invited-by>{row.invitedBy.handle ? tStr($t['admin.users.invitedBy'], { h: row.invitedBy.handle }) : `${$t['admin.users.invitedBy'].split('@')[0]}${row.invitedBy.name || '—'}`}</span>
+                  {/if}
+                  {#if row.invitedBy && row.invited > 0}&nbsp;·&nbsp;{/if}
+                  {#if row.invited > 0}
+                    <span data-admin-invited>{tStr($t['admin.users.invited'], { n: row.invited })}</span>
+                  {/if}
+                </div>
+              {/if}
             </div>
 
-            <!-- Phones: the controls flow and wrap. From lg: four fixed columns (type · limit · Kiez-Brief ·
-                 verify) so every row has the same shape; the limit column stays empty unless Initiative. -->
-            <div data-admin-controls class="flex flex-wrap items-center gap-2.5 lg:grid lg:grid-cols-[214px_158px_128px_112px]">
+            <!-- Phones: the controls flow and wrap. From lg: five fixed columns (type · limit · Kiez-Brief ·
+                 invites · verify) so every row has the same shape; the limit column stays empty unless Initiative. -->
+            <div data-admin-controls class="flex flex-wrap items-center gap-2.5 lg:grid lg:grid-cols-[214px_158px_128px_150px_112px]">
               <label class="font-dmmono" style="display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute);">
                 {$t['admin.users.type.label']}
                 <select
@@ -347,6 +371,24 @@
                 onclick={() => toggleBrief(row)}
               >
                 {row.newsletter === 'off' ? $t['admin.users.brief.off'] : $t['admin.users.brief.on']}
+              </button>
+              <button
+                type="button"
+                class="font-dmmono"
+                data-admin-invites={row.invitesPaused ? 'off' : 'on'}
+                title={$t['admin.users.invites.title']}
+                aria-pressed={!row.invitesPaused}
+                style="
+                  border: 1.5px {row.invitesPaused ? 'dashed' : 'solid'} var(--k-ink); border-radius: 999px;
+                  padding: 6px 12px; font-size: 11px; font-weight: 700; white-space: nowrap;
+                  cursor: pointer; min-height: 32px; background: var(--k-paper);
+                  color: {row.invitesPaused ? 'var(--k-ink-mute)' : 'var(--k-ink)'};
+                  {busy.has(row.id) ? 'opacity: 0.5; cursor: wait;' : ''}
+                "
+                disabled={busy.has(row.id)}
+                onclick={() => toggleInvites(row)}
+              >
+                {row.invitesPaused ? $t['admin.users.invites.off'] : $t['admin.users.invites.on']}
               </button>
               <button
                 type="button"

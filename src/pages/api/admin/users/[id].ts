@@ -21,6 +21,9 @@ const BodySchema = z.object({
   memberType: z.enum(MEMBER_TYPES).optional(),
   dailyLimit: z.number().int().min(1).max(MAX_DAILY_LIMIT).nullable().optional(),
   newsletter: z.enum(NEWSLETTER_MODES).optional(),
+  // Personal invitation link: pause one member's inviting (their link stops working, the card
+  // tells them). Admin-only writer, like `verified`.
+  invitesPaused: z.boolean().optional(),
 }).strict();
 
 export const PATCH: APIRoute = async ({ request, params }) => {
@@ -59,7 +62,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     // Read first: the limit rule depends on the member's type AFTER this call.
     const stored = await users.findOne(
       { _id, anonymized: { $ne: true } },
-      { projection: { memberType: 1, dailyLimit: 1, verified: 1, newsletter: 1 } }
+      { projection: { memberType: 1, dailyLimit: 1, verified: 1, newsletter: 1, invitesPaused: 1 } }
     );
     if (!stored) {
       return new Response(JSON.stringify({ error: 'not_found' }), {
@@ -69,9 +72,11 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     }
 
     // The planner knows `verified`, `memberType` and `dailyLimit`, and refuses a body with none
-    // of them — so a Kiez-Brief-only call gets an empty plan (nothing else changes).
-    const { newsletter, ...rest } = parsed.data;
-    const plan = newsletter !== undefined && Object.keys(rest).length === 0
+    // of them — so a call with only the fields outside its knowledge (Kiez-Brief, invites) gets
+    // an empty plan (nothing else changes).
+    const { newsletter, invitesPaused, ...rest } = parsed.data;
+    const outsideOnly = Object.keys(rest).length === 0;
+    const plan = outsideOnly
       ? planAdminPatch(stored, { verified: stored.verified === true })
       : planAdminPatch(stored, rest);
     if (!plan.ok) {
@@ -84,10 +89,13 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     // Same storage rule as the member's own switch: absent = weekly, 'off' = none.
     const set: Record<string, unknown> = { ...plan.set };
     const unset: string[] = [...plan.unset];
-    // The Kiez-Brief-only plan above restates `verified` to satisfy the planner: do not write it.
-    if (newsletter !== undefined && Object.keys(rest).length === 0) delete set.verified;
+    // The outside-only plan above restates `verified` to satisfy the planner: do not write it.
+    if (outsideOnly) delete set.verified;
     if (newsletter === 'off') set.newsletter = 'off';
     if (newsletter === 'weekly') unset.push('newsletter');
+    // Absent = may invite; only `true` is stored.
+    if (invitesPaused === true) set.invitesPaused = true;
+    if (invitesPaused === false) unset.push('invitesPaused');
 
     const update: Record<string, Record<string, unknown>> = {};
     if (Object.keys(set).length > 0) update.$set = set;
@@ -102,6 +110,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
       memberType: plan.result.memberType,
       dailyLimit: plan.result.dailyLimit,
       newsletter: newsletter ?? storedNewsletterMode(stored.newsletter),
+      invitesPaused: invitesPaused ?? stored.invitesPaused === true,
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
