@@ -35,6 +35,13 @@ export interface User {
   isBanned?: boolean;
   bannedAt?: Date;
   bannedReason?: string;
+  // Personal invitation link (2026-10-07, src/lib/invites): the member's own permanent code
+  // (minted on the first eligible read of the profile card), the admin's per-member pause,
+  // and — on the INVITED account — who issued the link and when (the redemption record).
+  inviteCode?: string;
+  invitesPaused?: boolean;
+  invitedBy?: ObjectId | string;
+  invitedAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
