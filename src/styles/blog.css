@@ -80,6 +80,45 @@
   border: 1.5px solid var(--k-ink);
   border-radius: 10px;
 }
+/* Wide comparison table (`<div class="bl-table">` around a GFM table in the MDX, 2026-10-11):
+   breaks out of the two text columns and scrolls sideways on narrow screens instead of
+   squeezing five columns into 390 px. Header row in the rust kicker voice, cells top-aligned. */
+[data-page="blog"] .bl-prose .bl-table {
+  column-span: all;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 6px 0 18px;
+  border-top: 2px solid var(--k-ink);
+  border-bottom: 2px solid var(--k-ink);
+}
+[data-page="blog"] .bl-prose .bl-table table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.4;
+}
+[data-page="blog"] .bl-prose .bl-table th,
+[data-page="blog"] .bl-prose .bl-table td {
+  vertical-align: top;
+  text-align: left;
+  padding: 10px 10px 10px 0;
+  border-bottom: 1px solid var(--k-ink-soft);
+}
+[data-page="blog"] .bl-prose .bl-table th {
+  font-family: var(--k-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--k-rust-deep);
+}
+[data-page="blog"] .bl-prose .bl-table td:first-child { font-weight: 700; white-space: nowrap; }
+[data-page="blog"] .bl-prose .bl-table tr:last-child td { border-bottom: none; }
+/* From lg the table steps out of the 720 px reading column (960 px) so nothing scrolls on a desktop. */
+@media (min-width: 1024px) {
+  [data-page="blog"] .bl-prose .bl-table { margin-inline: -120px; }
+}
+
 /* Step drawings in a guide post (`<div class="bl-steps">` in the MDX): up to three
    side by side, wrapping on phones. The drawings bring their own card + shadow, so
    the prose image frame is dropped; a real screenshot (.png) keeps it. */

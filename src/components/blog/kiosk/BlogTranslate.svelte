@@ -110,6 +110,16 @@
         <blockquote><p>{b.text}</p></blockquote>
       {:else if b.kind === 'p'}
         <p>{b.text}</p>
+      {:else if b.kind === 'table'}
+        <!-- same wrapper as the MDX (`.bl-table` in blog.css): first row = header -->
+        <div class="bl-table">
+          <table>
+            <thead><tr>{#each b.rows[0] ?? [] as cell, j (j)}<th>{cell}</th>{/each}</tr></thead>
+            <tbody>
+              {#each b.rows.slice(1) as row, r (r)}<tr>{#each row as cell, j (j)}<td>{cell}</td>{/each}</tr>{/each}
+            </tbody>
+          </table>
+        </div>
       {:else if b.kind === 'pics'}
         <!-- a guide post's step pictures, same markup as the MDX (`.bl-steps` in blog.css) -->
         <div class="bl-steps" class:bl-steps--wide={b.wide}>

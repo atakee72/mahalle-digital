@@ -152,3 +152,16 @@ test('an unclosed bl-steps group still yields its pictures', () => {
     { kind: 'pics', wide: false, pics: [{ src: '/assets/a.svg', alt: 'A' }] },
   ]);
 });
+
+test('a GFM table becomes one table block: header row kept, separator dropped, empty cells stay empty', () => {
+  const md = 'Davor.\n\n<div class="bl-table">\n\n| | Wem? | Geld |\n|---|---|---|\n| **A** | Firma [x](/y) | Werbung |\n| B | | Spenden \\| Lizenzen |\n\n</div>\n\nDanach.';
+  const blocks = parseBlocks(md);
+  assert.deepEqual(blocks, [
+    { kind: 'p', text: 'Davor.' },
+    { kind: 'table', rows: [['', 'Wem?', 'Geld'], ['A', 'Firma x', 'Werbung'], ['B', '', 'Spenden | Lizenzen']] },
+    { kind: 'p', text: 'Danach.' },
+  ]);
+  assert.deepEqual(blockTexts(blocks), ['Davor.', 'Wem?', 'Geld', 'A', 'Firma x', 'Werbung', 'B', 'Spenden | Lizenzen', 'Danach.']);
+  const tr = withTexts(blocks, ['Before.', 'Who?', 'Money', 'A', 'Company x', 'Ads', 'B', 'Donations | Licences', 'After.']);
+  assert.deepEqual(tr[1], { kind: 'table', rows: [['', 'Who?', 'Money'], ['A', 'Company x', 'Ads'], ['B', '', 'Donations | Licences']] });
+});

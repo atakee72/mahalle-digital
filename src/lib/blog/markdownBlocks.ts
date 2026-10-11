@@ -14,12 +14,14 @@ export type Pic = { src: string; alt: string; width?: number; height?: number };
 export type Block =
   | { kind: 'p' | 'h2' | 'h3' | 'quote'; text: string }
   | { kind: 'ul' | 'ol'; items: string[] }
+  // A GFM table (first row = header). Cells are plain text; the separator row is dropped. Empty cells stay ''.
+  | { kind: 'table'; rows: string[][] }
   // `<div class="bl-steps">` with plain <img> tags: kept in its place so the translated view shows
   // the pictures too. Only the alt texts are translated.
   | { kind: 'pics'; wide: boolean; pics: Pic[] };
 
-/** title + description + every block text, in characters. Posts today are 1.8–3k. */
-export const BLOG_TRANSLATE_MAX_CHARS = 12000;
+/** title + description + every block text, in characters. Guides and guest posts are 1.8–3k; the essay series runs to ~14k (2026-10-11). */
+export const BLOG_TRANSLATE_MAX_CHARS = 20000;
 
 export function plainInline(s: string): string {
   return s
@@ -62,6 +64,7 @@ export function parseBlocks(md: string): Block[] {
   let quote: string[] = [];
   let list: { kind: 'ul' | 'ol'; items: string[] } | null = null;
   let steps: { wide: boolean; pics: Pic[] } | null = null;
+  let table: string[][] | null = null;
 
   const flushSteps = () => {
     if (steps?.pics.length) out.push({ kind: 'pics', wide: steps.wide, pics: steps.pics });
@@ -85,10 +88,15 @@ export function parseBlocks(md: string): Block[] {
     if (items.length) out.push({ kind: list.kind, items });
     list = null;
   };
+  const flushTable = () => {
+    if (table?.length) out.push({ kind: 'table', rows: table });
+    table = null;
+  };
   const flushAll = () => {
     flushPara();
     flushQuote();
     flushList();
+    flushTable();
   };
 
   for (const raw of lines) {
@@ -103,6 +111,25 @@ export function parseBlocks(md: string): Block[] {
     if (group && /(^|\s)bl-steps(\s|$)/.test(group[1])) {
       flushAll();
       steps = { wide: /(^|\s)bl-steps--wide(\s|$)/.test(group[1]), pics: [] };
+      continue;
+    }
+    // The scroll wrapper around a wide table (`<div class="bl-table">` … `</div>`) carries no prose.
+    if ((group && /(^|\s)bl-table(\s|$)/.test(group[1])) || /^\s*<\/div>\s*$/.test(line)) {
+      flushAll();
+      continue;
+    }
+    // GFM table row: `| a | b |`. The `|---|---|` separator row is dropped.
+    if (/^\s*\|.*\|\s*$/.test(line)) {
+      flushPara();
+      flushQuote();
+      flushList();
+      if (/^\s*\|(\s*:?-+:?\s*\|)+\s*$/.test(line)) continue;
+      const cells = line
+        .trim()
+        .slice(1, -1)
+        .split(/(?<!\\)\|/)
+        .map((c) => plainInline(c.replace(/\\\|/g, '|')));
+      (table ??= []).push(cells);
       continue;
     }
     if (!line.trim()) {
@@ -159,6 +186,7 @@ export function blockTexts(blocks: Block[]): string[] {
   const out: string[] = [];
   for (const b of blocks) {
     if (b.kind === 'pics') out.push(...b.pics.map((p) => p.alt).filter(Boolean)); // never send '' to DeepL
+    else if (b.kind === 'table') out.push(...b.rows.flat().filter(Boolean));
     else if ('items' in b) out.push(...b.items);
     else out.push(b.text);
   }
@@ -173,6 +201,7 @@ export function withTexts(blocks: Block[], texts: string[]): Block[] {
   };
   const out = blocks.map((b): Block => {
     if (b.kind === 'pics') return { ...b, pics: b.pics.map((p) => (p.alt ? { ...p, alt: next() } : p)) };
+    if (b.kind === 'table') return { kind: 'table', rows: b.rows.map((r) => r.map((c) => (c ? next() : c))) };
     return 'items' in b ? { kind: b.kind, items: b.items.map(() => next()) } : { kind: b.kind, text: next() };
   });
   if (i !== texts.length) throw new Error('withTexts: too many texts');
