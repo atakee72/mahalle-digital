@@ -7,6 +7,7 @@ import KiezHeartbeat from '../components/auth/kiosk/KiezHeartbeat.svelte';
 import KioskSplash from '../components/auth/kiosk/KioskSplash.astro';
 import SeoHead from '../components/SeoHead.astro';
 import { ViewTransitions } from 'astro:transitions';
+import GoatCounter from '../components/GoatCounter.astro';
 
 export interface Props {
   title: string;
@@ -36,6 +37,7 @@ const {
     <title>{title} | Mahalle</title>
     <SeoHead title={card?.title ?? `${title} | Mahalle`} description={card?.description ?? description} noindex={true} />
     <ViewTransitions />
+    <GoatCounter />
   </head>
 
   <body

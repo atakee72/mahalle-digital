@@ -4,6 +4,7 @@
 // The page content (incl. its own date line + footer) comes from the slot.
 import { ViewTransitions } from 'astro:transitions';
 import SeoHead from '../components/SeoHead.astro';
+import GoatCounter from '../components/GoatCounter.astro';
 
 export interface Props {
   title: string;
@@ -46,6 +47,7 @@ const {
     />
     <title>{title}</title>
     <ViewTransitions />
+    <GoatCounter />
   </head>
   <body class="min-h-screen k-paper-bg text-ink font-bricolage antialiased" data-page="landing">
     <slot />

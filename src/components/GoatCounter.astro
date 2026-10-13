@@ -1,0 +1,89 @@
+---
+// Visitor counting with GoatCounter (hosted, cookieless, no personal data stored).
+// Rendered ONLY on the production deployment, only when GOATCOUNTER_ENDPOINT is
+// set, and never for the admin's own session (his visits would be the biggest
+// single visitor). Preview deployments and local builds count nothing; count.js
+// itself also ignores localhost.
+//
+// What leaves the browser per page view: the path (query string blanked, the
+// member profile path collapsed to /nachbarn/*), no title, an EXTERNAL referrer
+// once per visit (never a Mahalle URL), the screen width. See root CLAUDE.md →
+// „Visitor counting".
+export interface Props {
+  isAdmin?: boolean;
+}
+const { isAdmin = false } = Astro.props;
+const endpoint = import.meta.env.GOATCOUNTER_ENDPOINT as string | undefined;
+const enabled = Boolean(endpoint) && process.env.VERCEL_ENV === 'production' && !isAdmin;
+---
+
+{
+  enabled && (
+    <>
+      <script
+        is:inline
+        data-goatcounter={endpoint}
+        data-goatcounter-settings='{"no_onload": true}'
+        async
+        src="https://gc.zgo.at/count.js"
+      />
+      <script is:inline>
+        (function () {
+          // The ClientRouter keeps the document: register once, count on every page-load.
+          if (window.__mhCount) return;
+          window.__mhCount = true;
+          var pending = false;
+          var first = true;
+          var ready = function () {
+            var g = window.goatcounter;
+            return !!(g && g.count && g.get_data);
+          };
+          var send = function () {
+            // An admin's document carries this marker (KioskLayout/AdminLayout); the listener
+            // outlives a soft navigation from a public page, so check per page, not per script.
+            if (document.querySelector('meta[name="mh-nocount"]')) return;
+            var g = window.goatcounter;
+            if (!g.get_data.__mh) {
+              // count.js sends location.search as its own field `q` whatever path we pass —
+              // our URLs carry single-use tokens, search terms and redirect targets there.
+              // The flag sits on the function: count.js re-running assigns a fresh get_data.
+              var orig = g.get_data;
+              g.get_data = function (v) {
+                var d = orig(v);
+                d.q = '';
+                return d;
+              };
+              g.get_data.__mh = true;
+            }
+            var p = location.pathname;
+            if (p.indexOf('/nachbarn/') === 0) p = '/nachbarn/*';
+            // Referrer: only an EXTERNAL one, and only with the first view. document.referrer
+            // never changes during a ClientRouter session, and a same-site referrer would carry
+            // the previous page's query string (tokens, search terms) — '' makes count.js omit it.
+            var r = '';
+            if (first) {
+              try {
+                var u = new URL(document.referrer);
+                if (u.host !== location.host) r = document.referrer;
+              } catch (e) {}
+            }
+            g.count({ path: p, title: '', referrer: r });
+            first = false;
+          };
+          document.addEventListener('astro:page-load', function () {
+            if (ready()) send();
+            else pending = true; // count.js (async) not here yet — its load event sends
+          });
+          var s = document.querySelector('script[data-goatcounter]');
+          if (s)
+            s.addEventListener('load', function () {
+              if (pending) {
+                pending = false;
+                send();
+              }
+            });
+        })();
+      </script>
+    </>
+  )
+}
