@@ -1,14 +1,9 @@
 // src/lib/translation/deepl.ts
 // SERVER-ONLY: calls the DeepL REST API. Never import from client code.
 
-const ALLOWED_TARGET_LANGS = [
-  'de', 'en', 'tr', 'pl', 'ru', 'uk', 'ar', 'fr', 'es', 'it', 'ro', 'bg', 'el', 'nl', 'pt',
-] as const;
+import { deeplTargetFor } from './targetLangs';
 
-const DEEPL_TARGET_MAP: Record<string, string> = {
-  en: 'EN-US',
-  pt: 'PT-PT',
-};
+export { deeplTargetFor };
 
 export class DeepLError extends Error {
   code: 'unavailable' | 'quota' | 'bad_lang' | 'upstream';
@@ -16,13 +11,6 @@ export class DeepLError extends Error {
     super(message);
     this.code = code;
   }
-}
-
-/** Lowercase primary-subtag → DeepL target code, or null if unsupported. */
-export function deeplTargetFor(lang: string): string | null {
-  const primary = lang.trim().toLowerCase().split('-')[0];
-  if (!(ALLOWED_TARGET_LANGS as readonly string[]).includes(primary)) return null;
-  return DEEPL_TARGET_MAP[primary] ?? primary.toUpperCase();
 }
 
 export async function translateTexts(

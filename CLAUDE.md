@@ -222,7 +222,7 @@ CLOUDINARY_API_SECRET=
 OPENAI_API_KEY=         # Content moderation API + news relevance scoring
 CRON_SECRET=            # Vercel cron job authentication
 NEWSDATA_API_KEY=       # NewsData.io API (optional, for additional news sources)
-DEEPL_API_KEY=          # DeepL API key for on-demand content translation (POST /api/translate). Free-tier keys end ":fx" → api-free.deepl.com host is auto-selected. SERVER-ONLY secret. Unset ⇒ endpoint 503s translate_unavailable and the UI shows an inline error — no other feature affected.
+DEEPL_API_KEY=          # DeepL API key for on-demand content translation (POST /api/translate). Target languages = DeepL's FULL set (101 languages as of 2026-10-13, `src/lib/translation/targetLangs.ts`, pure, shared by server + client; the browser's language picks the target). Until that day a hand-picked 15 (de en tr pl ru uk ar fr es it ro bg el nl pt) while the landing page promised „30+" — refresh recipe in the file's header. Free-tier keys end ":fx" → api-free.deepl.com host is auto-selected. SERVER-ONLY secret. Unset ⇒ endpoint 503s translate_unavailable and the UI shows an inline error — no other feature affected.
 SMTP_HOST=              # SMTP relay host (smtp.mailbox.org). LOCAL DEV ONLY since 2026-08-09 — removed from Vercel prod (Resend is the prod transport). With SMTP_USER+SMTP_PASS set, SMTP wins over Resend in the transport chooser.
 SMTP_PORT=              # 587 (STARTTLS; 465 = implicit TLS also supported)
 SMTP_USER=              # SMTP login (mailbox.org account, e.g. atakee@mailbox.org)

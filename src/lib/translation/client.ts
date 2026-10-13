@@ -1,12 +1,12 @@
 // DEPENDENCY-PURE: imported by Svelte islands. No server imports, ever.
 import type { Block } from '../blog/markdownBlocks'; // type-only: the module is dependency-pure anyway
 
-const CLIENT_LANGS = ['de', 'en', 'tr', 'pl', 'ru', 'uk', 'ar', 'fr', 'es', 'it', 'ro', 'bg', 'el', 'nl', 'pt'];
+import { TARGET_LANGS, primaryLang } from './targetLangs';
 
 export function pickTargetLang(kioskLocale: string): string {
   try {
-    const nav = (navigator.language || '').toLowerCase().split('-')[0];
-    if (CLIENT_LANGS.includes(nav)) return nav;
+    const nav = primaryLang(navigator.language || '');
+    if ((TARGET_LANGS as readonly string[]).includes(nav)) return nav;
   } catch {
     /* SSR or exotic env */
   }
