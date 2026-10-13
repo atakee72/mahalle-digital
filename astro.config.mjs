@@ -78,7 +78,18 @@ export default defineConfig({
         'win32-x64-msvc',
         'darwin-x64',
         'linux-x64-gnu'
-      ]
+      ],
+      // Cold-start budget (2026-10-13): every request on a fresh Fluid instance paid 1.2–2.9 s
+      // of CPU before this line, almost all of it Node resolving and compiling ~1000 small
+      // files — @sentry/* + @opentelemetry/* (~650), date-fns (304, the barrel import loads
+      // every function), jose + @auth/core (~110). Bundling them into the server chunks makes
+      // the first request load ~60 files: landing 2.9 s → 0.43 s, /api/kiez-stats 1.2 s → 0.38 s,
+      // login page 1.4 s → 0.38 s (measured on the node-adapter build; Sentry delivery re-verified
+      // against a local sink). The Hobby plan's 4 CPU-hours/month were 76 % used by day 11 with
+      // ~2 000 requests a day — the bill was cold starts, not traffic. mongodb/bcrypt and the
+      // native optional deps stay external (above); `import-in-the-middle` must stay external
+      // (Sentry's ESM hook). Re-measure with scratchpad/coldstart/ before adding a heavy package.
+      noExternal: ['date-fns', /^@sentry\//, /^@opentelemetry\//, 'jose', '@auth/core', '@panva/hkdf', 'preact']
     },
     resolve: {
       alias: {
