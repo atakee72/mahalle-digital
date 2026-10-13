@@ -136,8 +136,8 @@ export function parseBlocks(md: string): Block[] {
       flushAll();
       continue;
     }
-    // MDX ESM lines and thematic breaks carry no prose.
-    if (/^import\s.+\sfrom\s.+$/.test(line) || /^export\s/.test(line) || /^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
+    // MDX ESM lines, MDX comments (`{/* source: teil1 v8 */}`) and thematic breaks carry no prose.
+    if (/^import\s.+\sfrom\s.+$/.test(line) || /^export\s/.test(line) || /^\{\/\*.*\*\/\}$/.test(line.trim()) || /^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
       flushAll();
       continue;
     }

@@ -165,3 +165,7 @@ test('a GFM table becomes one table block: header row kept, separator dropped, e
   const tr = withTexts(blocks, ['Before.', 'Who?', 'Money', 'A', 'Company x', 'Ads', 'B', 'Donations | Licences', 'After.']);
   assert.deepEqual(tr[1], { kind: 'table', rows: [['', 'Who?', 'Money'], ['A', 'Company x', 'Ads'], ['B', '', 'Donations | Licences']] });
 });
+
+test('an MDX comment line is not prose (the source marker of a revised post)', () => {
+  assert.deepEqual(parseBlocks('{/* source: teil1 v8 */}\n\nText.'), [{ kind: 'p', text: 'Text.' }]);
+});

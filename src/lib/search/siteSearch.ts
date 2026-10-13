@@ -110,6 +110,7 @@ export function plainMdx(body: string): string {
   if (!body) return '';
   return body
     .replace(/^(import|export) .*$/gm, ' ')
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')          // MDX comments ({/* source: teil1 v8 */})
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, ' $1 ')   // ![alt](src) → alt
     .replace(/\[([^\]]*)\]\([^)]*\)/g, ' $1 ')    // [text](href) → text
     .replace(/<[^>]+>/g, ' ')                      // JSX / HTML tags
