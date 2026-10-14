@@ -18,6 +18,9 @@ test('React falling back to client rendering after an early update is noise', ()
 test('the page-swap null read is noise ONLY when it comes from Astro\'s ClientRouter', () => {
   const msg = "Cannot read properties of null (reading 'body')";
   assert.equal(isClientNoise('TypeError', msg, ['/_astro/ClientRouter.astro_astro_type_script_index_0_lang.DQnP-Fov.js']), true);
+  // the transition module chunk, 2026-10-14 event on the board
+  assert.equal(isClientNoise('TypeError', msg, ['/_astro/router.CaH6K8pM.js']), true);
+  assert.equal(isClientNoise('TypeError', msg, ['/_astro/ForumRouterIsland.abc123.js']), false);
   assert.equal(isClientNoise('TypeError', msg, ['/_astro/ForumIndexInner.B1x.js']), false, 'the same message from OUR code is a real bug');
   assert.equal(isClientNoise('TypeError', msg), false);
 });
