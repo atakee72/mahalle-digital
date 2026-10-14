@@ -72,7 +72,7 @@
       alt={post.coverAlt ?? ''}
       width={post.coverWidth}
       height={post.coverHeight}
-      class="block w-[calc(100%-32px)] max-w-[1200px] mx-auto object-cover aspect-[2/1] h-auto lg:aspect-auto lg:h-[400px]"
+      class="block w-[calc(100%-32px)] max-w-[1200px] mx-auto {post.coverFit === 'full' ? 'h-auto' : 'object-cover aspect-[2/1] h-auto lg:aspect-auto lg:h-[400px]'}"
       style="margin-top: 24px; border: 2px solid var(--k-ink); border-radius: var(--k-radius-lg); box-shadow: 3px 3px 0 var(--k-ink);"
     />
   {/if}

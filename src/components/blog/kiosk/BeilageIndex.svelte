@@ -382,7 +382,12 @@
                 {#if lead.cover}
                   <img src={lead.cover} alt={lead.coverAlt ?? ''} class="w-full object-cover" style="height: 220px; object-position: {lead.coverPosition ?? 'center'};" />
                 {:else}
-                  <div class="w-full" style="height: 220px; background: var(--k-paper-warm);"></div>
+                  <!-- no cover → initials plate like the tag page; an empty beige box reads as a broken image -->
+                  <div
+                    class="w-full flex items-center justify-center font-bricolage"
+                    style="height: 220px; background: var(--k-paper-soft); font-size: 64px; font-weight: 800; letter-spacing: -0.03em; color: var(--k-ink-mute);"
+                    aria-hidden="true"
+                  >{initialsOf(lead.author && lead.author !== 'Mahalle Team' ? lead.author : 'Mahalle')}</div>
                 {/if}
               </div>
             </div>
