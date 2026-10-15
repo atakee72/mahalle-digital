@@ -78,14 +78,14 @@
       style="margin-top: 24px; border: 2px solid var(--k-ink); border-radius: var(--k-radius-lg); box-shadow: 3px 3px 0 var(--k-ink);"
     />
   {/if}
-  <div class="flex justify-center px-5" style="padding-top: 24px;">
+  <div class="flex justify-center px-5 pt-6 lg:pt-10">
     {@render heroBand()}
   </div>
   <!-- the shell's px-5 gutter covers the body slot only, so the lede + meta carry their own phone inset -->
-  <div class="text-center px-4 lg:px-0" style="padding-top: 24px;">
+  <div class="text-center px-4 lg:px-0 pt-6 lg:pt-9">
     <div class="font-instrument italic" style="font-size: 19px; line-height: 1.45; color: var(--k-ink-soft); max-width: 780px; margin: 0 auto;">{description}</div>
-    <div class="flex justify-center" style="margin-top: 14px;"><BlPostMeta {post} /></div>
-    <div style="width: 56px; height: 3px; background: var(--k-rust); margin: 20px auto 0;"></div>
+    <div class="flex justify-center mt-[14px] lg:mt-[18px]"><BlPostMeta {post} /></div>
+    <div class="mx-auto mt-5 lg:mt-7" style="width: 56px; height: 3px; background: var(--k-rust);"></div>
   </div>
 {:else}
   <div class="max-w-[940px] mx-auto">
