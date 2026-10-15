@@ -55,12 +55,14 @@
       box-shadow: 3px 3px 0 var(--k-ink);
       padding: 20px 34px;
       max-width: 760px;
+      min-width: 0;
+      width: 100%;
     "
   >
     <div class="font-dmmono" style="font-size: 9.5px; letter-spacing: 0.2em; color: var(--k-paper); opacity: 0.85;">
-      {$t['blog.strap.hero']} · {$t['blog.strap.rubrik']} {post.tags[0]?.toUpperCase()} · № {rank.no} / {rank.of}
+      {$t['blog.strap.hero']} · {$t['blog.strap.rubrik']} {post.tags[0]?.toUpperCase()} · <span class="whitespace-nowrap">№ {rank.no} / {rank.of}</span>
     </div>
-    <h1 class="font-bricolage text-[26px] lg:text-[38px]" style="font-weight: 800; letter-spacing: -0.025em; line-height: 1.02; margin: 8px 0 0;">{title}</h1>
+    <h1 class="font-bricolage text-[26px] lg:text-[38px]" style="font-weight: 800; letter-spacing: -0.025em; line-height: 1.02; margin: 8px 0 0; overflow-wrap: anywhere; hyphens: auto;" lang="de">{title}</h1>
   </div>
 {/snippet}
 
@@ -79,10 +81,11 @@
   <div class="flex justify-center px-5" style="padding-top: 24px;">
     {@render heroBand()}
   </div>
-  <div class="text-center" style="padding-top: 24px;">
+  <!-- the shell's px-5 gutter covers the body slot only, so the lede + meta carry their own phone inset -->
+  <div class="text-center px-4 lg:px-0" style="padding-top: 24px;">
     <div class="font-instrument italic" style="font-size: 19px; line-height: 1.45; color: var(--k-ink-soft); max-width: 780px; margin: 0 auto;">{description}</div>
-    <div class="flex justify-center" style="margin-top: 10px;"><BlPostMeta {post} /></div>
-    <div style="width: 56px; height: 3px; background: var(--k-rust); margin: 16px auto 0;"></div>
+    <div class="flex justify-center" style="margin-top: 14px;"><BlPostMeta {post} /></div>
+    <div style="width: 56px; height: 3px; background: var(--k-rust); margin: 20px auto 0;"></div>
   </div>
 {:else}
   <div class="max-w-[940px] mx-auto">
