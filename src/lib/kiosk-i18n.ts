@@ -2056,7 +2056,6 @@ const de = {
   'blog.meta.team': 'Mahalle-Team',
   'blog.meta.min': 'Min',
   'blog.meta.updated': 'Aktualisiert', // DRAFT — before the date a post was revised after publication (frontmatter updatedDate; the article header only)
-  'blog.meta.en.tooltip': 'Beitrag auf Englisch verfasst',
   'blog.badge.hero': '◼ AUFMACHER',
   'blog.badge.gallery': '▤ BILDSTRECKE',
   'blog.pag.perPage': 'PRO SEITE',
@@ -4152,7 +4151,6 @@ const en: Dict = {
   'blog.meta.team': 'Mahalle team',
   'blog.meta.min': 'min read',
   'blog.meta.updated': 'Updated', // DRAFT
-  'blog.meta.en.tooltip': 'written in English',
   'blog.badge.hero': '◼ FEATURE',
   'blog.badge.gallery': '▤ GALLERY',
   'blog.pag.perPage': 'PER PAGE',
