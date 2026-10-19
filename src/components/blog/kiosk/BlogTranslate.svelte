@@ -83,7 +83,9 @@
   }
 </script>
 
-<div class="ktr bl-print-hide {controlClass}" style="margin: 12px 0 2px;">
+<!-- `auto` side margins: the inline margin used to say `0` and beat the layout's `mx-auto`, so on the hero
+     layout the control sat at the 940 px body column's left edge, 110 px left of the 720 px text column. -->
+<div class="ktr bl-print-hide {controlClass}" style="margin: 12px auto 2px;">
   {#if phase === 'shown'}
     <span class="ktr-label">● {$t['tr.label']}</span>
   {/if}
