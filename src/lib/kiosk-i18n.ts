@@ -1681,7 +1681,7 @@ const de = {
   // ── Mitglieder (admin members list, /admin/mitglieder) ──
   'admin.users.kicker': 'MITGLIEDER · KIEZ-VERIFIZIERUNG',
   'admin.users.heading': 'Das Melderegister',
-  'admin.users.sub': 'Verifiziert wird von Hand — der Schalter ist der Nachweis (v1).',
+  'admin.users.sub': 'Verifiziert wird von Hand — der Schalter ist der Nachweis — oder durch Bürgschaft: Wer über den Link eines verifizierten Mitglieds kommt und seine Adresse bestätigt, trägt das Zeichen automatisch.',
   'admin.users.count': '{n} Mitglieder',
   'admin.users.search': 'Name, @handle oder E-Mail-Adresse suchen …',
   'admin.users.email.searching': 'Suche …',
@@ -3778,7 +3778,7 @@ const en: Dict = {
   // ── Mitglieder (admin members list, /admin/mitglieder) ──
   'admin.users.kicker': 'MEMBERS · KIEZ VERIFICATION',
   'admin.users.heading': 'The member register',
-  'admin.users.sub': 'Verification is manual — the toggle is the proof (v1).',
+  'admin.users.sub': 'Verification is manual — the toggle is the proof — or by vouch: whoever joins through a verified member’s link and confirms their address carries the badge automatically.',
   'admin.users.count': '{n} members',
   'admin.users.search': 'Search name, @handle or e-mail address …',
   'admin.users.email.searching': 'Searching …',

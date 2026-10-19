@@ -132,3 +132,20 @@ export function inviteMailto(subject: string, body: string): string {
   const crlf = body.replace(/\r?\n/g, '\r\n');
   return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(crlf)}`;
 }
+
+export type VouchInvitee = { verified?: unknown; invitedBy?: unknown; isBanned?: unknown; anonymized?: unknown; [k: string]: unknown };
+export type VouchInviter = { verified?: unknown; isBanned?: unknown; anonymized?: unknown; [k: string]: unknown };
+
+/**
+ * Kiez-verification by vouch (2026-10-19): may this invitee receive the badge from their inviter?
+ * Called on the FIRST confirmation of the invitee's e-mail address (both confirmation paths).
+ * true only when: the invitee was invited (invitedBy set), has no badge yet, is neither banned nor
+ * deleted; and the inviter exists, carries the badge NOW, is neither banned nor deleted.
+ * An inviter who loses the badge later never takes the invitee's with it (state, not a live join).
+ */
+export function vouchGrants(invitee: VouchInvitee, inviter: VouchInviter | null | undefined): boolean {
+  if (invitee.invitedBy === null || invitee.invitedBy === undefined) return false;
+  if (invitee.verified === true || invitee.isBanned === true || invitee.anonymized === true) return false;
+  if (!inviter) return false;
+  return inviter.verified === true && inviter.isBanned !== true && inviter.anonymized !== true;
+}

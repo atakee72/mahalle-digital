@@ -8,7 +8,9 @@
 // sessionless confirm endpoint knows what to swap to).
 import { randomBytes, createHash } from 'crypto';
 import { ObjectId } from 'mongodb';
+import type { Document } from 'mongodb';
 import { connectDB } from '../mongodb';
+import { grantVouchedBadge } from '../invites/vouch';
 
 const TOKEN_TTL_MS = 30 * 60 * 1000;  // 30 minutes per design
 const RESEND_GUARD_MS = 60 * 1000;           // at most one new token per user per 60s
@@ -69,6 +71,9 @@ export async function createEmailChangeToken(userId: string, newEmail: string): 
  * the design requires showing it ("Login now uses {addr}."). Not a new
  * information leak: the caller already had to possess the correct 256-bit
  * token (delivered only to the new address's inbox) to reach this branch.
+ *
+ * The first confirmation of an address through this path (emailVerified false→true) also runs the
+ * vouch step (`src/lib/invites/vouch.ts`).
  */
 export async function confirmEmailChange(
   rawToken: string
@@ -95,13 +100,15 @@ export async function confirmEmailChange(
   );
   if (takenBySomeoneElse) return { status: 'email_taken' };
 
+  let before: Document | null = null;
   try {
-    await db.collection('users').updateOne(
+    before = await db.collection('users').findOneAndUpdate(
       { _id: userId },
       {
         $set: { email: newEmail, emailVerified: true, updatedAt: new Date().toISOString() },
         $unset: { pendingEmail: '' },
-      }
+      },
+      { returnDocument: 'before' }
     );
   } catch (err: any) {
     // A duplicate-key violation means users_email_unique caught a race the
@@ -124,6 +131,10 @@ export async function confirmEmailChange(
     console.error('confirmEmailChange: user write failed, rolled back claim:', err);
     return { status: 'invalid' };
   }
+
+  // Kiez-verification by vouch (2026-10-19): first confirmation of an INVITED member whose inviter
+  // carries the badge. Best-effort, never fails the confirmation.
+  if (before && before.emailVerified !== true) await grantVouchedBadge(db, before);
 
   // Email is already swapped — clear any other unused tokens for this user.
   // Best-effort + POST-success: a failure here must NOT undo the change.

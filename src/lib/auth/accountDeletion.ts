@@ -454,6 +454,8 @@ export async function runDeletionPipeline(
           invitesPaused: '',
           invitedBy: '',
           invitedAt: '',
+          vouchedBy: '',
+          vouchedAt: '',
           deletionClaimedAt: '',
         },
       }

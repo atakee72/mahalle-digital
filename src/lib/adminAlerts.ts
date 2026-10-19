@@ -8,6 +8,7 @@ import { isMailerConfigured, sendMail } from './email/mailer';
 type AdminAlertKind =
   | 'member_new'
   | 'member_type'
+  | 'member_vouched'
   | 'moderation_flagged'
   | 'report_new'
   | 'content_new'
@@ -117,6 +118,16 @@ export function alertMemberType(p: { name: string; handle: string | null; member
   return sendAdminAlert({
     kind: 'member_type',
     text: `🏷️ ${trunc(p.name)}${at} hat sich als ${MEMBER_TYPE_WORD[p.memberType]} eingetragen\n→ ${ALERT_BASE_URL}/admin/mitglieder`,
+  });
+}
+
+/** An invited member got the Kiez badge from their inviter on confirming their address (vouch). */
+export function alertMemberVouched(p: { name: string; handle: string | null; inviterName: string; inviterHandle: string | null }): Promise<void> {
+  const at = p.handle ? ` (@${p.handle})` : '';
+  const via = p.inviterHandle ? `@${p.inviterHandle}` : trunc(p.inviterName, 40);
+  return sendAdminAlert({
+    kind: 'member_vouched',
+    text: `✓ Verifiziert durch Bürgschaft: ${trunc(p.name)}${at} — eingeladen von ${via}\n→ ${ALERT_BASE_URL}/admin/mitglieder`,
   });
 }
 

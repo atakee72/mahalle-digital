@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   INVITE_USES, INVITE_CODE_LEN, INVITE_CODE_ALPHABET,
-  normalizeInviteCode, codeFromBytes, inviterBlock, inviteUnlockAt, inviteBudget, inviteUrl, inviteMailto,
+  normalizeInviteCode, codeFromBytes, inviterBlock, inviteUnlockAt, inviteBudget, inviteUrl, inviteMailto, vouchGrants,
 } from './inviteRules';
 
 const NOW = new Date('2026-10-07T12:00:00Z');
@@ -89,4 +89,20 @@ test('inviteMailto: percent-encoded, CRLF line ends, no recipient', () => {
   assert.ok(href.includes('invite%3Da%26b'));
   assert.ok(!href.includes('\n'));
   assert.ok(href.includes('Gr%C3%BC%C3%9Fe'));
+});
+
+test('vouchGrants: invited, unbadged invitee + badged inviter only', () => {
+  const invitee = { invitedBy: 'u1' };
+  const inviter = { verified: true };
+  assert.equal(vouchGrants(invitee, inviter), true);
+  assert.equal(vouchGrants({}, inviter), false);
+  assert.equal(vouchGrants({ invitedBy: null }, inviter), false);
+  assert.equal(vouchGrants({ ...invitee, verified: true }, inviter), false);
+  assert.equal(vouchGrants({ ...invitee, isBanned: true }, inviter), false);
+  assert.equal(vouchGrants({ ...invitee, anonymized: true }, inviter), false);
+  assert.equal(vouchGrants(invitee, null), false);
+  assert.equal(vouchGrants(invitee, {}), false);
+  assert.equal(vouchGrants(invitee, { verified: false }), false);
+  assert.equal(vouchGrants(invitee, { verified: true, isBanned: true }), false);
+  assert.equal(vouchGrants(invitee, { verified: true, anonymized: true }), false);
 });

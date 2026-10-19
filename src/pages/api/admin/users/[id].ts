@@ -9,8 +9,9 @@ import { NEWSLETTER_MODES, storedNewsletterMode } from '../../../../lib/newslett
 
 // PATCH /api/admin/users/[id] — admin writes on a member: `verified` (Kiez-
 // verification v1), `memberType` (correcting the member's own choice) and
-// `dailyLimit` (1–50, organisations only). This admin-gated endpoint is the
-// ONLY writer of `verified` and `dailyLimit` — keep it that way.
+// `dailyLimit` (1–50, organisations only). This admin-gated endpoint and the
+// vouch step (`src/lib/invites/vouch.ts`, badge from a verified inviter on the first address
+// confirmation) are the only writers of `verified`; it is the ONLY writer of `dailyLimit` — keep it that way.
 // `newsletter` ('weekly' | 'off', 2026-10-04): the Kiez-Brief switch the member
 // also has in the profile — here for test accounts and addresses that bounce.
 // Tombstoned accounts (anonymized: true) are excluded from the match →
@@ -22,7 +23,7 @@ const BodySchema = z.object({
   dailyLimit: z.number().int().min(1).max(MAX_DAILY_LIMIT).nullable().optional(),
   newsletter: z.enum(NEWSLETTER_MODES).optional(),
   // Personal invitation link: pause one member's inviting (their link stops working, the card
-  // tells them). Admin-only writer, like `verified`.
+  // tells them). Admin-only writer.
   invitesPaused: z.boolean().optional(),
 }).strict();
 

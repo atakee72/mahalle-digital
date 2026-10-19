@@ -6,7 +6,9 @@
 // Mirrors src/lib/auth/passwordReset.ts (same collection shape, longer TTL).
 import { randomBytes, createHash } from 'crypto';
 import { ObjectId } from 'mongodb';
+import type { Document } from 'mongodb';
 import { connectDB } from '../mongodb';
+import { grantVouchedBadge } from '../invites/vouch';
 
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours (email-verify decision)
 const RESEND_GUARD_MS = 60 * 1000;        // at most one new token per user per 60s
@@ -83,10 +85,11 @@ export async function verifyEmailWithToken(rawToken: string): Promise<VerifyEmai
   if (!claimed) return { ok: false };
 
   let welcome: { email: string; name: string } | null = null;
+  let before: Document | null = null;
   try {
     // returnDocument 'before' → we see the PRE-update emailVerified value,
     // which is what makes the welcome mail exactly-once.
-    const before = await db.collection('users').findOneAndUpdate(
+    before = await db.collection('users').findOneAndUpdate(
       { _id: claimed.userId as ObjectId },
       { $set: { emailVerified: true, updatedAt: new Date().toISOString() } },
       { returnDocument: 'before' }
@@ -104,6 +107,10 @@ export async function verifyEmailWithToken(rawToken: string): Promise<VerifyEmai
     console.error('verifyEmailWithToken: user write failed, rolled back claim:', err);
     return { ok: false };
   }
+
+  // Kiez-verification by vouch (2026-10-19): first confirmation of an INVITED member whose inviter
+  // carries the badge. Best-effort, never fails the confirmation.
+  if (before && before.emailVerified !== true) await grantVouchedBadge(db, before);
 
   // Flag is already flipped — clear any other unused tokens for this user.
   // Best-effort + POST-success: a failure here must NOT undo the verification.
