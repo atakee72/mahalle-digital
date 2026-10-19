@@ -97,6 +97,7 @@ test('vouchGrants: invited, unbadged invitee + badged inviter only', () => {
   assert.equal(vouchGrants(invitee, inviter), true);
   assert.equal(vouchGrants({}, inviter), false);
   assert.equal(vouchGrants({ invitedBy: null }, inviter), false);
+  assert.equal(vouchGrants({ invitedBy: 'u1', verified: false }, inviter), false); // admin „off" stands
   assert.equal(vouchGrants({ ...invitee, verified: true }, inviter), false);
   assert.equal(vouchGrants({ ...invitee, isBanned: true }, inviter), false);
   assert.equal(vouchGrants({ ...invitee, anonymized: true }, inviter), false);

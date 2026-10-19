@@ -92,6 +92,9 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     const unset: string[] = [...plan.unset];
     // The outside-only plan above restates `verified` to satisfy the planner: do not write it.
     if (outsideOnly) delete set.verified;
+    // The switch is the admin's decision: it replaces a vouch (src/lib/invites/vouch.ts), so the
+    // vouch stamps go with it — and a stored false blocks a later vouch (see vouchGrants()).
+    if (!outsideOnly && rest.verified !== undefined) unset.push('vouchedBy', 'vouchedAt');
     if (newsletter === 'off') set.newsletter = 'off';
     if (newsletter === 'weekly') unset.push('newsletter');
     // Absent = may invite; only `true` is stored.

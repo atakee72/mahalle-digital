@@ -21,7 +21,7 @@ export async function grantVouchedBadge(db: Db, before: Document): Promise<boole
     );
     if (!inviter || !vouchGrants(before, inviter)) return false;
     const res = await users.updateOne(
-      { _id: before._id, verified: { $ne: true } },
+      { _id: before._id, verified: { $exists: false } }, // the admin switch (true OR false) wins a race
       { $set: { verified: true, vouchedBy: inviter._id, vouchedAt: new Date() } },
     );
     if (res.modifiedCount === 0) return false;
