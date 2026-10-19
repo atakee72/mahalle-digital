@@ -42,8 +42,24 @@ if (rawInvite !== null) {
     }
   }
 }
+
+// Link preview for a shared invitation (WhatsApp, Signal, Telegram, LinkedIn fetch og:* server-side):
+// its own title, a sentence that says what the link is, and a SQUARE plate — chat apps crop the
+// wide default og-image to a square thumbnail, which cut the wordmark to „halle". Deliberately
+// WITHOUT the inviter's name: the crawlers cache whatever they fetch; the name shows on the page.
+// A dead link keeps the plain register card — it must not promise an invitation.
+const card = invite && !invite.dead
+  ? {
+      title: 'Du bist eingeladen | Mahalle',
+      description: 'Eine Einladung in die Nachbarschaft: Mahalle ist das Forum, der Kalender und der Markt für den Schillerkiez – ohne Werbung, ohne Datenhandel.',
+      image: '/og-invite.png',
+      imageWidth: 1200,
+      imageHeight: 1200,
+      imageAlt: 'Du bist eingeladen – Mahalle, die digitale Nachbarschaft für den Schillerkiez',
+    }
+  : null;
 ---
 
-<AuthLayout title="Registrieren">
+<AuthLayout title="Registrieren" card={card}>
   <AuthRegisterInner client:only="svelte" invite={invite} />
 </AuthLayout>
