@@ -22,6 +22,7 @@
     failed = false,
     busy = false,
     memberName = '',
+    verified = false,
     onRegenerate,
     onRetry,
     bare = false,
@@ -31,6 +32,8 @@
     failed?: boolean;
     busy?: boolean;
     memberName?: string;
+    /** The member carries the Kiez badge: their invitees get it on confirming (vouch, 2026-10-19). */
+    verified?: boolean;
     onRegenerate?: () => Promise<void>;
     onRetry?: () => void;
     bare?: boolean;
@@ -108,6 +111,12 @@
     <p class="font-bricolage" data-invite-state="ready" style="font-size: 12.5px; line-height: 1.5; color: var(--k-ink-soft); margin: 10px 0 0;">
       {tStr($t['profile.invite.intro'], { max: INVITE_USES })}
     </p>
+    {#if verified}
+      <!-- Only a verified inviter passes the badge on (src/lib/invites/vouch.ts) — for everyone else the sentence would be untrue. -->
+      <p class="font-bricolage" data-invite-vouch style="font-size: 12.5px; line-height: 1.5; color: var(--k-ink-soft); margin: 8px 0 0;">
+        {$t['profile.invite.vouch']}
+      </p>
+    {/if}
 
     <div style="display: flex; gap: 14px; align-items: flex-start; margin-top: 14px;">
       {#if invite.qrSvg}

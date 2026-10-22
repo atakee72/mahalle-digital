@@ -507,6 +507,7 @@
           failed={inviteFailed}
           busy={inviteBusy}
           memberName={profile.name}
+          verified={profile.verified === true}
           onRegenerate={regenerateInvite}
           onRetry={retryInvite}
         />
@@ -634,6 +635,7 @@
             failed={inviteFailed}
             busy={inviteBusy}
             memberName={profile.name}
+            verified={profile.verified === true}
             onRegenerate={regenerateInvite}
             onRetry={retryInvite}
             bare

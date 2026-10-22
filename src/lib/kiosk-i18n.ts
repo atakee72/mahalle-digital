@@ -1788,6 +1788,7 @@ const de = {
   'profile.invite.title': 'Einladen',
   'profile.invite.fold.hint': 'Link · QR-Code · 5 Einladungen in 30 Tagen',
   'profile.invite.intro': 'Dein persönlicher Link. Wer sich darüber anmeldet, steht bei dir als eingeladen — bis zu {max} Personen in 30 Tagen. Teile ihn selbst, Mahalle verschickt nichts.',
+  'profile.invite.vouch': 'Du bist im Kiez verifiziert. Wer über deinen Link kommt und seine E-Mail-Adresse bestätigt, trägt das Zeichen „Verifiziert im Kiez“ automatisch – du bürgst damit für diese Person. Teile den Link also nur mit Leuten, die du kennst.', // DRAFT (2026-10-22), shown to verified inviters only
   'profile.invite.left': '{left} von {max} frei',
   'profile.invite.nextFree': 'wieder ab {d}',
   'profile.invite.share': 'Teilen',
@@ -3885,6 +3886,7 @@ const en: Dict = {
   'profile.invite.title': 'Invite',
   'profile.invite.fold.hint': 'Link · QR code · 5 invitations per 30 days',
   'profile.invite.intro': 'Your personal link. Whoever registers through it is recorded as invited by you — up to {max} people in 30 days. You share it yourself; Mahalle sends nothing.',
+  'profile.invite.vouch': 'You are verified in the Kiez. Whoever joins through your link and confirms their e-mail address carries the “Verified in the Kiez” badge automatically – you are vouching for them. So share the link only with people you know.', // DRAFT (2026-10-22), shown to verified inviters only
   'profile.invite.left': '{left} of {max} left',
   'profile.invite.nextFree': 'again from {d}',
   'profile.invite.share': 'Share',
