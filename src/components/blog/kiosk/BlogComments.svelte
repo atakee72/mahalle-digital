@@ -136,13 +136,15 @@
           onSubmit={submitComment}
         />
       </div>
-      <ForumCommentList
-        {comments}
-        topicAuthorId={authorId}
-        {currentUserId}
-        onEditComment={handleEditComment}
-        onDeleteComment={handleDeleteComment}
-      />
+      <div style="margin-top: 20px;">
+        <ForumCommentList
+          {comments}
+          topicAuthorId={authorId}
+          {currentUserId}
+          onEditComment={handleEditComment}
+          onDeleteComment={handleDeleteComment}
+        />
+      </div>
     {/if}
   </section>
 {/if}

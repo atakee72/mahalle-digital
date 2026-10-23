@@ -183,7 +183,9 @@ export const PUT: APIRoute = async ({ request, params }) => {
       );
       flaggedRecord.contentId = String(commentId);
       (flaggedRecord as any).parentPostId = parentPostId;
-      (flaggedRecord as any).parentCollection = parent?.collection ?? 'topics';
+      // A blog comment whose post vanished in the edit window still records the BLOG kind —
+      // the review's forum branch would otherwise run new ObjectId(<slug>) and throw.
+      (flaggedRecord as any).parentCollection = parent?.collection ?? (existingComment.blogSlug ? 'blog' : 'topics');
       (flaggedRecord as any).fromEdit = true;
       await db.collection<FlaggedContent>('flaggedContent').insertOne(flaggedRecord as FlaggedContent);
       await alertModerationFlagged({ contentType: 'comment', title: cleanBody.slice(0, 80), authorName: session.user.name });

@@ -19,6 +19,14 @@ export const GET: APIRoute = async ({ params, request }) => {
     // Get current user for moderation filtering
     const session = await getSession(request);
     const currentUserId = session?.user?.id;
+    // Members only (owner decision 2026-10-23). The middleware gates /api/comments already;
+    // this keeps the rule in the route itself.
+    if (!currentUserId) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     // Connect to database
     const db = await connectDB();
