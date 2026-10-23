@@ -13,6 +13,8 @@ export interface BeilagePost {
   sortISO?: string;              // ORDER-ONLY date (frontmatter `sortDate`); display always uses pubDateISO
   updatedDateISO?: string;       // ISO 8601
   author?: string;
+  /** Member account of the author (frontmatter `authorHandle`) — comment notifications go there. */
+  authorHandle?: string;
   tags: string[];
   layout: 'standard' | 'hero' | 'gallery';
   minutes: number;               // Lesezeit, precomputed at serialization

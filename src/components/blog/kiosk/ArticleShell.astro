@@ -5,7 +5,11 @@ import KioskLayout from '../../../layouts/KioskLayout.astro';
 import BlogReadBar from './BlogReadBar.svelte';
 import BlogArticleFooter from './BlogArticleFooter.svelte';
 import BlogRelatedRail from './BlogRelatedRail.svelte';
+import BlogComments from './BlogComments.svelte';
 import QRCode from 'qrcode';
+import { getSession } from 'auth-astro/server';
+import { connectDB } from '../../../lib/mongodb';
+import { lookupHandleId } from '../../../lib/blog/blogCommentParent';
 import { getTrustedBaseUrl } from '../../../lib/auth/baseUrl';
 import { fmtDate, type BeilagePost, type RelatedItem } from '../../../lib/blog/beilage';
 
@@ -34,6 +38,12 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? 'https://mahalle.
 // Link preview: the dedicated 1200×630 asset when the post has one (its real size is declared), else the cover as-is, else the site default.
 const ogImage = post.ogImage ?? post.cover ?? '/og-image.png'; // both are already processed asset path strings
 const ogDims = post.ogImage && post.ogImageWidth && post.ogImageHeight ? { width: post.ogImageWidth, height: post.ogImageHeight } : undefined;
+// Comments under the article: members only. The author's account id (for the „Autor" badge) is
+// looked up only for a logged-in viewer and only when the post names a member author.
+const session = await getSession(Astro.request);
+const authorId = session?.user?.id && post.authorHandle
+  ? await lookupHandleId(await connectDB(), post.authorHandle)
+  : null;
 const authorName = post.author ?? 'Mahalle Team'; // schema default, for safety
 
 const jsonLd = {
@@ -83,6 +93,16 @@ const jsonLd = {
       <slot />
       <div class="bl-print-hide">
         <BlogArticleFooter client:only="svelte" post={post} />
+      </div>
+      <div class="bl-print-hide">
+        <BlogComments
+          client:only="svelte"
+          slug={post.id}
+          title={post.title}
+          currentUserId={session?.user?.id ?? null}
+          currentUser={session?.user ? { name: session.user.name ?? 'du', image: session.user.image ?? null } : null}
+          authorId={authorId}
+        />
       </div>
       <div class="bl-print-hide">
         <BlogRelatedRail client:only="svelte" items={related} />

@@ -121,6 +121,7 @@ const de = {
   'nc.comment.announcement': '{actor} hat auf deine Ankündigung geantwortet: ‚{title}‘',
   'nc.comment.recommendation': '{actor} hat auf deine Empfehlung geantwortet: ‚{title}‘',
   'nc.comment.event': '{actor} hat auf deinen Termin geantwortet: ‚{title}‘',
+  'nc.comment.blog': '{actor} hat deinen Beilage-Artikel kommentiert: ‚{title}‘', // DRAFT (2026-10-23)
   'nc.mention.post': '{actor} hat dich erwähnt: ‚{title}‘',
   'nc.mention.comment': '{actor} hat dich in einem Kommentar erwähnt: ‚{title}‘',
   'nc.adminHint.post': 'Admin-Hinweis in einem Beitrag',
@@ -2087,6 +2088,8 @@ const de = {
   'blog.foot.share.copied': 'Link kopiert',
   'blog.foot.print': '⏙ Druckbogen (A4)',
   'blog.foot.print.note': '2-Farb-Druck-CSS · Ink + Rost',
+  'blog.comments.kicker': 'Kommentare', // DRAFT (2026-10-23)
+  'blog.comments.error': 'Kommentare konnten nicht geladen werden.', // DRAFT (2026-10-23)
   'blog.foot.discuss': 'Im Forum besprechen',
   'blog.foot.discuss.pre': 'Und was sagst ',
   'blog.foot.discuss.it': 'du',
@@ -2300,6 +2303,7 @@ const en: Dict = {
   'nc.comment.announcement': '{actor} replied to your announcement ‘{title}’',
   'nc.comment.recommendation': '{actor} replied to your recommendation ‘{title}’',
   'nc.comment.event': '{actor} replied to your event ‘{title}’',
+  'nc.comment.blog': '{actor} commented on your Beilage article ‘{title}’', // DRAFT (2026-10-23)
   'nc.mention.post': '{actor} mentioned you in ‘{title}’',
   'nc.mention.comment': '{actor} mentioned you in a comment on ‘{title}’',
   'nc.adminHint.post': 'Admin note in a post',
@@ -4183,6 +4187,8 @@ const en: Dict = {
   'blog.foot.share.copied': 'Link copied',
   'blog.foot.print': '⏙ Print sheet (A4)',
   'blog.foot.print.note': '2-color print CSS · ink + rust',
+  'blog.comments.kicker': 'Comments', // DRAFT (2026-10-23)
+  'blog.comments.error': 'Comments could not be loaded.', // DRAFT (2026-10-23)
   'blog.foot.discuss': 'Discuss in the forum',
   'blog.foot.discuss.pre': 'And what do ',
   'blog.foot.discuss.it': 'you',

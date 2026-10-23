@@ -292,6 +292,14 @@ Owner decisions: automatic (no admin trigger), every member EXCEPT admins (a blo
 - **Labels come from a real device, not from help pages:** the first draft took Android's label from Google's help page („Zum Startbildschirm hinzufügen"); his phone said „Installieren und Verknüpfung erstellen" and had two more screens. Desktop Chrome: „Streamen, speichern und teilen → Mahalle installieren…" (seen in English only). Firefox on Windows CAN add it („Tab zur Taskleiste hinzufügen"). The iPhone part rests on Apple/Google help and press, never seen on a device.
 - **The real Mahalle screenshot** (`mitteilungen-glocke.png`) is staged on the local build: headless Chromium reports `Notification.permission` as `denied`, so the push button is hidden — override it with an init script (`Object.defineProperty(Notification, 'permission', { get: () => 'default' })`), mock `/api/notifications` with two neutral rows, hide `main` (`scratchpad/install-guide/bell.cjs`).
 
+## Comments under articles (2026-10-23)
+Members can comment under an article, directly below the footer card (Forum-CTA stays) and above the related rail, in `ArticleShell.astro` (`BlogComments.svelte`, `client:only`, wrapped in `bl-print-hide`). A post is an MDX file, so the comment is a normal `comments` row whose parent is `blogSlug: '<slug>'` instead of `relevantPostId` (never both). Everything else is reused unchanged: moderation, mentions, `@alle`, report, edit window, self-delete, strikes, notification purge.
+- **Members only:** logged-out visitors get nothing (no count, no fetch); `GET /api/comments/blog/<slug>` sits behind the `/api/comments` gate.
+- **Who is told „replied":** the post's member author when the frontmatter names one (optional `authorHandle`, `[a-z0-9_]{3,20}`; a live account only), else the admin account (oldest admin by `_id`). The notify helper drops self-notifications. Notification link `/blog/<slug>`, copy `nc.comment.blog` (DRAFT).
+- **Not translated** by „Übersetzung anzeigen" (it only swaps the prose). Heading in rust, cards are the forum's.
+- **Parent resolution:** `findBlogCommentParent()` (`src/lib/blog/blogCommentParent.ts`, server-only, `astro:content` imported dynamically so reviewAction/mentionsStore stay loadable in tests) applies the same draft gate as `blog/[...slug].astro`; pure rules + slug regex in `blogCommentRules.ts`. `findAnyCommentParent()` in `mentionsStore.ts` maps any comment to forum or blog parent (mentions-on-approval, edit route); `reviewAction.ts` has a `parentCollection === 'blog'` branch (no `$addToSet`, only the notification). Held blog comments store `parentPostId = slug`, `parentCollection = 'blog'` on the flagged record. Site search ignores them (`relevantPostId: { $exists: true }`).
+- No index, no prod step.
+
 ## Audit record (2026-09-10, 4 passes: visual / functional / routes-SSR / mobile @390)
 
 0 critical, 10 important, 5 minor — all importants shipped the same night
