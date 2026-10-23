@@ -7,6 +7,7 @@ import { ObjectId, type Db } from 'mongodb';
 import type { FlaggedContent, User } from '../types';
 import { notify, commentTarget, moderationTarget } from './notifications';
 import { notifyMentionsOnApproval } from './mentions/mentionsStore';
+import { findBlogCommentParent } from './blog/blogCommentParent';
 import { notifyForumSubscribersOnApproval } from './forum/forumNotify';
 import { invalidateKiezKontext } from './kiez/kontext';
 import { sendOwedMoveNotice } from './calendar/eventMoveNotify';
@@ -122,10 +123,26 @@ export async function processReviewAction(
             if (comment && comment.relevantPostId) {
               parentPostId = comment.relevantPostId.toString();
               parentCollection = 'topics';
+            } else if (comment && (comment as any).blogSlug) {
+              parentPostId = (comment as any).blogSlug;
+              parentCollection = 'blog';
             }
           }
 
-          if (parentPostId && parentCollection) {
+          if (parentPostId && parentCollection === 'blog') {
+            // Blog post = MDX file: no parent document to $addToSet into, only the
+            // „replied" notification to the post's author (or the admin).
+            const parent = await findBlogCommentParent(db, parentPostId);
+            if (parent?.author && !flaggedAny.fromEdit) {
+              await notify({
+                userId: parent.author,
+                type: 'comment',
+                actorId: flaggedContent.authorId,
+                target: commentTarget('blog', parentPostId, parent.title),
+                meta: { sourceId: String(flaggedContent.contentId) },
+              });
+            }
+          } else if (parentPostId && parentCollection) {
             const parentCollectionRef = db.collection(parentCollection);
             const parentDoc = await parentCollectionRef.findOneAndUpdate(
               { _id: new ObjectId(parentPostId) },

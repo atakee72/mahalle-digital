@@ -11,6 +11,8 @@ const blog = defineCollection({
     // ORDER-ONLY date: a post that joins a group published earlier sorts with it and keeps its true pubDate (see beilage.ts compareNewest).
     sortDate: z.coerce.date().optional(),
     author: z.string().default('Mahalle Team'),
+    /** Member account of the author (handle) — receives the „replied" notification for comments under the post; absent = the admin. */
+    authorHandle: z.string().regex(/^[a-z0-9_]{3,20}$/).optional(),
     cover: image().optional(),
     coverAlt: z.string().optional(),
     /** Photo credit shown under the cover (replaces the default "Foto: Mahalle-Team" line). Required for third-party/CC images. */

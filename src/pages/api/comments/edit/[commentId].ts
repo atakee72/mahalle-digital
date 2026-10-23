@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../../lib/mongodb';
-import { resolveMentions, notifyMentions, findCommentParent, applyBroadcast, notifyAdminHint } from '../../../../lib/mentions/mentionsStore';
+import { resolveMentions, notifyMentions, findAnyCommentParent, applyBroadcast, notifyAdminHint } from '../../../../lib/mentions/mentionsStore';
 import { commentTarget } from '../../../../lib/notifications';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
@@ -134,9 +134,11 @@ export const PUT: APIRoute = async ({ request, params }) => {
     // A comment stores no parent collection, so it is looked up — needed for the
     // mention notification (public edit), the admin-hint notification and for the
     // review-queue record (flagged edit).
-    const parentPostId = existingComment.relevantPostId ? String(existingComment.relevantPostId) : '';
+    const parentPostId = existingComment.relevantPostId
+      ? String(existingComment.relevantPostId)
+      : (existingComment.blogSlug ?? '');
     const parent = parentPostId && (mergedResult || mentions.length > 0 || newBroadcast)
-      ? await findCommentParent(db, parentPostId)
+      ? await findAnyCommentParent(db, existingComment)
       : null;
 
     // Newly added mentions notify only while the comment is public. Idempotent, never throws.
@@ -144,14 +146,14 @@ export const PUT: APIRoute = async ({ request, params }) => {
       if (parent) {
         await notifyMentions(db, {
           actorId: userId, mentions, sourceId: String(commentId), kind: 'comment',
-          target: commentTarget(parent.collection, String(existingComment.relevantPostId), parent.title),
+          target: commentTarget(parent.collection, parent.parentId, parent.title),
           skipUserIds: parent.author ? [parent.author] : [],
         });
       }
     }
 
     if (newModerationStatus === 'approved' && newBroadcast && parent && !existingComment.broadcast?.notifiedAt) {
-      const baseTarget = commentTarget(parent.collection, String(existingComment.relevantPostId), parent.title);
+      const baseTarget = commentTarget(parent.collection, parent.parentId, parent.title);
       const n = await notifyAdminHint(db, {
         actorId: userId, sourceId: String(commentId), kind: 'comment',
         target: { ...baseTarget, href: baseTarget.href + '#comment-' + String(commentId) },

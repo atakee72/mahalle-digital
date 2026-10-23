@@ -11,11 +11,25 @@ import { notify, commentTarget, moderationTarget } from '../notifications';
 import type { NotificationTarget, NotificationDoc } from '../../types/notification';
 import type { MentionRef } from './mentions';
 import { findCommentParent, pickMentionRecipients } from './mentionsResolve';
+import { findBlogCommentParent } from '../blog/blogCommentParent';
 import { parseBroadcast } from './broadcast';
 import { findActiveMemberIds, activeSince } from './activeMembers';
 import { sendPushToUsers, buildPushPayload } from '../push';
 
 export * from './mentionsResolve';
+
+/** Any comment → its parent, forum or blog. */
+export async function findAnyCommentParent(db: Db, c: { relevantPostId?: unknown; blogSlug?: string }):
+  Promise<{ collection: string; author: string | null; title: string; parentId: string } | null> {
+  if (c.blogSlug) {
+    const p = await findBlogCommentParent(db, c.blogSlug);
+    return p ? { collection: p.collection, author: p.author, title: p.title, parentId: p.slug } : null;
+  }
+  if (!c.relevantPostId) return null;
+  const parentId = String(c.relevantPostId);
+  const p = await findCommentParent(db, parentId);
+  return p ? { ...p, parentId } : null;
+}
 
 const POST_COLLECTION: Record<string, string> = {
   topic: 'topics', announcement: 'announcements', recommendation: 'recommendations',
@@ -83,13 +97,13 @@ export async function notifyMentionsOnApproval(
       return;
     }
     if (flagged.contentType === 'comment') {
-      const c = await db.collection('comments').findOne({ _id }, { projection: { mentions: 1, relevantPostId: 1 } });
-      if (!c?.mentions?.length || !c.relevantPostId) return;
-      const parent = await findCommentParent(db, String(c.relevantPostId));
+      const c = await db.collection('comments').findOne({ _id }, { projection: { mentions: 1, relevantPostId: 1, blogSlug: 1 } });
+      if (!c?.mentions?.length) return;
+      const parent = await findAnyCommentParent(db, c as { relevantPostId?: unknown; blogSlug?: string });
       if (!parent) return;
       await notifyMentions(db, {
         actorId: flagged.authorId, mentions: c.mentions, sourceId: flagged.contentId, kind: 'comment',
-        target: commentTarget(parent.collection, String(c.relevantPostId), parent.title),
+        target: commentTarget(parent.collection, parent.parentId, parent.title),
         skipUserIds: parent.author ? [parent.author] : [],
       });
     }

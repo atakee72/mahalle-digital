@@ -10,6 +10,42 @@ import { requireMemberSession } from '../../../lib/auth';
 import { notify, commentTarget } from '../../../lib/notifications';
 import { resolveMentions, notifyMentions, applyBroadcast, notifyAdminHint } from '../../../lib/mentions/mentionsStore';
 import { alertComment, alertModerationFlagged } from '../../../lib/adminAlerts';
+import { findBlogCommentParent } from '../../../lib/blog/blogCommentParent';
+import type { Db } from 'mongodb';
+
+// Shared tail of both branches: populated author + 201 response (shape unchanged).
+async function createdResponse(
+  db: Db, userId: string, newComment: Comment, insertedId: ObjectId,
+  mergedResult: ReturnType<typeof mergeModerationResults>
+): Promise<Response> {
+  const usersCollection = db.collection('users');
+  const author = await usersCollection.findOne(
+    { _id: new ObjectId(userId) },
+    { projection: PUBLIC_AUTHOR_PROJECTION }
+  );
+
+  const createdComment = {
+    ...newComment,
+    _id: insertedId,
+    author: author ? toPublicAuthor(author) : userId // Return populated author or fallback to ID
+  };
+
+  if (mergedResult) {
+    return new Response(
+      JSON.stringify({
+        comment: createdComment,
+        message: mergedResult.userMessage,
+        moderationStatus: 'pending'
+      }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  return new Response(
+    JSON.stringify({ comment: createdComment, message: 'Comment added successfully' }),
+    { status: 201, headers: { 'Content-Type': 'application/json' } }
+  );
+}
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -22,6 +58,94 @@ export const POST: APIRoute = async ({ request }) => {
     const validation = await parseRequestBody(request, CommentCreateSchema);
     if (!validation.success) {
       return validation.response;
+    }
+
+    // Blog branch: the parent is an MDX post (slug), not a Mongo document.
+    if ('blogSlug' in validation.data) {
+      const { body: rawBody, blogSlug } = validation.data;
+      const db = await connectDB();
+      // Cheap check first: no OpenAI call for a slug that is not a published post.
+      const post = await findBlogCommentParent(db, blogSlug);
+      if (!post) {
+        return new Response(JSON.stringify({ error: 'post_not_found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      const isAdminB = session.user.role === 'admin';
+      const { body: cleanBodyB, broadcast: broadcastB } = applyBroadcast(rawBody, isAdminB);
+      let mergedB: ReturnType<typeof mergeModerationResults> = null;
+      if (!isAdminB) {
+        const [textResult, spamResult] = await Promise.all([
+          moderateText(cleanBodyB),
+          checkSpamWithGPT(cleanBodyB, 'community blog comment')
+        ]);
+        mergedB = mergeModerationResults(textResult, spamResult);
+      }
+      const statusB = mergedB ? 'pending' : 'approved';
+      const commentsB = db.collection<Comment>('comments');
+      const mentionsB = await resolveMentions(db, cleanBodyB);
+
+      const blogComment: Comment = {
+        body: cleanBodyB,
+        author: userId as any,
+        blogSlug,
+        date: Date.now(),
+        upvotes: 0,
+        mentions: mentionsB,
+        ...(broadcastB ? { broadcast: broadcastB } : {}),
+        moderationStatus: statusB,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      const inserted = await commentsB.insertOne(blogComment);
+      const commentId = inserted.insertedId.toString();
+
+      if (mergedB) {
+        const flaggedRecord = createFlaggedContentRecord(
+          'comment',
+          { body: cleanBodyB },
+          { id: userId, name: session.user.name || undefined, email: session.user.email || undefined },
+          mergedB
+        );
+        flaggedRecord.contentId = commentId;
+        (flaggedRecord as any).parentPostId = blogSlug;
+        (flaggedRecord as any).parentCollection = 'blog';
+        await db.collection<FlaggedContent>('flaggedContent').insertOne(flaggedRecord as FlaggedContent);
+        await alertModerationFlagged({ contentType: 'comment', title: cleanBodyB.slice(0, 80), authorName: session.user.name });
+      } else {
+        const target = commentTarget('blog', blogSlug, post.title);
+        if (post.author) {
+          await notify({
+            userId: post.author,
+            type: 'comment',
+            actorId: userId,
+            target,
+            meta: { sourceId: commentId },
+          });
+        }
+        await notifyMentions(db, {
+          actorId: userId, mentions: mentionsB, sourceId: commentId, kind: 'comment',
+          target,
+          skipUserIds: post.author ? [post.author] : [],
+        });
+        if (broadcastB) {
+          const n = await notifyAdminHint(db, {
+            actorId: userId, sourceId: commentId, kind: 'comment',
+            target: { ...target, href: target.href + '#comment-' + commentId },
+            excludedHandles: broadcastB.excludedHandles,
+          });
+          await commentsB.updateOne(
+            { _id: inserted.insertedId },
+            { $set: { 'broadcast.notifiedAt': new Date(), 'broadcast.recipients': n } }
+          );
+        }
+        if (!isAdminB) {
+          await alertComment({ authorName: session.user.name, parentTitle: post.title });
+        }
+      }
+      return await createdResponse(db, userId, blogComment, inserted.insertedId as ObjectId, mergedB);
     }
 
     const { body, topicId, collectionType } = validation.data;
@@ -154,44 +278,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // Fetch author info to return with the created comment
-    const usersCollection = db.collection('users');
-    const author = await usersCollection.findOne(
-      { _id: new ObjectId(userId) },
-      { projection: PUBLIC_AUTHOR_PROJECTION }
-    );
-
-    const createdComment = {
-      ...newComment,
-      _id: result.insertedId,
-      author: author ? toPublicAuthor(author) : userId // Return populated author or fallback to ID
-    };
-
-    // Return appropriate response based on moderation result
-    if (mergedResult) {
-      return new Response(
-        JSON.stringify({
-          comment: createdComment,
-          message: mergedResult.userMessage,
-          moderationStatus: 'pending'
-        }),
-        {
-          status: 201,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        comment: createdComment,
-        message: 'Comment added successfully'
-      }),
-      {
-        status: 201,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
+    return await createdResponse(db, userId, newComment, result.insertedId as ObjectId, mergedResult);
   } catch (error) {
     console.error('Comment creation error:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {

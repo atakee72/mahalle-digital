@@ -127,6 +127,7 @@ const PARENT_CONTENT_TYPE: Record<string, NotificationTarget['contentType']> = {
   announcements: 'announcement',
   recommendations: 'recommendation',
   events: 'event',
+  blog: 'blog',
 };
 
 export function commentTarget(
@@ -135,7 +136,9 @@ export function commentTarget(
   title: string,
 ): NotificationTarget {
   const contentType = PARENT_CONTENT_TYPE[parentCollection] ?? 'topic';
-  const href = contentType === 'event' ? '/calendar' : `/${parentCollection}/${parentId}`;
+  const href = contentType === 'event'
+    ? '/calendar'
+    : contentType === 'blog' ? `/blog/${parentId}` : `/${parentCollection}/${parentId}`;
   return { contentType, contentId: parentId, title, href };
 }
 

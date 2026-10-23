@@ -67,6 +67,7 @@ async function searchComments(db: Db, q: string, userId?: string): Promise<Searc
     .collection('comments')
     .find({
       body: rx,
+      relevantPostId: { $exists: true }, // blog comments have no forum parent
       $or: [{ moderationStatus: 'approved' }, { moderationStatus: { $exists: false } }],
     })
     .sort({ date: -1 })

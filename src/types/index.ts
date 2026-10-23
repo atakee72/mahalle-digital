@@ -95,7 +95,9 @@ export interface Comment {
   _id?: ObjectId | string;
   body: string;
   author: ObjectId | string | User;
-  relevantPostId: ObjectId | string;
+  relevantPostId?: ObjectId | string; // forum/calendar parent
+  /** Parent is a blog post (MDX slug) — set INSTEAD of relevantPostId. Never both. */
+  blogSlug?: string;
   date: number;
   upvotes: number;
   user?: User[]; // Denormalized user data
