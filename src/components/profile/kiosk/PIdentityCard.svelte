@@ -40,6 +40,7 @@
   import type { MemberType } from '../../../lib/members/memberType';
   import MemberTypeTag from '../../forum/kiosk/MemberTypeTag.svelte';
   import PAvatarUploadPanel from './atoms/PAvatarUploadPanel.svelte';
+  import { shrinkForUpload } from '../../../lib/images/shrinkImage';
 
   let {
     profile,
@@ -123,7 +124,8 @@
     avatarErrorKey = null;
   }
 
-  function validateAndUploadAvatar(file: File) {
+  async function validateAndUploadAvatar(picked: File) {
+    const file = await shrinkForUpload(picked, { maxEdge: 1024 });
     if (file.size > AVATAR_MAX_BYTES) {
       avatarState = 'error';
       avatarErrorKey = 'size';

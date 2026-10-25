@@ -354,3 +354,4 @@ only when the named condition appears.
 - `ContactForm` is `novalidate` now: the `required`/`minlength` attributes let the browser's English bubbles pre-empt the bilingual `validate()` copy.
 - Listing delete confirm is i18n'd (`market.owner.deleteConfirm*`); the shared `ConfirmDialog`'s defaults are locale-aware (root `CLAUDE.md` „Confirm dialog").
 - Parked for the UI-polish peer: „bearbeiten / veröffentlichen / löschen" on the Entwürfe rows measure 27px tall (`browse/OwnerDraftsSection.svelte`).
+- Photo uploads (`ImageSlots.svelte`) shrink the file in the browser first via `shrinkForUpload()` (`src/lib/images/`), 4 MB cap — see root CLAUDE.md „Uploads vs Vercel's 4.5 MB body cap“.

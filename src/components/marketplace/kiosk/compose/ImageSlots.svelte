@@ -4,6 +4,8 @@
   // Slot 0 is the "HAUPT" (main) image — shown first in listing views.
   import { t } from '../../../../lib/kiosk-i18n';
   import { showError } from '../../../../utils/toast';
+  import { shrinkForUpload } from '../../../../lib/images/shrinkImage';
+  import { UPLOAD_MAX_BYTES } from '../../../../lib/images/shrinkRules';
 
   let {
     images,
@@ -46,8 +48,13 @@
     uploading = new Set([...uploading, slotIdx]);
 
     try {
+      const sent = await shrinkForUpload(file);
+      if (sent.size > UPLOAD_MAX_BYTES) {
+        showError($t['compose.error.imageTooLarge']);
+        return;
+      }
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', sent);
 
       const res = await fetch('/api/posts/upload', {
         method: 'POST',

@@ -4,6 +4,7 @@
 // client bundles").
 
 import type { MemberType } from '../members/memberType';
+import { UPLOAD_MAX_BYTES } from '../images/shrinkRules';
 
 export interface ProfileMe {
   id: string;
@@ -109,7 +110,7 @@ export { DISPLAY_NAME_REGEX as PROFILE_NAME_REGEX } from './nameRules';
 export const HOBBY_MAX_COUNT = 10;
 export const HOBBY_MAX_LEN = 50;
 export const MOTTO_MAX_LEN = 80;
-export const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+export const AVATAR_MAX_BYTES = UPLOAD_MAX_BYTES;
 export const AVATAR_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
 // ─── Cross-surface activity feed ("Archiv") ────────────────────────────

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { v2 as cloudinary } from 'cloudinary';
 import { requireMemberSession } from '../../../lib/auth';
+import { UPLOAD_MAX_BYTES } from '../../../lib/images/shrinkRules';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -33,9 +34,9 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // 5MB limit for forum post images
-    if (image.size > 5 * 1024 * 1024) {
-      return new Response(JSON.stringify({ error: 'Image must be under 5MB' }), {
+    // 4MB cap (UPLOAD_MAX_BYTES) for forum post images
+    if (image.size > UPLOAD_MAX_BYTES) {
+      return new Response(JSON.stringify({ error: 'Image must be under 4MB' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });

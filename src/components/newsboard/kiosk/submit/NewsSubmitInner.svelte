@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { t, tStr } from '../../../../lib/kiosk-i18n';
   import { showToast } from '../../../../utils/toast';
+  import { shrinkForUpload } from '../../../../lib/images/shrinkImage';
+  import { UPLOAD_MAX_BYTES } from '../../../../lib/images/shrinkRules';
   import { type SektionKey } from '../../../../lib/newsboard/newsTaxonomy';
   import KioskBtn from '../../../forum/kiosk/KioskBtn.svelte';
   import QuotaIndicator from './QuotaIndicator.svelte';
@@ -60,10 +62,15 @@
 
   async function onImagePick(e: Event) {
     const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
+    const picked = input.files?.[0];
+    if (!picked) return;
     uploading = true;
     try {
+      const file = await shrinkForUpload(picked);
+      if (file.size > UPLOAD_MAX_BYTES) {
+        showToast($t['compose.error.imageTooLarge'], { type: 'error' });
+        return;
+      }
       const fd = new FormData(); fd.append('file', file);
       const res = await fetch('/api/news/upload', { method: 'POST', body: fd });
       if (!res.ok) throw new Error();

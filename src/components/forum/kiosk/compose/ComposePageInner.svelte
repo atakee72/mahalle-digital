@@ -37,6 +37,8 @@
   } from '../../../../lib/forumMutations';
   import { tick, untrack } from 'svelte';
   import { t } from '../../../../lib/kiosk-i18n';
+  import { shrinkForUpload } from '../../../../lib/images/shrinkImage';
+  import { UPLOAD_MAX_BYTES } from '../../../../lib/images/shrinkRules';
   import { draftIsEmpty, type PostDraftDTO } from '../../../../lib/forum/postDrafts';
 
   let { currentUser, initialDraft = null } = $props<{
@@ -203,7 +205,9 @@
   // Image upload (lazy — fires only on submit).
   async function uploadPendingFiles(files: File[]) {
     const uploaded: { url: string; publicId: string; width?: number; height?: number }[] = [];
-    for (const file of files) {
+    for (const original of files) {
+      const file = await shrinkForUpload(original);
+      if (file.size > UPLOAD_MAX_BYTES) throw new Error($t['compose.error.imageTooLarge'] as string);
       const formData = new FormData();
       formData.append('file', file);
       const res = await fetch('/api/posts/upload', {

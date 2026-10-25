@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { v2 as cloudinary } from 'cloudinary';
 import { requireMemberSession } from '../../../lib/auth';
+import { UPLOAD_MAX_BYTES } from '../../../lib/images/shrinkRules';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -35,9 +36,9 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Validate file size (10MB)
-    if (image.size > 10 * 1024 * 1024) {
-      return new Response(JSON.stringify({ error: 'Image must be under 10MB' }), {
+    // Validate file size (4MB)
+    if (image.size > UPLOAD_MAX_BYTES) {
+      return new Response(JSON.stringify({ error: 'Image must be under 4MB' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
