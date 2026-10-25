@@ -188,7 +188,7 @@
   // for free text from the server (validation details of a failed publish).
   type ErrorKey = 'compose.error.titleShort' | 'compose.error.titleLong' | 'compose.error.bodyShort' | 'compose.error.bodyLong'
     | 'compose.error.tags' | 'compose.error.images' | 'compose.error.publish'
-    | 'drafts.error.empty' | 'drafts.error.limit' | 'drafts.error.save';
+    | 'drafts.error.empty' | 'drafts.error.limit' | 'drafts.error.save' | 'compose.error.imageTooLarge';
   let errorKey = $state<ErrorKey | null>(null);
   let errorText = $state<string | null>(null);
   const inlineError = $derived(errorKey ? ($t[errorKey] as string) : errorText);
@@ -207,7 +207,9 @@
     const uploaded: { url: string; publicId: string; width?: number; height?: number }[] = [];
     for (const original of files) {
       const file = await shrinkForUpload(original);
-      if (file.size > UPLOAD_MAX_BYTES) throw new Error($t['compose.error.imageTooLarge'] as string);
+      // A photo the browser could not shrink (decode failed) and that is still over the cap:
+      // thrown as a KEY so both the publish and the draft-save catch can show the real reason.
+      if (file.size > UPLOAD_MAX_BYTES) throw new Error('compose.error.imageTooLarge');
       const formData = new FormData();
       formData.append('file', file);
       const res = await fetch('/api/posts/upload', {
@@ -286,7 +288,8 @@
       } else {
         // Server text (validation details) is shown as it comes; without one, our own sentence.
         const msg = caught instanceof Error ? caught.message : '';
-        void raiseError(msg ? null : 'compose.error.publish', msg || null);
+        if (msg === 'compose.error.imageTooLarge') void raiseError('compose.error.imageTooLarge');
+        else void raiseError(msg ? null : 'compose.error.publish', msg || null);
       }
     }
   }
@@ -325,7 +328,8 @@
     } catch (caught) {
       savingDraft = false;
       // Our own throws carry a key; anything else (upload failure, network) → the generic draft sentence.
-      const k = caught instanceof Error && caught.message === 'drafts.error.limit' ? 'drafts.error.limit' : 'drafts.error.save';
+      const m = caught instanceof Error ? caught.message : '';
+      const k: ErrorKey = m === 'drafts.error.limit' ? 'drafts.error.limit' : m === 'compose.error.imageTooLarge' ? 'compose.error.imageTooLarge' : 'drafts.error.save';
       void raiseError(k);
     }
   }
