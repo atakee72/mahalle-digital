@@ -49,7 +49,6 @@ export function dragToClose(node: HTMLElement, initial: DragToCloseOptions) {
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onUp);
     node.removeEventListener('lostpointercapture', onUp);
-    card?.removeEventListener('touchmove', onTouchMove);
   }
 
   function reset() {
@@ -82,7 +81,6 @@ export function dragToClose(node: HTMLElement, initial: DragToCloseOptions) {
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onUp);
-    card.addEventListener('touchmove', onTouchMove, { passive: false });
   }
 
   function onMove(e: PointerEvent) {
@@ -122,6 +120,10 @@ export function dragToClose(node: HTMLElement, initial: DragToCloseOptions) {
   function onUp(e: Event) {
     if (destroyed) return; // the close path unmounted us mid-gesture
     if ('pointerId' in e && (e as PointerEvent).pointerId !== pointerId) return;
+    // Taking explicit capture on the root fires `lostpointercapture` on the
+    // touched child (implicit touch capture) first; it bubbles here and is
+    // NOT the end of the gesture — only the root's own loss counts.
+    if (e.type === 'lostpointercapture' && e.target !== node) return;
     const wasActive = state === 'active';
     const el = card;
     const travelled = Math.max(0, dy);
@@ -138,9 +140,16 @@ export function dragToClose(node: HTMLElement, initial: DragToCloseOptions) {
       if (reduced) { clearInline(); return; }
       el.style.transition = SNAP_EASE;
       el.style.transform = 'translateY(0px)';
-      const done = () => { el.removeEventListener('transitionend', done); clearInline(); };
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const done = (ev?: Event) => {
+        if (ev && ev.target !== el) return; // a child's own transition
+        el.removeEventListener('transitionend', done);
+        if (timer !== null) clearTimeout(timer);
+        if (state === 'idle') clearInline(); // never wipe a drag that has started since
+      };
       el.addEventListener('transitionend', done);
-      later(done, 220);
+      timer = setTimeout(done, 220);
+      timers.push(timer);
       return;
     }
 
@@ -154,12 +163,17 @@ export function dragToClose(node: HTMLElement, initial: DragToCloseOptions) {
   }
 
   node.addEventListener('pointerdown', onDown);
+  // Registered ONCE, not per gesture: Chrome decides at touch start whether a
+  // touch sequence is cancelable from the listeners that exist then — a
+  // listener added in pointerdown may only ever see `cancelable === false`.
+  node.addEventListener('touchmove', onTouchMove, { passive: false });
 
   return {
     update(next: DragToCloseOptions) { opts = next; },
     destroy() {
       destroyed = true;
       node.removeEventListener('pointerdown', onDown);
+      node.removeEventListener('touchmove', onTouchMove);
       detach();
       timers.forEach(clearTimeout);
       timers = [];
