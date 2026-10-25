@@ -7,6 +7,7 @@
   // Who-am-i cache lives in avatarMenuCache.ts, NOT a `<script module>`
   // block — see that file's comment (Astro prod CSS-extraction bug).
   import { t } from '../../../lib/kiosk-i18n';
+  import { dragToClose } from '../../../lib/sheet/dragToClose';
   import { whoamiCache, setWhoamiCache } from './avatarMenuCache';
 
   // `context`: 'app' (default — KioskNav on the member surfaces) or 'admin'
@@ -69,6 +70,15 @@
   }
 
   let menuEl = $state<HTMLElement | null>(null);
+  let cardEl = $state<HTMLElement | null>(null);
+
+  // Swipe-down on the phone sheet: the slide has already finished, so skip the
+  // 140 ms fade of close() and unmount directly (closing first blocks a second gesture).
+  function closeAfterSwipe() {
+    if (closing) return;
+    closing = true;
+    onClose(false);
+  }
 
   function onDocPointerDown(e: PointerEvent) {
     if (menuEl && !menuEl.contains(e.target as Node)) close();
@@ -119,9 +129,17 @@
 </script>
 
 <div class="am-scrim" class:am-closing={closing} aria-hidden="true"></div>
-<div bind:this={menuEl} class="am-menu" class:am-closing={closing} role="menu" aria-label={user?.name ?? 'Konto'}>
+<div
+  bind:this={menuEl}
+  class="am-menu"
+  class:am-closing={closing}
+  role="menu"
+  aria-label={user?.name ?? 'Konto'}
+  use:dragToClose={{ card: () => cardEl, handles: '.am-grabber, .am-head', onClose: closeAfterSwipe, disabled: () => closing }}
+>
   <div class="am-caret"></div>
-  <div class="am-card">
+  <div class="am-card" bind:this={cardEl}>
+    <div class="am-grabber" aria-hidden="true"></div>
     <div class="am-head">
       <div class="am-name font-bricolage">{user?.name ?? ''}</div>
       {#if handle}

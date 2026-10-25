@@ -637,6 +637,7 @@ option:disabled {
   border-radius: var(--k-radius-md); box-shadow: 3px 3px 0 var(--k-ink);
   overflow: hidden; position: relative;
 }
+.am-grabber { display: none; } /* mobile-only, see media block */
 .am-head { padding: 12px 14px 10px; border-bottom: 1px dashed var(--k-rule); background: var(--k-paper-warm); }
 .am-name { font-size: 13.5px; font-weight: 800; letter-spacing: -0.01em; color: var(--k-ink); }
 .am-sub { font-size: 9.5px; color: var(--k-ink-mute); letter-spacing: 0.08em; margin-top: 2px; }
@@ -687,7 +688,15 @@ option:disabled {
     /* Echo the bottom nav's max-w-md (28rem) so the sheet doesn't go
        comically full-bleed on tablets (<1024px still shows the sheet). */
     max-width: 28rem; margin-inline: auto;
+    overscroll-behavior: contain;
   }
+  .am-grabber {
+    display: block; width: 44px; height: 4px; border-radius: 999px;
+    background: color-mix(in srgb, var(--k-ink) 25%, transparent);
+    margin: 8px auto 0;
+  }
+  /* Swipe-down zones: the browser must never start a native scroll here. */
+  .am-grabber, .am-head { touch-action: none; }
   .am-row { min-height: 44px; padding: 11px 18px; }
 }
 
@@ -936,7 +945,9 @@ option:disabled {
     max-height: 80vh; overflow-y: auto;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     max-width: 28rem; margin-inline: auto;
+    overscroll-behavior: contain;
   }
+  .nc-grabber, .nc-head { touch-action: none; } /* swipe-down zones */
   .nc-grabber {
     display: block; width: 44px; height: 4px; border-radius: 999px;
     background: color-mix(in srgb, var(--k-ink) 25%, transparent);

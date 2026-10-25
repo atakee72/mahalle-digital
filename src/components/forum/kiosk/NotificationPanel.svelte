@@ -8,6 +8,7 @@
   import type { NotificationItem } from '../../../types/notification';
   import { detectPushState, subscribeToPush, unsubscribeFromPush, type PushUiState } from '../../../lib/pushClient';
   import { showError } from '../../../utils/toast';
+  import { dragToClose } from '../../../lib/sheet/dragToClose';
   import { storedForumNotify, type ForumNotifyMode } from '../../../lib/forum/forumNotifyRules';
 
   let { onClose } = $props<{ onClose: (restoreFocus: boolean) => void }>();
@@ -110,6 +111,7 @@
   });
 
   let menuEl = $state<HTMLElement | null>(null);
+  let cardEl = $state<HTMLElement | null>(null);
 
   // CD motion spec: „Schließen: kein Exit-Theater — sofort weg."
   function close(fromEscape = false) {
@@ -290,9 +292,18 @@
 </script>
 
 <div class="nc-scrim" aria-hidden="true"></div>
-<div bind:this={menuEl} class="nc-menu" role="dialog" aria-label={$t['nc.title']}>
+<!-- Phone swipe-down: the sheet is already moving under the finger when the
+     action calls close() — it finishes the travel, so this is NOT the „exit
+     theater" the CD ruling forbids; close() itself stays instant. -->
+<div
+  bind:this={menuEl}
+  class="nc-menu"
+  role="dialog"
+  aria-label={$t['nc.title']}
+  use:dragToClose={{ card: () => cardEl, handles: '.nc-grabber, .nc-head', onClose: () => onClose(false) }}
+>
   <div class="nc-caret"></div>
-  <div class="nc-card">
+  <div class="nc-card" bind:this={cardEl}>
     <div class="nc-grabber" aria-hidden="true"></div>
     <div class="nc-head">
       <span class="nc-head-title font-dmmono">{$t['nc.title']}</span>
