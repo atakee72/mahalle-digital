@@ -9,6 +9,7 @@
  * - Nothing is permanently deleted without admin review
  */
 
+import { batchOmniInputs, mergeOmniResults, type OmniInput, type OmniResult } from './omniModerationBatches';
 import * as Sentry from '@sentry/astro';
 
 // ============================================================================
@@ -423,7 +424,7 @@ async function moderateContent(input: ModerationInput): Promise<ModerationResult
   }
 
   // Build input array for OpenAI
-  const moderationInput: any[] = [];
+  const moderationInput: OmniInput[] = [];
 
   if (input.text) {
     moderationInput.push({ type: 'text', text: input.text });
@@ -466,43 +467,47 @@ async function moderateContent(input: ModerationInput): Promise<ModerationResult
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/moderations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'omni-moderation-latest',
-        input: moderationInput,
-      }),
-    });
+    // The endpoint takes at most ONE image per request (400 `too_many_images` otherwise —
+    // 2026-10-25, every multi-photo listing had been failing into the manual queue): text +
+    // first image in one request, every further image in its own, all in parallel.
+    const batches = batchOmniInputs(moderationInput);
+    const responses = await Promise.all(
+      batches.map((input) =>
+        fetch('https://api.openai.com/v1/moderations', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'omni-moderation-latest',
+            input,
+          }),
+        })
+      )
+    );
 
-    if (!response.ok) {
-      const error = await response.text();
+    const failed = responses.find((r) => !r.ok);
+    if (failed) {
+      const error = await failed.text();
       console.error('[Moderation] OpenAI API error:', error);
       // FAIL-SAFE: Queue for manual review on API error
       // The provider's own message rides along (Sentry `extra.reason` + the admin-only record) —
       // a bare status told us nothing on 2026-10-25. Structured + scrubbed, never the raw body.
-      return createFailSafeResult(`OpenAI API error: ${response.status}${apiErrorDetail(error)}`);
+      return createFailSafeResult(`OpenAI API error: ${failed.status}${apiErrorDetail(error)}`);
     }
 
-    const data = await response.json();
-
-    // Process results - if multiple inputs, take the worst result
-    let worstResult = {
-      flagged: false,
-      categories: {} as Record<string, boolean>,
-      category_scores: {} as Record<string, number>,
-    };
-
-    for (const result of data.results) {
-      if (result.flagged || getMaxScore(result.category_scores) > getMaxScore(worstResult.category_scores)) {
-        worstResult = result;
-      }
+    // Across all requests and inputs: per-category MAX of the scores + union of the flags (a
+    // category flagged by one image must not be lost to a higher score elsewhere); no result → fail-safe.
+    const all: OmniResult[] = [];
+    for (const response of responses) {
+      const data = await response.json();
+      if (Array.isArray(data?.results)) all.push(...data.results);
     }
+    const merged = mergeOmniResults(all);
+    if (!merged) return createFailSafeResult('OpenAI moderation returned no result');
 
-    return processResult(worstResult);
+    return processResult(merged);
   } catch (error) {
     console.error('[Moderation] Error:', error);
     // FAIL-SAFE: Queue for manual review on any error
