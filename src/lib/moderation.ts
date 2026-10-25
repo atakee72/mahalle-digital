@@ -482,7 +482,9 @@ async function moderateContent(input: ModerationInput): Promise<ModerationResult
       const error = await response.text();
       console.error('[Moderation] OpenAI API error:', error);
       // FAIL-SAFE: Queue for manual review on API error
-      return createFailSafeResult(`OpenAI API error: ${response.status}`);
+      // The provider's own message rides along (Sentry `extra.reason` + the admin-only record) —
+      // a bare status told us nothing on 2026-10-25. Structured + scrubbed, never the raw body.
+      return createFailSafeResult(`OpenAI API error: ${response.status}${apiErrorDetail(error)}`);
     }
 
     const data = await response.json();
@@ -599,6 +601,29 @@ function createApprovedResult(): ModerationResult {
  * FAIL-SAFE: When moderation can't complete, queue for manual review
  * Nothing gets published without either AI approval OR human review
  */
+/**
+ * The useful part of an OpenAI error body for the fail-safe reason: `error.code`/`type` and
+ * `error.message` from the JSON envelope (else the first line of the body), keys and URLs
+ * scrubbed, capped at 200 chars. The reason is persisted in the admin-only moderation record.
+ */
+function apiErrorDetail(body: string): string {
+  let code = '';
+  let message = '';
+  try {
+    const e = JSON.parse(body)?.error;
+    if (e && typeof e === 'object') {
+      code = String(e.code ?? e.type ?? '');
+      message = String(e.message ?? '');
+    }
+  } catch {
+    message = body.split('\n')[0] ?? '';
+  }
+  const scrub = (t: string) =>
+    t.replace(/sk-[A-Za-z0-9_-]+/g, '[key]').replace(/https?:\/\/\S+/g, '[url]').replace(/\s+/g, ' ').trim().slice(0, 200);
+  const parts = [code && `(${scrub(code)})`, message && scrub(message)].filter(Boolean);
+  return parts.length ? ` ${parts.join(' ')}` : '';
+}
+
 async function createFailSafeResult(reason: string): Promise<ModerationResult> {
   // Fail-safe is invisible by design (content just queues for manual review),
   // so an OpenAI outage never surfaced anywhere — see Aug 2026 credits
@@ -810,7 +835,7 @@ Return JSON only: {"classification": "...", "confidence": 0.0-1.0, "reason": "br
     if (!response.ok) {
       const error = await response.text();
       console.error('[SpamCheck] OpenAI API error:', error);
-      return createFailSafeResult(`Spam check API error: ${response.status}`);
+      return createFailSafeResult(`Spam check API error: ${response.status}${apiErrorDetail(error)}`);
     }
 
     const data = await response.json();
@@ -953,7 +978,7 @@ Return JSON only: {"classification": "...", "confidence": 0.0-1.0, "reason": "br
     if (!response.ok) {
       const error = await response.text();
       console.error('[ImageCheck] OpenAI API error:', response.status, error);
-      return createFailSafeResult(`Image check API error: ${response.status}`);
+      return createFailSafeResult(`Image check API error: ${response.status}${apiErrorDetail(error)}`);
     }
 
     const data = await response.json();
