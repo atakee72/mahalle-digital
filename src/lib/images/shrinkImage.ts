@@ -11,17 +11,17 @@ async function decode(file: File): Promise<Source | null> {
   } catch {
     /* fall through to <img> */
   }
-  let url: string | null = null;
+  // <img> fallback: the object URL stays alive until close() — Safari may re-fetch the
+  // decoded data from it under memory pressure, so it is revoked after encoding, not before drawing.
+  const url = URL.createObjectURL(file);
   try {
-    url = URL.createObjectURL(file);
     const img = new Image();
     img.src = url;
     await img.decode();
-    return { draw: img, width: img.naturalWidth, height: img.naturalHeight, close: () => {} };
+    return { draw: img, width: img.naturalWidth, height: img.naturalHeight, close: () => URL.revokeObjectURL(url) };
   } catch {
+    URL.revokeObjectURL(url);
     return null;
-  } finally {
-    if (url) URL.revokeObjectURL(url);
   }
 }
 

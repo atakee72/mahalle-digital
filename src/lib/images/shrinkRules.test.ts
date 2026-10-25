@@ -31,6 +31,16 @@ test('tiny image: q0.7 then null', () => {
   assert.deepEqual(a, { width: 400, height: 300, quality: 0.7 });
   assert.equal(nextAttempt(a!), null);
 });
+test('avatar: maxEdge 1024 scales a 4000×3000 photo to 1024×768', () => {
+  assert.deepEqual(planShrink({ width: 4000, height: 3000, bytes: 6_000_000, type: 'image/jpeg' }, 1024), { action: 'encode', width: 1024, height: 768, quality: 0.85 });
+});
+test('ladder: a long edge between two steps drops to the next smaller step', () => {
+  const a = nextAttempt({ width: 1500, height: 1000, quality: 0.7 });
+  assert.deepEqual(a, { width: 1280, height: 853, quality: 0.7 });
+});
+test('encode: an empty type is re-encoded even when small', () => {
+  assert.equal(planShrink({ width: 800, height: 600, bytes: 100_000, type: '' }).action, 'encode');
+});
 test('uploadFileName', () => {
   assert.equal(uploadFileName('IMG_0001.HEIC'), 'IMG_0001.jpg');
   assert.equal(uploadFileName('photo'), 'photo.jpg');

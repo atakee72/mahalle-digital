@@ -124,8 +124,16 @@
     avatarErrorKey = null;
   }
 
+  let avatarShrinking = false;
   async function validateAndUploadAvatar(picked: File) {
-    const file = await shrinkForUpload(picked, { maxEdge: 1024 });
+    if (avatarShrinking) return; // a second pick while the first is still being shrunk would start two uploads
+    avatarShrinking = true;
+    let file: File;
+    try {
+      file = await shrinkForUpload(picked, { maxEdge: 1024 });
+    } finally {
+      avatarShrinking = false;
+    }
     if (file.size > AVATAR_MAX_BYTES) {
       avatarState = 'error';
       avatarErrorKey = 'size';
