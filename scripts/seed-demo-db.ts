@@ -1,6 +1,6 @@
 /**
  * Seed the DEMO database (demo.mahalle.digital) with fictional accounts and content.
- *   MONGODB_URI="<uri ending in /mahalle-dev-demo>" pnpm tsx scripts/seed-demo-db.ts [--write] [--copy-kiez-from <uri>]
+ *   MONGODB_URI="<uri ending in /mahalle-dev-demo>" [KIEZ_SOURCE_URI="<source uri>"] pnpm tsx scripts/seed-demo-db.ts [--write] [--copy-kiez]
  *
  * Content status: fictional, reviewed by the owner before commit: pending.
  * Every person, text and number below is invented; the only real names are public
@@ -11,9 +11,10 @@
  * drops and rewrites the content collections named in DROP below. No demo account
  * carries a password (`password: null`), so there is no bcrypt here and no secret.
  *
- * `news` is never touched. `--copy-kiez-from <uri>` copies the five public
- * `schillerkiez_*` statistics collections from the SOURCE (read-only, its name is
- * never printed) into the target.
+ * `news` is never touched. `--copy-kiez` copies the five public `schillerkiez_*`
+ * statistics collections from the SOURCE named by the env var KIEZ_SOURCE_URI (read-only;
+ * taken from the environment, never from argv — argv shows in process lists and CI step
+ * logs; its name is never printed, not even on error).
  *
  * Dates are relative to the run (daysAgo/daysAhead), so the nightly reseed keeps the
  * demo current. Field shapes mirror what the create routes write (see the comments).
@@ -24,8 +25,12 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const WRITE = process.argv.includes('--write');
-const copyIdx = process.argv.indexOf('--copy-kiez-from');
-const KIEZ_SOURCE = copyIdx >= 0 ? process.argv[copyIdx + 1] : undefined;
+const COPY_KIEZ = process.argv.includes('--copy-kiez');
+const KIEZ_SOURCE = COPY_KIEZ ? process.env.KIEZ_SOURCE_URI : undefined;
+if (COPY_KIEZ && !KIEZ_SOURCE) {
+  console.error('--copy-kiez needs KIEZ_SOURCE_URI in the environment.');
+  process.exit(1);
+}
 
 const KIEZ_COLLECTIONS = [
   'schillerkiez_demographics',
@@ -337,4 +342,10 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+// Generic failure line only: driver errors can embed hosts or the URI, and this runs in
+// public CI logs.
+main().catch((e: unknown) => {
+  const err = e as { name?: string; code?: string | number } | undefined;
+  console.error(`seed failed: ${err?.name ?? 'Error'}${err?.code !== undefined ? ` (code ${err.code})` : ''}`);
+  process.exit(1);
+});

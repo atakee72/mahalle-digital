@@ -4,7 +4,7 @@ name: Demo Reseed
 # five public Kiez statistics from prod, then rings the demo deployment's own news fetch.
 # 04:00 UTC = 05:00/06:00 Berlin. Actions cron is UTC-only and jitters by minutes.
 # Owner's hand steps: repo secret DEMO_MONGODB_URI (the dev URI with the path /mahalle-dev-demo),
-# and the demo deployment's preview-scoped CRON_SECRET must equal the repo secret CRON_SECRET.
+# and the demo deployment's preview-scoped CRON_SECRET (branch `demo`) must equal the repo secret DEMO_CRON_SECRET — a secret of its own, never prod's.
 on:
   schedule:
     - cron: '0 4 * * *'
@@ -33,12 +33,16 @@ jobs:
           # (no member data) and writes nothing to this database:
           # schillerkiez_demographics, schillerkiez_social, schillerkiez_reference,
           # schillerkiez_air_log, schillerkiez_air_daily.
-          PROD_MONGODB_URI: ${{ secrets.MONGODB_URI }}
-        run: pnpm tsx scripts/seed-demo-db.ts --write --copy-kiez-from "$PROD_MONGODB_URI"
+          # Passed as an env var, never on the command line (argv shows in process lists and
+          # step logs); the seed prints nothing of it, not even on error.
+          KIEZ_SOURCE_URI: ${{ secrets.MONGODB_URI }}
+        run: pnpm tsx scripts/seed-demo-db.ts --write --copy-kiez
 
       - name: Trigger the demo's own news fetch
         env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Its OWN secret: repo secret DEMO_CRON_SECRET = the branch-scoped Preview var
+          # CRON_SECRET of the `demo` branch. Prod's CRON_SECRET is never used for the demo.
+          CRON_SECRET: ${{ secrets.DEMO_CRON_SECRET }}
           APP_ORIGIN: https://demo.mahalle.digital
         run: |
           code=$(curl -s -o /tmp/resp.json -w '%{http_code}' \

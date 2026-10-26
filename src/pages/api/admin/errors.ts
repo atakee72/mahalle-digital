@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { requireAdminSession } from '../../../lib/auth';
+import { isDemoDeployment } from '../../../lib/demo/demoMode';
 
 // Server-only proxy to Sentry's REST API. Exists so SENTRY_AUTH_TOKEN
 // never ships to the client and so the widget gets a minimal shape
@@ -18,6 +19,10 @@ const json = (body: unknown, status = 200) =>
 export const GET: APIRoute = async ({ request }) => {
   const guard = await requireAdminSession(request);
   if (!guard.ok) return guard.response;
+  // Demo deployment (spec 2026-10-26): nobody there may see the owner's real Sentry board — the
+  // card shows its „nicht verfügbar" state. The middleware refuses the path for a demo session
+  // too; this is the second lock and does not depend on path matching.
+  if (isDemoDeployment()) return json({ enabled: false });
 
   const token = import.meta.env.SENTRY_AUTH_TOKEN;
   const org = import.meta.env.SENTRY_ORG;

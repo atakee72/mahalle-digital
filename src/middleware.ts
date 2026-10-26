@@ -31,6 +31,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return new Response(`Cross-site ${context.request.method} form submissions are forbidden`, { status: 403 });
     }
 
+    // Read-only demo deployment (spec 2026-10-26): every state change is refused except the
+    // three Auth.js endpoints that make sign-in/sign-out work. Sits ABOVE the static-asset skip,
+    // like the cross-site check, so a dotted dynamic path cannot slip past it. Needs no session.
+    // Inert without DEMO_MODE=1 + a dev-named database (fail closed).
+    const demo = isDemoDeployment();
+    if (demo && decideDemoRequest({ method: context.request.method, pathname, demoSession: false }) === 'refuse') {
+      return demoRefusal(pathname);
+    }
+
     // Skip middleware for static assets and prerendered routes
     if (
       pathname.startsWith("/_image") ||
@@ -80,16 +89,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
       context.locals.session = null;
     }
 
-    // Read-only demo deployment (spec 2026-10-26): every state change is refused except the
-    // three Auth.js endpoints that make sign-in/sign-out work; a demo session may not read the
-    // Sentry proxy. Inert without DEMO_MODE=1 + a dev-named database (fail closed).
-    if (isDemoDeployment()) {
-      const verdict = decideDemoRequest({
-        method: context.request.method,
-        pathname,
-        demoSession: (context.locals.user as { demo?: true } | null)?.demo === true,
-      });
-      if (verdict === 'refuse') return demoRefusal(pathname);
+    // Demo session: the Sentry proxy would show the owner's real issue board. Refused here and a
+    // second time inside the route itself (src/pages/api/admin/errors.ts).
+    if (demo && decideDemoRequest({
+      method: context.request.method,
+      pathname,
+      demoSession: (context.locals.user as { demo?: true } | null)?.demo === true,
+    }) === 'refuse') {
+      return demoRefusal(pathname);
     }
 
     // NOTE: this gate runs only for SSR requests — the isPrerendered early

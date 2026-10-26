@@ -6,6 +6,13 @@ export const DEMO_REFUSAL_BODY = { error: 'demo_read_only' } as const;
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+/** One spelling per path: Astro serves `/api/admin/errors/` and `//api/admin/errors` like the
+ *  bare path, so both lists must see repeated slashes collapsed and the trailing slash dropped. */
+export function normalizePath(pathname: string): string {
+  const p = pathname.replace(/\/{2,}/g, '/');
+  return p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
+}
+
 export function dbNameFromUri(uri: string | undefined): string {
   if (!uri) return '';
   try {
@@ -20,9 +27,11 @@ export function isDemoEnabled(a: { demoMode: string | undefined; dbName: string 
 }
 
 export function decideDemoRequest(a: { method: string; pathname: string; demoSession: boolean }): 'allow' | 'refuse' {
+  const p = normalizePath(a.pathname);
   if (SAFE_METHODS.has(a.method.toUpperCase())) {
-    if (a.demoSession && (DEMO_BLOCKED_READS as readonly string[]).includes(a.pathname)) return 'refuse';
+    // Blocked reads match by PREFIX (fail closed on any sub-path); allowed writes match EXACTLY.
+    if (a.demoSession && DEMO_BLOCKED_READS.some((b) => p === b || p.startsWith(b + '/'))) return 'refuse';
     return 'allow';
   }
-  return (DEMO_ALLOWED_WRITES as readonly string[]).includes(a.pathname) ? 'allow' : 'refuse';
+  return (DEMO_ALLOWED_WRITES as readonly string[]).includes(p) ? 'allow' : 'refuse';
 }

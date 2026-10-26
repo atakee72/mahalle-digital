@@ -38,6 +38,12 @@ test('allowed writes are exact paths, not prefixes', () => {
   assert.equal(decideDemoRequest({ method: 'POST', pathname: '/api/auth/signout/x', demoSession: false }), 'refuse');
   assert.equal(decideDemoRequest({ method: 'POST', pathname: '/api/auth/csrf?x=1', demoSession: false }), 'refuse');
 });
+test('blocked reads survive path spelling variants', () => {
+  for (const p of ['/api/admin/errors/', '//api/admin/errors', '/api/admin//errors', '/api/admin/errors/anything']) {
+    assert.equal(decideDemoRequest({ method: 'GET', pathname: p, demoSession: true }), 'refuse', p);
+  }
+  assert.equal(decideDemoRequest({ method: 'GET', pathname: '/api/admin/errorsx', demoSession: true }), 'allow');
+});
 test('blocked reads need a demo session', () => {
   assert.equal(decideDemoRequest({ method: 'GET', pathname: '/api/admin/errors', demoSession: true }), 'refuse');
   assert.equal(decideDemoRequest({ method: 'GET', pathname: '/api/admin/errors', demoSession: false }), 'allow');
