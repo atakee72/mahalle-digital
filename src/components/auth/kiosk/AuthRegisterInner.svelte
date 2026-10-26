@@ -1,5 +1,6 @@
 <script lang="ts">
   import { signIn } from 'auth-astro/client';
+  import DemoDoor from '../../demo/DemoDoor.svelte';
   import { t, tStr } from '../../../lib/kiosk-i18n';
   import { cleanDisplayName, isValidDisplayName } from '../../../lib/profile/nameRules';
   import { slugifyHandle, normalizeChosenHandle, chosenHandleProblem } from '../../../lib/profile/handle';
@@ -14,7 +15,8 @@
 
   // Personal invitation link (2026-10-07): the page resolved `?invite=` server-side. A valid
   // code rides along in the POST; a dead one shows the notice and the form registers without it.
-  let { invite = null }: { invite?: RegisterInvite | null } = $props();
+  // demo: read-only demo deployment (spec 2026-10-26) shows two buttons instead of the form.
+  let { invite = null, demo = false }: { invite?: RegisterInvite | null; demo?: boolean } = $props();
   let inviteCode = $state(invite && 'code' in invite ? invite.code : '');
   let inviteDead = $state(invite !== null && 'dead' in invite);
   const inviterName = $derived(invite && 'code' in invite && inviteCode ? invite.inviterName : '');
@@ -152,6 +154,9 @@
     <AuthBanner kind="success" title={$t['auth.register.successTitle']} body={$t['auth.register.successBody']} />
   {/if}
 
+  {#if demo}
+    <DemoDoor />
+  {:else}
   <form onsubmit={submit} style="display:flex; flex-direction:column; gap:14px; margin-top:20px;">
     <AuthField label={$t['auth.register.name']} placeholder={$t['auth.register.namePh']}
       name="name" autocomplete="nickname" value={name} error={nameErr}
@@ -200,6 +205,7 @@
   <div class="font-bricolage" style="text-align:center; font-size:13.5px; color:var(--k-ink-soft); margin-top:14px;">
     {$t['auth.register.alt']}<a href="/login" class="no-underline kiosk-tap" style="font-weight:700; color:var(--k-ink); border-bottom:2px solid var(--k-accent);">{$t['auth.register.altLink']}</a>
   </div>
+  {/if}
 </div>
 
 <style>

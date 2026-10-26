@@ -8,6 +8,7 @@ import KioskSplash from '../components/auth/kiosk/KioskSplash.astro';
 import SeoHead from '../components/SeoHead.astro';
 import { ViewTransitions } from 'astro:transitions';
 import GoatCounter from '../components/GoatCounter.astro';
+import DemoHead from '../components/demo/DemoHead.astro';
 
 export interface Props {
   title: string;
@@ -48,6 +49,7 @@ const {
     />
     <ViewTransitions />
     <GoatCounter />
+    <DemoHead />
   </head>
 
   <body

@@ -1,0 +1,6 @@
+---
+// noindex for the read-only demo deployment (spec 2026-10-26). Renders nothing elsewhere.
+import { isDemoDeployment } from '../../lib/demo/demoMode';
+---
+
+{isDemoDeployment() && <meta name="robots" content="noindex, nofollow" />}

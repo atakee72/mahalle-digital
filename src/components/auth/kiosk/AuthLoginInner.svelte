@@ -7,6 +7,10 @@
   import AuthPrimaryBtn from './primitives/AuthPrimaryBtn.svelte';
   import AuthBanner from './primitives/AuthBanner.svelte';
   import { safeInternalPath } from '../../../lib/auth/safeRedirect';
+  import DemoDoor from '../../demo/DemoDoor.svelte';
+
+  // Read-only demo deployment (spec 2026-10-26): two buttons instead of the password form.
+  let { demo = false }: { demo?: boolean } = $props();
 
   // Post-login destination: honor ?redirect= from the middleware gate.
   // Validation lives in safeInternalPath (URL-normalization based — see
@@ -199,6 +203,9 @@
       <AuthBanner kind="success" title={$t['auth.login.successTitle']} body={$t['auth.login.successBody']} />
     {/if}
 
+    {#if demo}
+      <DemoDoor />
+    {:else}
     <form onsubmit={submit} style="display:flex; flex-direction:column; gap:16px; margin-top:22px;">
       <AuthField
         label={$t['auth.login.email']} placeholder={$t['auth.login.emailPh']}
@@ -228,6 +235,7 @@
     <div class="font-bricolage" style="text-align:center; font-size:13.5px; color:var(--k-ink-soft);">
       {$t['auth.login.alt']}<a href="/register" class="no-underline kiosk-tap" style="font-weight:700; color:var(--k-ink); border-bottom:2px solid var(--k-accent);">{$t['auth.login.altLink']}</a>
     </div>
+    {/if}
   {/if}
 </div>
 

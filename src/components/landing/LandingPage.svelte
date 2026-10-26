@@ -13,16 +13,28 @@
   import type { EventCategory } from '../../types';
   import { cloudinaryFit, optimizeCloudinary } from '../../utils/cloudinary';
   import { fmtDate, fmtDateKicker } from '../../lib/blog/beilage';
+  import { startDemo } from '../../lib/demo/startDemo';
   import { relTime } from '../../lib/relTime';
   import { SEKTION_TOKEN, type SektionKey as NewsSektion } from '../../lib/newsboard/newsTaxonomy';
 
-  let { data, blog, blogMeta } = $props<{
+  let { data, blog, blogMeta, demo = false } = $props<{
     data: LandingData;
     blog: BlogPeek[];
     blogMeta: BlogMeta | null;
+    demo?: boolean;
   }>();
 
   const GITHUB_URL = 'https://github.com/atakee72/mahalle-digital';
+  const ENGINEERING_URL = 'https://github.com/atakee72/mahalle-digital/blob/main/docs/ENGINEERING.md';
+  let demoPending = $state<'member' | 'admin' | null>(null);
+  let demoFailed = $state(false);
+  async function startDemoRole(role: 'member' | 'admin') {
+    if (demoPending) return;
+    demoPending = role;
+    demoFailed = false;
+    const ok = await startDemo(role, null);
+    if (!ok) { demoPending = null; demoFailed = true; }
+  }
   const year = new Date().getFullYear();
 
   const dateLineShort = $derived(
@@ -769,12 +781,30 @@
   <!-- §03 heartbeat strip dropped 2026-09-29 (user: it divided the page); data.rows + /api/kiez-heartbeat stay computed -->
 
   <!-- CTA (§08) — the page's ONE call to action -->
+  {#if demo}
+    <div class="lnd-cta lnd-cta--demo" id="mitmachen">
+      <h2 class="font-bricolage">{$t['lnd.demo.h']}</h2>
+      <p class="font-bricolage lnd-demo-p">{$t['lnd.demo.p']}</p>
+      <div class="lnd-demo-btns">
+        <button type="button" class="lnd-cta-btn font-bricolage" disabled={demoPending !== null} onclick={() => startDemoRole('member')}>{$t['lnd.demo.member']}</button>
+        <button type="button" class="lnd-cta-btn lnd-cta-btn--outline font-bricolage" disabled={demoPending !== null} onclick={() => startDemoRole('admin')}>{$t['lnd.demo.admin']}</button>
+      </div>
+      {#if demoFailed}<div class="lnd-meta font-dmmono lnd-demo-fail" role="alert">{$t['auth.demo.fail']}</div>{/if}
+      <div class="lnd-meta font-dmmono lnd-cta-sub">{$t['lnd.demo.meta']}</div>
+      <div class="lnd-demo-links font-dmmono">
+        <a href={GITHUB_URL} target="_blank" rel="noopener">{$t['lnd.demo.code']}</a>
+        <a href={ENGINEERING_URL} target="_blank" rel="noopener">{$t['lnd.demo.eng']}</a>
+        <a href="https://mahalle.digital">{$t['lnd.demo.real']}</a>
+      </div>
+    </div>
+  {:else}
   <div class="lnd-cta" id="mitmachen">
     <h2 class="font-bricolage">{$t['lnd.cta.h']}</h2>
     <a href="/register" class="lnd-cta-btn font-bricolage">{$t['lnd.cta.btn']}</a>
     <div class="lnd-meta font-dmmono lnd-cta-sub">{$t['lnd.cta.sub']}</div>
     <div class="font-instrument lnd-slogan">{$t['lnd.cta.slogan']}</div>
   </div>
+  {/if}
 
   <!-- footer (§09) — no language switcher here (it sits in the date line) -->
   <footer class="lnd-footer">
@@ -866,6 +896,14 @@
   .lnd-cta h2 { font-size: 30px; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 16px; }
   .lnd-cta-btn { display: inline-block; background: var(--k-ink); color: var(--k-paper); font-size: 16px; font-weight: 700; padding: 13px 30px; min-height: 48px; box-sizing: border-box; border-radius: 999px; border: 1.5px solid var(--k-ink); box-shadow: 3px 3px 0 var(--k-ochre); text-decoration: none; }
   .lnd-cta-sub { margin-top: 13px; }
+  .lnd-cta--demo .lnd-demo-p { max-width: 560px; margin: 0 auto 16px; font-size: 14px; line-height: 1.55; color: var(--k-ink-soft); }
+  .lnd-demo-btns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+  .lnd-demo-btns .lnd-cta-btn { cursor: pointer; }
+  .lnd-demo-btns .lnd-cta-btn:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+  .lnd-cta-btn--outline { background: transparent; color: var(--k-ink); }
+  .lnd-demo-fail { margin-top: 12px; color: var(--k-danger); }
+  .lnd-demo-links { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center; margin-top: 12px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .lnd-demo-links a { color: var(--k-ink); border-bottom: 1px dashed var(--k-ink-mute); text-decoration: none; }
   .lnd-slogan { font-style: italic; font-size: 21px; color: var(--k-ink); margin-top: 16px; }
 
   /* ── footer (§09) ── */

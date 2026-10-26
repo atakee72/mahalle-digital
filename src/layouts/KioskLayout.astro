@@ -13,12 +13,14 @@ import { getSession } from 'auth-astro/server';
 import KioskNav from '../components/forum/kiosk/KioskNav.svelte';
 import KioskFooter from '../components/forum/kiosk/KioskFooter.svelte';
 import VerifyEmailBanner from '../components/auth/kiosk/VerifyEmailBanner.svelte';
+import DemoBanner from '../components/demo/DemoBanner.svelte';
 import SuspendedBanner from '../components/auth/kiosk/SuspendedBanner.svelte';
 import ToastProvider from '../components/ToastProvider';
 import TourController from '../components/tour/TourController.svelte';
 import SeoHead from '../components/SeoHead.astro';
 import { ViewTransitions } from 'astro:transitions';
 import GoatCounter from '../components/GoatCounter.astro';
+import DemoHead from '../components/demo/DemoHead.astro';
 
 const session = await getSession(Astro.request);
 const isAdmin = session?.user?.role === 'admin';
@@ -90,6 +92,7 @@ const {
 
     <ViewTransitions />
     <GoatCounter isAdmin={isAdmin} />
+    <DemoHead />
     {isAdmin && <meta name="mh-nocount" content="1" />}
   </head>
 
@@ -98,6 +101,7 @@ const {
     data-page={page}
   >
     <KioskNav client:load currentPath={currentPath} user={session?.user ?? null} />
+    {(session?.user as { demo?: true } | undefined)?.demo && <DemoBanner client:load />}
     {session?.user && <SuspendedBanner client:load />}
     {session?.user && session.user.emailVerified !== true && <VerifyEmailBanner client:load />}
     <ToastProvider client:load />

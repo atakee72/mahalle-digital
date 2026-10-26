@@ -7,12 +7,13 @@
 // and passes `user` (name/image/role) for the masthead avatar + menu.
 import AuthLangToggle from '../components/auth/kiosk/AuthLangToggle.svelte';
 import AdmAvatar from '../components/admin/kiosk/AdmAvatar.svelte';
+import DemoBanner from '../components/demo/DemoBanner.svelte';
 import ToastProvider from '../components/ToastProvider';
 import { ViewTransitions } from 'astro:transitions';
 
 export interface Props {
   title: string;
-  user: { name?: string | null; image?: string | null; role?: string };
+  user: { name?: string | null; image?: string | null; role?: string; demo?: true };
   wordmark?: string;   // masthead italic word — 'moderation' | 'amtliches' | …
   ribbonEcho?: string; // mono echo on the right of the internal-area ribbon
 }
@@ -63,6 +64,7 @@ const currentPath = Astro.url.pathname;
     class="min-h-screen k-paper-bg text-ink font-bricolage antialiased flex flex-col"
     data-page="admin"
   >
+    {user.demo && <DemoBanner client:load />}
     <!-- ═══ Desktop (≥ md) masthead — full ribbon + branding + back-link + avatar menu. ═══ -->
     <div class="hidden md:block">
       <!-- Internal-area ribbon — static DE, locked decision (Task 1 brief). -->

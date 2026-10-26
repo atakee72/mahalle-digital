@@ -204,6 +204,19 @@ const de = {
   'lnd.cta.btn': 'Mitmachen — kostenlos',
   'lnd.cta.sub': 'FÜR NACHBAR:INNEN IM SCHILLERKIEZ · ANMELDUNG IN ZWEI MINUTEN',
   'lnd.cta.slogan': '„Das hier wird, was wir draus machen.“',
+  'lnd.demo.h': 'Mahalle ansehen – als Demo.', // DRAFT
+  'lnd.demo.p': 'Das ist eine Lesekopie von Mahalle mit erfundenen Inhalten: dieselbe App, dieselben Regeln, keine echten Nachbar:innen. Schreiben ist abgeschaltet. Das echte Mahalle läuft auf mahalle.digital.', // DRAFT
+  'lnd.demo.member': 'Als Mitglied ansehen', // DRAFT
+  'lnd.demo.admin': 'Als Admin ansehen', // DRAFT
+  'lnd.demo.meta': 'DEMO · INHALTE FIKTIV · SCHREIBEN DEAKTIVIERT', // DRAFT
+  'lnd.demo.code': 'Code auf GitHub', // DRAFT
+  'lnd.demo.eng': 'Engineering-Notizen', // DRAFT
+  'lnd.demo.real': 'Das echte Mahalle', // DRAFT
+  'auth.demo.h': 'Demo-Zugang', // DRAFT
+  'auth.demo.p': 'Auf dieser Demo gibt es keine Anmeldung mit Passwort. Wähle eine Rolle:', // DRAFT
+  'auth.demo.fail': 'Die Demo konnte nicht gestartet werden. Bitte noch einmal versuchen.', // DRAFT
+  'demo.banner': 'Demo-Ansicht · nur lesen · Inhalte fiktiv', // DRAFT
+  'demo.banner.code': 'Code auf GitHub →', // DRAFT
   'lnd.ticker': 'KEINE WERBUNG|KEIN ALGORITHMUS|KEIN DATENVERKAUF|SERVER IN DEUTSCHLAND|SPRICHT 30+ SPRACHEN', // DRAFT — pipe-separated ticker items
   // DRAFT copy (2026-09-28) — the owner words UI copy himself · landing Schaufenster
   'lnd.sf.kicker': 'DAS SCHAUFENSTER · SECHS RÄUME',
@@ -2387,6 +2400,19 @@ const en: Dict = {
   'lnd.cta.btn': 'Join — it’s free',
   'lnd.cta.sub': 'FOR NEIGHBORS IN SCHILLERKIEZ · SIGN-UP TAKES TWO MINUTES',
   'lnd.cta.slogan': '“This becomes what we make of it.”',
+  'lnd.demo.h': 'See Mahalle — as a demo.', // DRAFT
+  'lnd.demo.p': 'This is a read-only copy of Mahalle with invented content: the same app, the same rules, no real neighbours. Writing is switched off. The real Mahalle runs at mahalle.digital.', // DRAFT
+  'lnd.demo.member': 'View as a member', // DRAFT
+  'lnd.demo.admin': 'View as the admin', // DRAFT
+  'lnd.demo.meta': 'DEMO · FICTIONAL CONTENT · WRITING DISABLED', // DRAFT
+  'lnd.demo.code': 'Code on GitHub', // DRAFT
+  'lnd.demo.eng': 'Engineering notes', // DRAFT
+  'lnd.demo.real': 'The real Mahalle', // DRAFT
+  'auth.demo.h': 'Demo access', // DRAFT
+  'auth.demo.p': 'This demo has no password login. Pick a role:', // DRAFT
+  'auth.demo.fail': 'The demo could not start. Please try again.', // DRAFT
+  'demo.banner': 'Demo view · read-only · fictional content', // DRAFT
+  'demo.banner.code': 'Code on GitHub →', // DRAFT
   'lnd.ticker': 'NO ADS|NO ALGORITHM|NO DATA SALES|SERVERS IN GERMANY|SPEAKS 30+ LANGUAGES', // DRAFT — pipe-separated ticker items
   // DRAFT copy (2026-09-28) — the owner words UI copy himself · landing Schaufenster
   'lnd.sf.kicker': 'THE SHOP WINDOW · SIX ROOMS',

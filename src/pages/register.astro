@@ -4,6 +4,7 @@ import AuthRegisterInner from '../components/auth/kiosk/AuthRegisterInner.svelte
 import { connectDB } from '../lib/mongodb';
 import { resolveInvite } from '../lib/invites/invites';
 import { normalizeInviteCode } from '../lib/invites/inviteRules';
+import { isDemoDeployment } from '../lib/demo/demoMode';
 import type { RegisterInvite } from '../components/auth/kiosk/registerInvite';
 // Session-varying (logged-in members are bounced to /forum) — parity with reset/verify.
 Astro.response.headers.set('Cache-Control', 'no-store, must-revalidate');
@@ -61,5 +62,5 @@ const card = invite && !invite.dead
 ---
 
 <AuthLayout title="Registrieren" card={card}>
-  <AuthRegisterInner client:only="svelte" invite={invite} />
+  <AuthRegisterInner client:only="svelte" invite={invite} demo={isDemoDeployment()} />
 </AuthLayout>
