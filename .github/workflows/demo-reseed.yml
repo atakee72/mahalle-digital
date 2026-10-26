@@ -10,6 +10,9 @@ on:
     - cron: '0 4 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   reseed:
     runs-on: ubuntu-latest

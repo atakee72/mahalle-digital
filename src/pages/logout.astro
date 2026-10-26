@@ -6,6 +6,7 @@
 // (__Secure- prefix); server-side cookie deletion here would have to guess both.
 import { getSession } from 'auth-astro/server';
 import LogoutAction from '../components/auth/kiosk/LogoutAction.svelte';
+import DemoHead from '../components/demo/DemoHead.astro';
 
 const session = await getSession(Astro.request);
 if (!session?.user) {
@@ -36,6 +37,7 @@ if (!session?.user) {
         letter-spacing: 0.02em;
       }
     </style>
+    <DemoHead />
   </head>
   <body>
     <p>Du wirst abgemeldet &hellip;</p>

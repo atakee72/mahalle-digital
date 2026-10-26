@@ -13,7 +13,7 @@ import '../sentry.server.config';
 import * as Sentry from '@sentry/astro';
 import { safeInternalPath } from './lib/auth/safeRedirect';
 import { isCrossSiteForm } from './lib/security/crossSiteForm';
-import { isDemoDeployment, demoRefusal } from './lib/demo/demoMode';
+import { isDemoDeployment, demoRefusal, demoBlockedRead } from './lib/demo/demoMode';
 import { decideDemoRequest } from './lib/demo/demoRules';
 
 export const onRequest = defineMiddleware(async (context, next) => {
@@ -89,14 +89,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
       context.locals.session = null;
     }
 
-    // Demo session: the Sentry proxy would show the owner's real issue board. Refused here and a
-    // second time inside the route itself (src/pages/api/admin/errors.ts).
+    // Demo session: the Sentry proxy would show the owner's real issue board. Answered here with
+    // the route's own „off" shape and locked a second time inside the route itself
+    // (src/pages/api/admin/errors.ts). Only reads reach this point — writes were refused above.
     if (demo && decideDemoRequest({
       method: context.request.method,
       pathname,
       demoSession: (context.locals.user as { demo?: true } | null)?.demo === true,
     }) === 'refuse') {
-      return demoRefusal(pathname);
+      return demoBlockedRead();
     }
 
     // NOTE: this gate runs only for SSR requests — the isPrerendered early

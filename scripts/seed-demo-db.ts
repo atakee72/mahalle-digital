@@ -100,8 +100,11 @@ async function main(): Promise<void> {
   const now = new Date();
 
   // ---------------------------------------------------------------- users
+  // FIXED ids: a demo session lives 7 days and carries the user id; the nightly reseed must
+  // not orphan it (a visitor would stay logged in as a user that no longer exists and `/`
+  // would bounce them to /forum without a way back to the demo buttons). Hex prefix 64656d6f = "demo".
   const ids = Object.fromEntries(
-    ['member', 'admin', 'leyla', 'tobias', 'nour', 'garten', 'fincan', 'marek'].map((k) => [k, new ObjectId()]),
+    ['member', 'admin', 'leyla', 'tobias', 'nour', 'garten', 'fincan', 'marek'].map((k, i) => [k, new ObjectId(`64656d6f00000000000000${String(i + 1).padStart(2, '0')}`)]),
   ) as Record<string, ObjectId>;
   const S = Object.fromEntries(Object.entries(ids).map(([k, v]) => [k, String(v)])) as Record<string, string>;
 
@@ -219,7 +222,9 @@ async function main(): Promise<void> {
     listing(S.nour, 'Zimmerpflanzen zu verschenken', 'Monstera-Ableger und Grünlilien. Töpfe gibt es dazu. Bitte vorher melden.', 'pflanze', { listingType: 'gift', price: 0, createdAt: daysAgo(1), lastBumpedAt: daysAgo(1) }),
     listing(S.tobias, 'Tausche Kinderfahrrad gegen Laufrad', 'Kinderfahrrad 16 Zoll, ich suche ein kleines Laufrad für meine Nichte.', 'kinder', { listingType: 'exchange', price: 0, exchangeFor: 'Laufrad für Kleinkinder' }),
     listing(S.garten, 'Gießkannen und Pflanzschalen', 'Vom Gartenprojekt übrig, alles sauber. Abholung am Gartentor.', 'garten', { price: 12, status: 'reserved', reservedAt: hoursAgo(30) }),
-    listing(S.fincan, 'Espressokocher, 6 Tassen', 'Italienischer Klassiker, funktioniert einwandfrei. Verkauft, bleibt zur Ansicht stehen.', 'sonstiges', { price: 15, status: 'sold', createdAt: daysAgo(10), lastBumpedAt: daysAgo(10) }),
+    // Sold by the demo MEMBER: the public browse hides sold listings, only the seller's own
+    // profile/market view still shows it — so it is the demo member who must own it.
+    listing(S.member, 'Espressokocher, 6 Tassen', 'Italienischer Klassiker, funktioniert einwandfrei. Inzwischen verkauft.', 'sonstiges', { price: 15, status: 'sold', createdAt: daysAgo(10), lastBumpedAt: daysAgo(10) }),
     lWarned,
     lReported,
   ];

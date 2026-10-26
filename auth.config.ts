@@ -122,6 +122,11 @@ export default defineConfig({
 
     callbacks: {
         async jwt({ token, user }) {
+            // A demo token (spec 2026-10-26) is valid ONLY on a demo deployment. Copied into a
+            // browser on mahalle.digital it would otherwise be a working session (the role rides in
+            // the token) whenever the Auth secret is shared — so it dies here on its first request,
+            // whatever the env scoping. The owner also gives the demo branch its own secret.
+            if ((token as any).demo === true && !isDemoDeployment()) return null;
             if (user) {
                 token.id = user.id;
                 token.role = (user as any).role ?? 'user';
