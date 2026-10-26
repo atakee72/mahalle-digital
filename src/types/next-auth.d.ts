@@ -20,6 +20,8 @@ declare module '@auth/core/types' {
       id: string;
       role?: 'user' | 'admin';
       emailVerified?: boolean;
+      // Demo session marker (spec 2026-10-26-demo-instance-and-engineering-tour-design.md).
+      demo?: true;
       email?: string | null;
       name?: string | null;
       image?: string | null;
@@ -32,6 +34,8 @@ declare module '@auth/core/types' {
     // Wide union: AdapterUser narrows this to Date | null; our credentials
     // authorize() returns a boolean. Keep all three assignable.
     emailVerified?: boolean | Date | null;
+    // Demo user marker (spec 2026-10-26-demo-instance-and-engineering-tour-design.md).
+    demo?: true;
     email?: string | null;
     name?: string | null;
     image?: string | null;
@@ -43,6 +47,8 @@ declare module '@auth/core/jwt' {
     id?: string;
     role?: 'user' | 'admin';
     emailVerified?: boolean;
+    // Demo session marker (spec 2026-10-26-demo-instance-and-engineering-tour-design.md).
+    demo?: true;
     // Task 9 (password change / other-device sign-out): wall-clock ms of the
     // last passwordChangedAt DB recheck for this token — see auth.config.ts's
     // jwt callback. Absent on tokens minted before this shipped; treated as 0.

@@ -8,6 +8,8 @@ import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise, { connectDB } from "./src/lib/mongodb";
 import { ObjectId } from "mongodb";
 import bcrypt from "bcrypt";
+import { isDemoDeployment } from "./src/lib/demo/demoMode";
+import { demoCredentialsProvider } from "./src/lib/demo/demoProvider";
 import { peekRateLimit, consumeRateLimit, clearRateLimit, LOGIN_MAX_FAILS, LOGIN_WINDOW_MS, BAN_FLAG_WINDOW_MS } from "./src/lib/auth/rateLimit";
 
 export default defineConfig({
@@ -63,6 +65,13 @@ export default defineConfig({
                     return null;
                 }
 
+                // A doc without a password hash (demo users, deletion tombstones) can never log in by
+                // password; bcrypt.compare must not be handed undefined (it throws).
+                if (typeof user.password !== 'string') {
+                    await consumeRateLimit(lockKey, LOGIN_MAX_FAILS, LOGIN_WINDOW_MS);
+                    return null;
+                }
+
                 // Verify password using bcrypt
                 const isValidPassword = await bcrypt.compare(
                     credentials.password as string,
@@ -102,7 +111,8 @@ export default defineConfig({
                     emailVerified: user.emailVerified === true,
                 };
             }
-        })
+        }),
+        ...(isDemoDeployment() ? [demoCredentialsProvider()] : []),
     ],
 
     session: {
@@ -125,6 +135,8 @@ export default defineConfig({
                 // /api/auth/session), this stays fixed for the token's whole
                 // lifetime, so it actually reflects "when this device logged in".
                 token.loginAt = Date.now();
+                // Demo sessions (spec 2026-10-26): set once here, never rewritten by the recheck branch.
+                if ((user as any).demo === true) token.demo = true;
                 return token;
             }
             // Other-device sign-out: invalidate tokens issued before passwordChangedAt.
@@ -166,6 +178,7 @@ export default defineConfig({
                 session.user.id = token.id as string;
                 session.user.role = (token as any).role ?? 'user';
                 (session.user as any).emailVerified = (token as any).emailVerified === true;
+                if ((token as any).demo === true) (session.user as any).demo = true;
             }
             return session;
         }

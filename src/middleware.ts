@@ -13,6 +13,8 @@ import '../sentry.server.config';
 import * as Sentry from '@sentry/astro';
 import { safeInternalPath } from './lib/auth/safeRedirect';
 import { isCrossSiteForm } from './lib/security/crossSiteForm';
+import { isDemoDeployment, demoRefusal } from './lib/demo/demoMode';
+import { decideDemoRequest } from './lib/demo/demoRules';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   try {
@@ -76,6 +78,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
       console.error("Error getting session:", error);
       context.locals.user = null;
       context.locals.session = null;
+    }
+
+    // Read-only demo deployment (spec 2026-10-26): every state change is refused except the
+    // three Auth.js endpoints that make sign-in/sign-out work; a demo session may not read the
+    // Sentry proxy. Inert without DEMO_MODE=1 + a dev-named database (fail closed).
+    if (isDemoDeployment()) {
+      const verdict = decideDemoRequest({
+        method: context.request.method,
+        pathname,
+        demoSession: (context.locals.user as { demo?: true } | null)?.demo === true,
+      });
+      if (verdict === 'refuse') return demoRefusal(pathname);
     }
 
     // NOTE: this gate runs only for SSR requests — the isPrerendered early
