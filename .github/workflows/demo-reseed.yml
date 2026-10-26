@@ -1,0 +1,51 @@
+name: Demo Reseed
+# Nightly reset of the demo instance (demo.mahalle.digital): drops and rewrites the demo
+# database's content collections with fictional data (dates relative to the run), copies the
+# five public Kiez statistics from prod, then rings the demo deployment's own news fetch.
+# 04:00 UTC = 05:00/06:00 Berlin. Actions cron is UTC-only and jitters by minutes.
+# Owner's hand steps: repo secret DEMO_MONGODB_URI (the dev URI with the path /mahalle-dev-demo),
+# and the demo deployment's preview-scoped CRON_SECRET must equal the repo secret CRON_SECRET.
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  reseed:
+    runs-on: ubuntu-latest
+    steps:
+      # The deployed code of the demo (branch `demo`); the seed script and the blog slugs it
+      # pre-claims come from this commit.
+      - uses: actions/checkout@v7
+        with:
+          ref: demo
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Reseed the demo database
+        env:
+          MONGODB_URI: ${{ secrets.DEMO_MONGODB_URI }}
+          # READ-ONLY use: the seed copies exactly these five public statistics collections
+          # (no member data) and writes nothing to this database:
+          # schillerkiez_demographics, schillerkiez_social, schillerkiez_reference,
+          # schillerkiez_air_log, schillerkiez_air_daily.
+          PROD_MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: pnpm tsx scripts/seed-demo-db.ts --write --copy-kiez-from "$PROD_MONGODB_URI"
+
+      - name: Trigger the demo's own news fetch
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_ORIGIN: https://demo.mahalle.digital
+        run: |
+          code=$(curl -s -o /tmp/resp.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_ORIGIN/api/news/fetch-daily")
+          cat /tmp/resp.json; echo
+          if [ "$code" != "200" ]; then
+            echo "demo news fetch failed with HTTP $code"
+            exit 1
+          fi
