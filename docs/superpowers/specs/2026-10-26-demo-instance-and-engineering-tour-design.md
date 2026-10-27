@@ -193,3 +193,12 @@ Recorded here rather than rewritten into the sections, so the approved design st
 - **Robots meta** also on `/logout`, which has its own `<head>`. Workflow carries `permissions: contents: read`.
 - **Probe result (local prod build):** 23/23 demo mode, 6/6 flagless, 3/3 with the prod database name on an unreachable host. The admin card text for the off state is „Fehler-Monitoring nicht konfiguriert".
 - **Noted, not done (owner's calls):** SHA-pinned GitHub Actions (the repo pins by major tag everywhere); a dedicated read-only Atlas user for the Kiez copy instead of the stats workflow's read-write login.
+
+## 14. Go-live notes (2026-10-27 21:35, live at https://demo.mahalle.digital)
+
+- Order that works: push the branch BEFORE adding branch-scoped vars (`branch_not_found` otherwise); add the vars; push an empty commit so the branch rebuilds with them (the first branch push got no build at all).
+- Vercel refuses empty env values: the three Sentry vars stay on the demo, which therefore reports tagged `preview`. The §6.2 worry (a daily air-freshness false alarm) does not materialise because the nightly Kiez copy brings fresh air-log rows.
+- The domain was bound to the branch through the API (`POST /v10/projects/{id}/domains { name, gitBranch }`, verified at once since the apex is on the account). After the CNAME, Vercel did not issue the certificate by itself within five minutes; `vercel certs issue demo.mahalle.digital` did it in nine seconds.
+- First `demo-reseed.yml` run: success (seed, five Kiez collections from prod, the demo's own fetch-daily saved 20 articles). Live probe on the real domain: 23/23.
+- GitHub: description, homepage and topics set by CLI; pinning has no API any more (owner's click).
+- `lnd.demo.p` DE replaced by the owner's wording the same evening; the remaining demo keys are DRAFT.
