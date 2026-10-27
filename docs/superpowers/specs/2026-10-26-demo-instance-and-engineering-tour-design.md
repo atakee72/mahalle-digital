@@ -202,3 +202,4 @@ Recorded here rather than rewritten into the sections, so the approved design st
 - First `demo-reseed.yml` run: success (seed, five Kiez collections from prod, the demo's own fetch-daily saved 20 articles). Live probe on the real domain: 23/23.
 - GitHub: description, homepage and topics set by CLI; pinning has no API any more (owner's click).
 - `lnd.demo.p` DE replaced by the owner's wording the same evening; the remaining demo keys are DRAFT.
+- First night (`098892b1`, released to the demo at 22:26): two Sentry issues from the demo — the Kiez-Brief step of `fetch-daily` threw without `NEXTAUTH_URL` (the preview scope has none; now skipped on a demo deployment, the other piggy-backs stay), and a scanner's `GET /api/auth/<unknown>` was a 500 because auth-astro returns nothing for it (now a 404 from the middleware, `src/lib/auth/authRoutePath.ts`). §6.2's „no mail job ever runs on the demo" is thereby true in code, not only by missing transport.
