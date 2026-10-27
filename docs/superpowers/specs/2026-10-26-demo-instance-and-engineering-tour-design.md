@@ -176,3 +176,20 @@ GitHub About: description + website `https://mahalle.digital`; topics (`astro`, 
 5. ENGINEERING.md is written here, from the repo, with the owner reading before commit. Decided.
 6. News: option (b) — the nightly workflow calls the demo deployment's `GET /api/news/fetch-daily` with the `CRON_SECRET` Bearer after the reseed; Sentry is blanked on the `demo` branch so the air-freshness check stays silent (§5.2 step 3, §6.2). If the NewsData quota turns out too tight, fall back to (a). Decided.
 7. Kiez statistics: option (b) — the reseed workflow copies the five `schillerkiez_*` collections read-only from prod through an explicit allowlist of those names, using the `MONGODB_URI` secret the stats workflow already holds; the owner authorised this scheduled prod read on 2026-10-26. Decided.
+
+## 13. As built (2026-10-26, merged `c3727b34`) — deviations from the design above
+
+Recorded here rather than rewritten into the sections, so the approved design stays readable as what was approved.
+
+- **The database URI is read at RUN time, not inlined.** §5.2 step 3, §7.1 and §9 assumed `import.meta.env.MONGODB_URI` is inlined at build; in the server bundle it compiles to a `process.env.MONGODB_URI` read (verified: four such reads in `dist/server`). Consequences: one build serves prod, demo and the probe's three modes; the probe sets the URI on the SERVER command; Vercel's branch-scoped var applies at request time. `demoMode.ts` documents it.
+- **New lock, from the Opus review (critical):** a demo admin's session cookie copied onto mahalle.digital would have been a working prod admin session whenever the Auth secret is shared across environments. The `jwt` callback now returns `null` for any token carrying `demo: true` on a non-demo deployment. **New hand step for §5.2:** a branch-scoped `NEXTAUTH_SECRET` for `demo` with a fresh random value, so the two deployments never share a signing key. §10's „cookies never cross" sentence covered automatic sending only; a copied cookie is now dead on arrival.
+- **Blocked read answers the route's own shape.** §7.2's 403 made the admin errors card show a warning-toned „nicht erreichbar"; the middleware now answers `200 { enabled: false, demo: true }` (`demoBlockedRead()`), the card shows „nicht konfiguriert", and `/api/admin/errors` carries the same lock itself. The blocked-read match is by normalised prefix (repeated slashes collapsed, trailing slash dropped) — exact matching let `/api/admin/errors/` through (security scanner).
+- **Write gate placement.** The write refusal runs ABOVE the middleware's static-asset skip, like the cross-site check, so a dotted dynamic path cannot bypass it; only the session-dependent blocked read sits after session resolution.
+- **Own cron secret.** The workflow uses repo secret `DEMO_CRON_SECRET`, which must equal a branch-scoped preview `CRON_SECRET` for `demo`; prod's cron secret is never reused (security scanner).
+- **Source URI via env.** `--copy-kiez-from <uri>` became `--copy-kiez` + `KIEZ_SOURCE_URI` in the environment (argv shows in process lists and step logs); the seed prints only an error's name and code.
+- **Fixed ObjectIds** (`64656d6f…01–08`) for all eight seeded users: the nightly reseed would otherwise orphan every 7-day demo session and `/` would bounce a returning visitor to `/forum` with no way back to the buttons (Opus review).
+- **Sold listing** belongs to the demo member (public browse hides sold listings; only the seller's own view shows it).
+- **„Stand: <seed date>"** on the landing block dropped — the nightly reseed would always print today.
+- **Robots meta** also on `/logout`, which has its own `<head>`. Workflow carries `permissions: contents: read`.
+- **Probe result (local prod build):** 23/23 demo mode, 6/6 flagless, 3/3 with the prod database name on an unreachable host. The admin card text for the off state is „Fehler-Monitoring nicht konfiguriert".
+- **Noted, not done (owner's calls):** SHA-pinned GitHub Actions (the repo pins by major tag everywhere); a dedicated read-only Atlas user for the Kiez copy instead of the stats workflow's read-write login.

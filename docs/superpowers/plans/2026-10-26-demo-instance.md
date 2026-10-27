@@ -349,3 +349,7 @@ git commit -m "demo: seed script for mahalle-dev-demo + nightly reseed workflow"
 - Dispatch A (Sonnet): Tasks 1–3 in that order, one report. Dispatch B (Sonnet, second worktree `.claude/worktrees/demo-seed` off the same base, no file overlap): Task 4. Both may run in parallel; B's branch is rebased onto A's before the review.
 - Neither implementer starts a server, writes a probe, dispatches subagents, or touches a database other than one whose name contains both `dev` and `demo`.
 - Order of the owner's hand steps matters once: the `demo` branch and the `DEMO_MONGODB_URI` secret must exist before the first `workflow_dispatch` of `demo-reseed.yml` (its checkout uses `ref: demo`).
+
+## As executed (2026-10-26)
+
+Tasks 1–4 by two Sonnet implementers in parallel worktrees (code 20a36d6b/ce232484/d3ad9d90, seed 851e53b4), my fix commits e85b0f23 (security scanner: path normalisation, gate placement, own cron secret, env source URI) and c3727b34 (Opus review: transplanted-token guard, calm blocked-read answer, fixed seed ids, sold-listing owner, logout robots meta, workflow permissions), merged ff to `main`. Task 6's three probe builds collapsed into ONE build because the database URI is a run-time read (spec §13). Task 5 (docs) 2026-10-27; `docs/ENGINEERING.md` and the README block wait for the owner's read. 495 tests, tsc 16, svelte-check 81.
