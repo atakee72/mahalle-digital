@@ -7,7 +7,7 @@ export const prerender = true;
 
 const SITE = 'https://mahalle.digital';
 
-const STATIC_PATHS = ['/', '/blog', '/schillerkiez', '/impressum', '/datenschutz'];
+const STATIC_PATHS = ['/', '/blog', '/schillerkiez', '/impressum', '/datenschutz', '/foerderung'];
 
 export const GET: APIRoute = async () => {
   const posts = await getCollection('blog', ({ data }) => data.draft !== true);

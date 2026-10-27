@@ -240,7 +240,7 @@ const de = {
   'lnd.foot.impressum': 'Impressum',
   'lnd.foot.datenschutz': 'Datenschutz',
   'lnd.foot.ueber': 'Über das Projekt',
-  'lnd.foot.foerderung': 'Förderung: Gebietsfonds',
+  'lnd.foot.foerderung': 'Förderung', // → /foerderung since 2026-10-27 (was „Förderung: Gebietsfonds" → the Manifest)
   'lnd.foot.kontakt': 'Kontakt',
   'lnd.foot.github': 'GitHub ↗',
   'lnd.foot.copyright': '© {year} MAHALLE · SCHILLERKIEZ',
@@ -335,6 +335,7 @@ const de = {
   'footer.copyright.after': ' — Mahalle.',
   'footer.licensedUnder': 'Lizenziert unter',
   'footer.license': 'PolyForm Noncommercial 1.0.0',
+  'footer.foerderung': 'Förderung', // member footer link → /foerderung (2026-10-27)
 
   // ─── Phase 4b · forum state matrix ─────────────────────────────────
   // Empty state — active filter (tag or kind) returned zero matches.
@@ -2436,7 +2437,7 @@ const en: Dict = {
   'lnd.foot.impressum': 'Impressum',
   'lnd.foot.datenschutz': 'Privacy',
   'lnd.foot.ueber': 'About the project',
-  'lnd.foot.foerderung': 'Funding: Gebietsfonds',
+  'lnd.foot.foerderung': 'Funding',
   'lnd.foot.kontakt': 'Contact',
   'lnd.foot.github': 'GitHub ↗',
   'lnd.foot.copyright': '© {year} MAHALLE · SCHILLERKIEZ',
@@ -2520,6 +2521,7 @@ const en: Dict = {
   'footer.copyright.after': ' — Mahalle.',
   'footer.licensedUnder': 'Licensed under',
   'footer.license': 'PolyForm Noncommercial 1.0.0',
+  'footer.foerderung': 'Funding',
 
   // ─── Phase 4b · forum state matrix ─────────────────────────────────
   'state.empty.filter.flourish': 'still.',

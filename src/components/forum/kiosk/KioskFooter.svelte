@@ -31,5 +31,12 @@
         {$t['footer.license']}
       </a>.
     </span>
+    <!-- Transparency page: who supported Mahalle, how much, for what (2026-10-27). -->
+    <span>
+      <a
+        href="/foerderung"
+        class="inline-block kiosk-tap underline decoration-rule decoration-1 underline-offset-2 hover:text-ink hover:decoration-ink transition-colors"
+      >{$t['footer.foerderung']}</a>
+    </span>
   </div>
 </footer>

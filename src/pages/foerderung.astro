@@ -1,0 +1,88 @@
+---
+// Förderung — public transparency page in the style of the legal pages
+// (Impressum / Datenschutz): who supported Mahalle, how much, for what, and
+// what that does not mean. ITZ shape (Geber, Summe, Zweck, Zeitraum,
+// Einflussklausel). Text = the owner's (brief „foerderung v1", 2026-10-27);
+// the Logoleiste lives ONLY here, never in a footer. German only, like the
+// other legal pages. Linked from the landing footer and the member footer.
+// source: foerderung v1 (2026-10-27)
+import LandingLayout from '../layouts/LandingLayout.astro';
+---
+
+<LandingLayout title="Förderung | Mahalle" description="Von wem Mahalle Unterstützung erhalten hat, wie viel, wofür – und was das nicht bedeutet.">
+  <div class="lgl-wrap">
+    <a href="/" class="lgl-back font-dmmono">← Mahalle</a>
+    <h1 class="font-bricolage">Förderung und Unterstützung</h1>
+
+    <p>
+      Mahalle wird ehrenamtlich entwickelt und betrieben. Für einzelne Vorhaben haben wir
+      Unterstützung erhalten. Hier steht, von wem, wie viel, wofür – und was das nicht bedeutet.
+    </p>
+
+    <h2 class="font-bricolage">Gebietsfonds Schillerpromenade</h2>
+    <p class="lgl-sub"><em>Bezirksamt Neukölln, Städtebauförderung „Lebendige Zentren und Quartiere"</em></p>
+    <ul class="lgl-list">
+      <li><strong>Projekt:</strong> „MaHalle Digital – Dein Kiez, deine Plattform: Schillerkiez vernetzt sich"</li>
+      <li><strong>Bewilligt:</strong> 8. Mai 2026, durch die Gebietsfonds-Jury</li>
+      <li><strong>Summe:</strong> 320 € (50 % der Projektkosten; den Rest tragen wir selbst)</li>
+      <li><strong>Zeitraum:</strong> September–November 2026</li>
+      <li>
+        <strong>Wofür:</strong> zwei Infotage auf dem Schillermarkt (19. und 26. September 2026) –
+        Flyer, Banner, QR-Karten, Standmaterial, Snacks – sowie, nach Zustimmung vom
+        24. September 2026, zeitlose Flyer, Plakate und Aufkleber für den Kiez.
+      </li>
+      <li><strong>Nicht gefördert:</strong> die Plattform selbst, ihre Entwicklung oder ihr Betrieb.</li>
+    </ul>
+    <figure class="lgl-logos">
+      <img
+        src="/assets/foerderung/logoleiste-lq-schiller.webp"
+        width="1600"
+        height="149"
+        loading="lazy"
+        decoding="async"
+        alt="Gefördert durch Bund, Land Berlin und Bezirk Neukölln – Lebendiges Quartier Schillerpromenade"
+      />
+    </figure>
+
+    <h2 class="font-bricolage">Weitere Förderung (zugesagt)</h2>
+    <p>
+      Für das Projektjahr 2026/27 hat uns eine internationale Stiftung, die gesellschaftliches
+      Engagement von Stipendiat:innen fördert, eine Projektförderung zugesagt. Sie unterstützt
+      Kiez-Veranstaltungen, die Ausbildung mehrsprachiger „Mahalle Guides" und das
+      Mahalle-Playbook – nicht den Betrieb der Plattform. Name, Summe und Zeitraum tragen wir
+      nach, sobald der Vertrag unterschrieben und die Förderung offiziell bekannt gegeben ist.
+    </p>
+
+    <h2 class="font-bricolage">Was Förderung bei Mahalle bedeutet – und was nicht</h2>
+    <p>
+      Förderer haben keinen Einfluss auf Inhalte, Regeln, Moderation oder Daten. Das steht so im
+      <a href="/blog/das-mahalle-manifest">Manifest</a>. Wer uns unterstützt, bekommt eine Zeile
+      auf dieser Seite und unseren Dank – keine Stimme.
+    </p>
+
+    <p class="lgl-stand"><em>Stand: 27. Oktober 2026. Weitere Förderungen tragen wir hier mit Datum nach.</em></p>
+  </div>
+</LandingLayout>
+
+<style>
+  .lgl-wrap { max-width: 680px; margin: 0 auto; padding: 40px 22px 60px; }
+  .lgl-back { display: inline-block; font-size: 11px; letter-spacing: 0.1em; color: var(--k-ink-mute); text-decoration: none; margin-bottom: 24px; }
+  .lgl-wrap h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 20px; }
+  .lgl-wrap h2 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; margin: 26px 0 8px; }
+  .lgl-wrap p { font-size: 14px; line-height: 1.65; color: var(--k-ink-soft); margin: 0 0 10px; }
+  .lgl-wrap a { color: var(--k-ink); text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 3px; }
+  .lgl-sub { margin-top: -4px; }
+  .lgl-list { list-style: none; padding: 0; margin: 0 0 14px; }
+  .lgl-list li { font-size: 14px; line-height: 1.65; color: var(--k-ink-soft); padding: 6px 0; border-top: 1px dashed var(--k-rule, #d9d1bf); }
+  .lgl-list li:last-child { border-bottom: 1px dashed var(--k-rule, #d9d1bf); }
+  .lgl-list strong { color: var(--k-ink); font-weight: 700; }
+  /* The official Logoleiste sits on white (the logos are not made for paper tones). */
+  .lgl-logos { margin: 16px 0 0; padding: 14px 16px; background: #fff; border: 1px solid var(--k-rule, #d9d1bf); }
+  .lgl-logos img { display: block; width: 100%; height: auto; }
+  /* Phones: the strip would shrink to a 29 px line — keep it readable and let it swipe sideways. */
+  @media (max-width: 640px) {
+    .lgl-logos { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .lgl-logos img { min-width: 720px; }
+  }
+  .lgl-stand { margin-top: 28px; font-size: 12px; color: var(--k-ink-mute); }
+</style>

@@ -812,7 +812,7 @@
       <a href="/impressum">{$t['lnd.foot.impressum']}</a>
       <a href="/datenschutz">{$t['lnd.foot.datenschutz']}</a>
       <a href="/blog/das-mahalle-manifest">{$t['lnd.foot.ueber']}</a>
-      <a href="/blog/das-mahalle-manifest">{$t['lnd.foot.foerderung']}</a>
+      <a href="/foerderung">{$t['lnd.foot.foerderung']}</a>
       <a href="mailto:admin@mahalle.digital">{$t['lnd.foot.kontakt']}</a>
       <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">{$t['lnd.foot.github']}</a>
     </div>
