@@ -2,6 +2,8 @@
 
 A modern, performant community web application built with Astro, TypeScript, and React — live at **[mahalle.digital](https://mahalle.digital)**, serving the Schillerkiez neighborhood in Berlin-Neukölln.
 
+> 🔎 **For reviewers (recruiters, hiring managers):** try the read-only demo at **[demo.mahalle.digital](https://demo.mahalle.digital)** — two one-click roles (member, admin), fictional content, no sign-up. Then read **[docs/ENGINEERING.md](./docs/ENGINEERING.md)**: a 10-minute path through the architecture, five files worth reading, three postmortems, the testing and security posture, and how this project is built with AI tools.
+
 > 📜 **Read the [Mahalle Manifesto](./MANIFESTO.md)** — the project's moral charter. It describes who Mahalle is for, what it must remain, and what it refuses to become. Anyone deploying, forking, or contributing to this project is expected to honor it.
 
 ## 🚀 Tech Stack
