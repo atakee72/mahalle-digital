@@ -15,6 +15,7 @@ import { safeInternalPath } from './lib/auth/safeRedirect';
 import { isCrossSiteForm } from './lib/security/crossSiteForm';
 import { isDemoDeployment, demoRefusal, demoBlockedRead } from './lib/demo/demoMode';
 import { decideDemoRequest } from './lib/demo/demoRules';
+import { isUnknownAuthPath } from './lib/auth/authRoutePath';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   try {
@@ -38,6 +39,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const demo = isDemoDeployment();
     if (demo && decideDemoRequest({ method: context.request.method, pathname, demoSession: false }) === 'refuse') {
       return demoRefusal(pathname);
+    }
+
+    // auth-astro's catch-all returns `undefined` for `/api/auth/<unknown action>` (and bare
+    // `/api/auth`), which Astro reports as a 500 and Sentry as an issue per hit (MAHALLE-PROD-X,
+    // 2026-10-27, a scanner on the demo host). Answer 404 here, before the route and before the
+    // static skip (`/api/auth/.env` has a dot). Astro reroutes a 404 from here to the 404 page.
+    if (isUnknownAuthPath(pathname)) {
+      return new Response(null, { status: 404 });
     }
 
     // Skip middleware for static assets and prerendered routes

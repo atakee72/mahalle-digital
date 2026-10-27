@@ -5,6 +5,7 @@ import { checkAirLoggerFreshness } from '../../../lib/kiez/airFreshness';
 import { announceNewBlogPosts } from '../../../lib/blog/blogNotify';
 import { sendForumDigest } from '../../../lib/forum/forumNotify';
 import { sendKiezBrief } from '../../../lib/newsletter/kiezBrief';
+import { isDemoDeployment } from '../../../lib/demo/demoMode';
 import type { NewsItem } from '../../../types';
 import { decodeHtmlEntities } from '../../../utils/decodeHtmlEntities';
 import crypto from 'crypto';
@@ -364,7 +365,10 @@ export const GET: APIRoute = async ({ request }) => {
   // issue whose members are still waiting (groups of 75, one per UTC day); (2) on a Berlin Monday,
   // when Sunday's GitHub run never claimed the issue, it starts the issue itself (the key is the
   // ISO week of now − 24 h, so Monday morning still belongs to Sunday's issue). Never throws.
-  await sendKiezBrief({ fallback: true });
+  // Not on the read-only demo deployment: a demo never mails, and it has no NEXTAUTH_URL, so the
+  // run only threw into Sentry every night (MAHALLE-PROD-W, 2026-10-27). The digest and the blog
+  // announce above stay — they write in-app notifications into the demo database, nothing leaves.
+  if (!isDemoDeployment()) await sendKiezBrief({ fallback: true });
 
     const openaiKey = import.meta.env.OPENAI_API_KEY;
     const newsDataKey = import.meta.env.NEWSDATA_API_KEY;
