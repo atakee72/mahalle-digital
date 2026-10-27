@@ -205,7 +205,7 @@ const de = {
   'lnd.cta.sub': 'FÜR NACHBAR:INNEN IM SCHILLERKIEZ · ANMELDUNG IN ZWEI MINUTEN',
   'lnd.cta.slogan': '„Das hier wird, was wir draus machen.“',
   'lnd.demo.h': 'Mahalle ansehen – als Demo.', // DRAFT
-  'lnd.demo.p': 'Das ist eine Lesekopie von Mahalle mit erfundenen Inhalten: dieselbe App, dieselben Regeln, keine echten Nachbar:innen. Schreiben ist abgeschaltet. Das echte Mahalle läuft auf mahalle.digital.', // DRAFT
+  'lnd.demo.p': 'Dies ist eine Lesekopie von „Mahalle” mit erfundenen Inhalten: Es ist dieselbe App, es gelten dieselben Regeln, aber es gibt keine echten Nachbar:innen. Das Schreiben ist abgeschaltet. Das echte Mahalle läuft auf mahalle.digital.', // owner's wording 2026-10-27
   'lnd.demo.member': 'Als Mitglied ansehen', // DRAFT
   'lnd.demo.admin': 'Als Admin ansehen', // DRAFT
   'lnd.demo.meta': 'DEMO · INHALTE FIKTIV · SCHREIBEN DEAKTIVIERT', // DRAFT
