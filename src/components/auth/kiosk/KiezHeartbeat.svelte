@@ -40,39 +40,60 @@
   });
 </script>
 
-<div class="inline-flex items-center font-dmmono"
-  style="gap:{compact ? '10px' : '16px'}; padding:{compact ? '7px 12px' : '9px 16px'};
-         background:var(--k-paper-warm); border:1.5px solid var(--k-ink); border-radius:999px;
-         box-shadow:2px 2px 0 var(--k-ink); font-size:{compact ? '10px' : '11px'}; color:var(--k-ink-soft);">
-  <span class="inline-flex items-center uppercase" style="gap:6px; color:var(--k-ink); font-weight:600; letter-spacing:0.08em; font-size:{compact ? '9px' : '10px'};">
-    <span style="position:relative; width:8px; height:8px;">
-      <span class="kh-ping" style="position:absolute; inset:0; border-radius:50%; background:var(--k-success);"></span>
-      <span style="position:absolute; inset:0; border-radius:50%; background:var(--k-success);"></span>
+<div class="kh font-dmmono"
+  style="--kh-gap:{compact ? '10px' : '16px'}; --kh-pad:{compact ? '7px 12px' : '9px 16px'};
+         --kh-fs:{compact ? '10px' : '11px'}; --kh-live-fs:{compact ? '9px' : '10px'};">
+  <span class="kh-seg kh-live">
+    <span class="kh-dot">
+      <span class="kh-ping"></span>
+      <span class="kh-dot-core"></span>
     </span>
     {$t['auth.heartbeat.live']}
   </span>
 
   {#if events !== null}
-    <span class="inline-flex items-center" style="gap:5px;">
-      <span style="width:1px; height:12px; background:var(--k-rule);"></span>
-      <b style="color:var(--k-ink); font-weight:700;">{events}</b> {events === 1 ? $t['auth.heartbeat.events.one'] : $t['auth.heartbeat.events']}
+    <span class="kh-seg">
+      <span class="kh-rule"></span>
+      <b>{events}</b> {events === 1 ? $t['auth.heartbeat.events.one'] : $t['auth.heartbeat.events']}
     </span>
   {/if}
   {#if posts !== null}
-    <span class="inline-flex items-center" style="gap:5px;">
-      <span style="width:1px; height:12px; background:var(--k-rule);"></span>
-      <b style="color:var(--k-ink); font-weight:700;">{posts}</b> {posts === 1 ? $t['auth.heartbeat.posts.one'] : $t['auth.heartbeat.posts']}
+    <span class="kh-seg">
+      <span class="kh-rule"></span>
+      <b>{posts}</b> {posts === 1 ? $t['auth.heartbeat.posts.one'] : $t['auth.heartbeat.posts']}
     </span>
   {/if}
   {#if air !== null}
-    <span class="inline-flex items-center" style="gap:5px;">
-      <span style="width:1px; height:12px; background:var(--k-rule);"></span>
-      {$t['auth.heartbeat.air']}: <b style="color:var(--k-ink); font-weight:700;">{air}</b>
+    <span class="kh-seg">
+      <span class="kh-rule"></span>
+      {$t['auth.heartbeat.air']}: <b>{air}</b>
     </span>
   {/if}
 </div>
 
 <style>
+  .kh {
+    display: inline-flex; align-items: center; gap: var(--kh-gap); padding: var(--kh-pad);
+    background: var(--k-paper-warm); border: 1.5px solid var(--k-ink); border-radius: 999px;
+    box-shadow: 2px 2px 0 var(--k-ink); font-size: var(--kh-fs); color: var(--k-ink-soft);
+  }
+  /* A segment is one unit: its label never breaks mid-phrase. */
+  .kh-seg { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .kh-seg b { color: var(--k-ink); font-weight: 700; }
+  .kh-live { gap: 6px; color: var(--k-ink); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--kh-live-fs); }
+  .kh-dot { position: relative; width: 8px; height: 8px; }
+  .kh-ping, .kh-dot-core { position: absolute; inset: 0; border-radius: 50%; background: var(--k-success); }
+  .kh-rule { width: 1px; height: 12px; background: var(--k-rule); }
+  /* Phones (2026-10-28): the pill is wider than the screen with three segments, so each
+     label wrapped inside its segment („LIVE IM / KIEZ"). Let whole segments wrap onto a
+     second centred line instead; the dividers would start a wrapped line, the gap separates. */
+  @media (max-width: 639px) {
+    .kh { flex-wrap: wrap; justify-content: center; row-gap: 4px; column-gap: 12px;
+          max-width: calc(100vw - 32px); margin: 0 16px; padding: 7px 14px; font-size: 10px;
+          border-radius: 18px; }
+    .kh-live { font-size: 9px; }
+    .kh-rule { display: none; }
+  }
   @keyframes khPing { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.55); opacity: 0.35; } }
   .kh-ping { animation: khPing 1.8s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce) { .kh-ping { animation: none; } }
