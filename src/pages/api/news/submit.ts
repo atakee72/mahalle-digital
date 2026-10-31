@@ -64,7 +64,8 @@ export const POST: APIRoute = async ({ request }) => {
       const [moderationResult, spamResult, linkResult] = await Promise.all([
         moderateText(textToModerate),
         checkSpamWithGPT(textToModerate, 'neighborhood news submission'),
-        checkLinkReputation(sourceUrl),
+        // schema guarantees it parses; look it up in canonical form, as given text would be
+        checkLinkReputation(new URL(sourceUrl).href),
       ]);
       mergedResult = mergeModerationResults(moderationResult, spamResult, linkResult);
     }
