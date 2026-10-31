@@ -2,6 +2,7 @@
 // Datenschutzerklärung — static legal page. Drafted from the actual data
 // flows of the app (processors: MongoDB Atlas Frankfurt, Vercel, Cloudinary,
 // Resend EU, Sentry EU, OpenAI moderation, DeepL, GoatCounter). User reviews before launch.
+// DRAFT 2026-10-31: Safe Browsing sentence, owner to review
 import LandingLayout from '../layouts/LandingLayout.astro';
 import ObfuscatedText from '../components/legal/ObfuscatedText.astro';
 
@@ -67,7 +68,9 @@ const zipCity = import.meta.env.IMPRESSUM_ZIP_CITY || 'Berlin';
       Automatisierte Inhaltsprüfung: OpenAI (übermittelt werden nur die zu
       prüfenden Texte/Bilder, keine Kontodaten). Übersetzung auf Knopfdruck:
       DeepL (übermittelt wird nur der zu übersetzende Text, keine Kontodaten). Mit den Anbietern bestehen
-      Auftragsverarbeitungsverträge nach Art. 28 DSGVO. Besucherzählung: GoatCounter
+      Auftragsverarbeitungsverträge nach Art. 28 DSGVO. Link-Prüfung: Google Safe Browsing
+      (Google; übermittelt werden nur die in einem Beitrag enthaltenen Web-Adressen, keine Kontodaten).
+      Besucherzählung: GoatCounter
       (Martin Tournoij, Irland; Server bei Hetzner Online GmbH in Deutschland und Finnland), siehe
       Abschnitt 2.
     </p>
