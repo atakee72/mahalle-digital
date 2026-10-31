@@ -61,6 +61,8 @@ User, the same day: he saved his announcement „als Entwurf" to test it and cou
 - **Detail-page parity**: `ForumPostDetail.svelte` has `showPendingBanner` / `showReportedBanner` / `showRejectedBanner` derives, all author-only.
 - **`buildModerationFilter`** in `src/lib/topicsQuery.ts` was untouched throughout — community-reported pending posts STAY visible to non-authors (anti-abuse: prevents weaponized reports being used to silence others).
 
+**Link check (2026-10-31):** every link in a post or comment is looked up in Google Safe Browsing inside `moderateContent()`, edits included; a hit queues the content like any other flag — rules in root CLAUDE.md → „Content Moderation“.
+
 ### Edit lockout during moderation
 - All three post edit endpoints (`/api/topics/edit/[id].ts`, `/api/announcements/edit/[id].ts`, `/api/recommendations/edit/[id].ts`) return `403 'edit_blocked_by_moderation'` when `existingTopic.moderationStatus !== 'approved' || existingTopic.hasWarningLabel`. Mirrors the comment-edit gate at `/api/comments/edit/[commentId].ts:71-76`.
 - **UI mirror**: `ForumPostDetail.svelte` has a `canEdit` derived (same predicate). Edit button stays VISIBLE but `disabled` with strikethrough + cursor-not-allowed + tooltip when not editable. Visible disabled state is a clearer signal to the author than hiding the button.

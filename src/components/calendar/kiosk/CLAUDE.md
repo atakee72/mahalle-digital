@@ -52,6 +52,8 @@ Calendar reached parity with forum on 2026-05-12 (commit `3bad8d15`). The visual
 - Edits are **blocked** with `403 'edit_blocked_by_moderation'` while the existing event is `pending` / `rejected` / `hasWarningLabel`. Author can delete + recreate if they want to amend.
 - This mirrors the forum topics-edit gate. Pre-fix, an author could publish clean then edit dirty — that bypass is closed.
 
+**Link check (2026-10-31):** every link in an event's text is looked up in Google Safe Browsing inside `moderateContent()` on create and edit; a hit queues the event — rules in root CLAUDE.md → „Content Moderation“.
+
 ### Edit UI (page route + EventComposePageInner mode prop)
 Shipped 2026-05-12. Edit flow is a dedicated page at `/events/edit/[id]` that reuses `EventComposePageInner` in `mode='edit'`, NOT inline-in-modal (the form has 10+ fields — too big for the detail-modal container; forum inline-edit pattern only works because the forum form is title + body).
 
