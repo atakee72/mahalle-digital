@@ -10,7 +10,8 @@ export const ObjectIdSchema = z.string()
 // the right box before the file arrives (no layout shift). Posts written before
 // 2026-09-25 have no dimensions — the hero falls back to a reserved 3:2 box.
 const PostImageSchema = z.array(z.object({
-  url: z.string().url(),
+  // Cloudinary only: /api/posts/upload stores there, and the server later fetches this URL for image moderation (SSRF).
+  url: z.string().url().startsWith('https://res.cloudinary.com/'),
   publicId: z.string(),
   width: z.number().int().positive().optional(),
   height: z.number().int().positive().optional()
