@@ -4,11 +4,13 @@ import { connectDB } from '../../../../lib/mongodb';
 import { resolveMentions, notifyMentions, applyBroadcast, notifyAdminHint } from '../../../../lib/mentions/mentionsStore';
 import { moderationTarget } from '../../../../lib/notifications';
 import { ObjectId } from 'mongodb';
-import type { Announcement, EditHistory } from '../../../../types';
+import type { Announcement, EditHistory, FlaggedContent } from '../../../../types';
 import { AnnouncementUpdateSchema } from '../../../../schemas/forum.schema';
 import { parseRequestBody } from '../../../../schemas/validation.utils';
 import { isOwner } from '../../../../utils/authHelpers';
 import { requireMemberSession } from '../../../../lib/auth';
+import { moderateText, checkSpamWithGPT, checkImagesWithGPT, createFlaggedContentRecord, mergeModerationResults } from '../../../../lib/moderation';
+import { alertModerationFlagged } from '../../../../lib/adminAlerts';
 
 export const PUT: APIRoute = async ({ request, params }) => {
   try {
@@ -83,6 +85,22 @@ export const PUT: APIRoute = async ({ request, params }) => {
     // „@handle" mentions are re-resolved on every save (src/lib/mentions).
     const mentions = await resolveMentions(db, cleanBody ?? '');
 
+    // Mirrors topics/edit since 2026-10-31 — these two edit routes ran no moderation before.
+    // Admins are exempt (auto-approved); body may be omitted, then the stored one is checked.
+    let mergedModerationResult: ReturnType<typeof mergeModerationResults> = null;
+    if (session.user.role !== 'admin') {
+      const contentText = `${title}\n\n${cleanBody ?? existingAnnouncement.body ?? ''}`;
+      const moderationChecks: Promise<any>[] = [
+        moderateText(contentText),
+        checkSpamWithGPT(contentText, 'neighborhood community forum post')
+      ];
+      if (tags?.length) moderationChecks.push(moderateText(tags.join(' ')));
+      if (images?.length) moderationChecks.push(checkImagesWithGPT(images.map(img => img.url)));
+      const results = (await Promise.all(moderationChecks)).filter(Boolean);
+      mergedModerationResult = mergeModerationResults(...results);
+    }
+    const newModerationStatus = mergedModerationResult ? 'pending' : existingAnnouncement.moderationStatus || 'approved';
+
     const setFields: Record<string, any> = {
       title,
       body: cleanBody,
@@ -92,8 +110,10 @@ export const PUT: APIRoute = async ({ request, params }) => {
       mentions,
       isEdited: true,
       lastEditedAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      moderationStatus: newModerationStatus
     };
+    if (newModerationStatus === 'pending') setFields.rejectionReason = null;
     if (newBroadcast) {
       setFields.broadcast = {
         ...newBroadcast,
@@ -125,14 +145,26 @@ export const PUT: APIRoute = async ({ request, params }) => {
       });
     }
 
-    // The gate above guarantees the post is public → newly added mentions notify
-    // right away. Idempotent (already-notified members are skipped), never throws.
-    await notifyMentions(db, {
+    if (mergedModerationResult) {
+      const flaggedRecord = createFlaggedContentRecord(
+        'announcement',
+        { title, body: cleanBody ?? existingAnnouncement.body, tags },
+        { id: userId, name: session.user.name || undefined, email: session.user.email || undefined },
+        mergedModerationResult
+      );
+      flaggedRecord.contentId = announcementId;
+      await db.collection<FlaggedContent>('flaggedContent').insertOne(flaggedRecord as FlaggedContent);
+      await alertModerationFlagged({ contentType: 'announcement', title: title ?? '', authorName: session.user.name });
+    }
+
+    // Newly added mentions notify only while the post is public (an edit that fell
+    // back to pending is picked up on approval). Idempotent (already-notified members are skipped), never throws.
+    if (newModerationStatus === 'approved') await notifyMentions(db, {
       actorId: userId, mentions, sourceId: String(announcementId), kind: 'post',
       target: moderationTarget('announcement', String(announcementId), title ?? ''),
     });
 
-    if (newBroadcast && !existingAnnouncement.broadcast?.notifiedAt) {
+    if (newModerationStatus === 'approved' && newBroadcast && !existingAnnouncement.broadcast?.notifiedAt) {
       const n = await notifyAdminHint(db, {
         actorId: userId, sourceId: String(announcementId), kind: 'post',
         target: moderationTarget('announcement', String(announcementId), title ?? ''),
