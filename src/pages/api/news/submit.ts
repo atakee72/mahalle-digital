@@ -5,6 +5,7 @@ import type { NewsItem, FlaggedContent } from '../../../types';
 import { NewsSubmitSchema } from '../../../schemas/news.schema';
 import { parseRequestBody } from '../../../schemas/validation.utils';
 import { moderateText, checkSpamWithGPT, mergeModerationResults, createFlaggedContentRecord } from '../../../lib/moderation';
+import { checkLinkReputation } from '../../../lib/linkReputation';
 import { requireMemberSession } from '../../../lib/auth';
 import { alertModerationFlagged } from '../../../lib/adminAlerts';
 import { decodeHtmlEntities } from '../../../utils/decodeHtmlEntities';
@@ -60,11 +61,12 @@ export const POST: APIRoute = async ({ request }) => {
       // (moderateText) runs in parallel with the GPT spam/ad/hate/harassment check
       // (checkSpamWithGPT); merged → null when nothing flagged, else a combined result.
       const textToModerate = `${title}\n\n${description}${submitterComment ? `\n\n${submitterComment}` : ''}`;
-      const [moderationResult, spamResult] = await Promise.all([
+      const [moderationResult, spamResult, linkResult] = await Promise.all([
         moderateText(textToModerate),
         checkSpamWithGPT(textToModerate, 'neighborhood news submission'),
+        checkLinkReputation(sourceUrl),
       ]);
-      mergedResult = mergeModerationResults(moderationResult, spamResult);
+      mergedResult = mergeModerationResults(moderationResult, spamResult, linkResult);
     }
 
     // All user-submitted news goes to moderation queue regardless of AI result

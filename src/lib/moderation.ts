@@ -72,6 +72,7 @@ export interface ModerationResult {
 // FlaggedContent type is imported from types/index.ts
 import type { FlaggedContent, ModeratedContentType } from '../types';
 import { shortTextVerdict } from './shortTextVerdict';
+import { checkLinkReputation } from './linkReputation';
 
 // ============================================================================
 // THRESHOLDS
@@ -394,11 +395,25 @@ export async function checkMottoProfanity(motto: string): Promise<{ clean: boole
 // MAIN MODERATION FUNCTION
 // ============================================================================
 
+/** Joins the OpenAI result with the link check; the SAME omni object when the link is clean. */
+export function composeModeration(omni: ModerationResult, link: ModerationResult): ModerationResult {
+  return link.needsReview ? mergeModerationResults(omni, link)! : omni;
+}
+
+/**
+ * Every caller of moderateText/moderatePost (12 routes, edits included) gets the
+ * Safe Browsing link check here. Admins never reach this (routes skip the pipeline).
+ */
+async function moderateContent(input: ModerationInput): Promise<ModerationResult> {
+  const [omni, link] = await Promise.all([moderateWithOpenAI(input), checkLinkReputation(input.text ?? '')]);
+  return composeModeration(omni, link);
+}
+
 /**
  * Moderate content using OpenAI's moderation API
  * Returns decision: approved, pending_review, or urgent_review
  */
-async function moderateContent(input: ModerationInput): Promise<ModerationResult> {
+async function moderateWithOpenAI(input: ModerationInput): Promise<ModerationResult> {
   const apiKey = import.meta.env.OPENAI_API_KEY;
 
   if (!apiKey) {
