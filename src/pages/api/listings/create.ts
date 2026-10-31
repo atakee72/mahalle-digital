@@ -47,7 +47,8 @@ export const POST: APIRoute = async ({ request }) => {
     let moderationStatus: 'approved' | 'pending' = 'approved';
     if (!skipModeration) {
       // Run all moderation checks in parallel: text safety, spam check, and image safety (GPT-4o vision)
-      const contentText = `${title}\n\n${descriptionPlainText}`;
+      // Moderate the text the page renders: `description` when a string, else the plain text.
+      const contentText = `${title}\n\n${typeof description === 'string' ? description : descriptionPlainText}`;
       const [moderationResult, spamResult, imageResult] = await Promise.all([
         moderatePost(contentText, images),
         checkSpamWithGPT(contentText, 'neighborhood marketplace listing'),

@@ -122,7 +122,11 @@ export const PUT: APIRoute = async ({ request, params }) => {
       }
 
       const title = updateData.title || existingListing.title;
-      const plainText = updateData.descriptionPlainText || existingListing.descriptionPlainText || '';
+      // Moderate the text the page renders: `description` when a string, else the plain text.
+      const rendered = updateData.description ?? existingListing.description;
+      const plainText = typeof rendered === 'string'
+        ? rendered
+        : updateData.descriptionPlainText || existingListing.descriptionPlainText || '';
       const images = updateData.images || existingListing.images;
 
       // Admins are exempt from AI moderation (their content is auto-approved —
