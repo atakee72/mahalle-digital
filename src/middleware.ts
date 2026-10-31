@@ -15,7 +15,7 @@ import { safeInternalPath } from './lib/auth/safeRedirect';
 import { isCrossSiteForm } from './lib/security/crossSiteForm';
 import { isDemoDeployment, demoRefusal, demoBlockedRead } from './lib/demo/demoMode';
 import { decideDemoRequest } from './lib/demo/demoRules';
-import { isUnknownAuthPath } from './lib/auth/authRoutePath';
+import { shouldAnswerAuth404 } from './lib/auth/authRoutePath';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   try {
@@ -45,7 +45,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     // `/api/auth`), which Astro reports as a 500 and Sentry as an issue per hit (MAHALLE-PROD-X,
     // 2026-10-27, a scanner on the demo host). Answer 404 here, before the route and before the
     // static skip (`/api/auth/.env` has a dot). Astro reroutes a 404 from here to the 404 page.
-    if (isUnknownAuthPath(pathname)) {
+    // Only when Astro routed the request to auth-astro's catch-all: our own `/api/auth/register`,
+    // `forgot-password`, `verify-email`, … have their own routes and were wrongly 404'd for three
+    // days (2026-10-27 … 10-31) when this tested the path alone.
+    if (shouldAnswerAuth404(context.routePattern, pathname)) {
       return new Response(null, { status: 404 });
     }
 
