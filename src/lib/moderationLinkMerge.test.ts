@@ -19,6 +19,10 @@ test('flagged omni + unsafe link merge into one record with both chips', () => {
   const m = composeModeration(profane, badLink);
   assert.deepEqual(m.flaggedCategories, ['turkish_profanity', 'unsafe_link']); assert.equal(m.isUrgent, true); assert.equal(m.highestCategory, 'unsafe_link'); assert.equal(m.adminReason, 'Profanity | Safe Browsing: MALWARE — https://p.example/');
 });
+test('duplicate categories collapse', () => {
+  const m = composeModeration(unsafeLinkResult([{ url: 'https://a.example/', threatType: 'MALWARE' }]), unsafeLinkResult([{ url: 'https://b.example/', threatType: 'MALWARE' }]));
+  assert.deepEqual(m.flaggedCategories, ['unsafe_link']);
+});
 test('a flagged link in a short text (motto) is refused, not tolerated', () => {
   assert.equal(shortTextVerdict([badLink]), 'refused');
 });

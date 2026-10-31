@@ -763,7 +763,7 @@ export function mergeModerationResults(...results: ModerationResult[]): Moderati
   const flagged = results.filter(r => r.needsReview);
   if (flagged.length === 0) return null;
 
-  const allCategories = flagged.flatMap(r => r.flaggedCategories);
+  const allCategories = [...new Set(flagged.flatMap(r => r.flaggedCategories))];
   const allScores = Object.assign({}, ...flagged.map(r => r.scores));
   const isUrgent = flagged.some(r => r.isUrgent);
   const worst = flagged.reduce((a, b) => (a.maxScore >= b.maxScore ? a : b));
