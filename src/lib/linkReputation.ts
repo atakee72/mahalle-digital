@@ -50,7 +50,7 @@ export function unsafeLinkResult(hits: LinkHit[]): ModerationResult {
     needsReview: true,
     isUrgent: true,
     flaggedCategories: ['unsafe_link'],
-    scores: {},
+    scores: { unsafe_link: 1 } as ModerationResult['scores'],
     highestCategory: 'unsafe_link',
     maxScore: 1,
     userMessage: 'Your submission is under review by our moderation team.',

@@ -31,7 +31,7 @@ test('clean answer → approved; request carries the key and the URL', async () 
 test('a hit → urgent review with the unsafe_link category and Google-naming reason', async () => {
   const r = await checkLinkReputation(`Konto prüfen: ${PH}`, { apiKey: 'k', fetchImpl: fakeFetch(200, { matches: [{ threatType: 'SOCIAL_ENGINEERING', threat: { url: PH } }] }) });
   assert.equal(r.decision, 'urgent_review'); assert.equal(r.isUrgent, true); assert.equal(r.canPublish, false);
-  assert.deepEqual(r.flaggedCategories, ['unsafe_link']); assert.equal(r.highestCategory, 'unsafe_link'); assert.equal(r.maxScore, 1);
+  assert.deepEqual(r.flaggedCategories, ['unsafe_link']); assert.equal(r.highestCategory, 'unsafe_link'); assert.equal(r.maxScore, 1); assert.equal((r.scores as Record<string, number>).unsafe_link, 1);
   assert.equal(r.adminReason, `Safe Browsing: SOCIAL_ENGINEERING — ${PH}`);
 });
 test('two hits join with "; "', () => {

@@ -14,10 +14,10 @@ test('an unsafe link alone makes the record urgent with the unsafe_link chip', (
   assert.equal(m.decision, 'urgent_review'); assert.equal(m.canPublish, false); assert.deepEqual(m.flaggedCategories, ['unsafe_link']); assert.equal(m.highestCategory, 'unsafe_link');
   assert.equal(m.adminReason, 'Safe Browsing: MALWARE — https://p.example/');
 });
-test('profanity short-circuit wins, link check result discarded or merged — never two records', () => {
+test('flagged omni + unsafe link merge into one record with both chips', () => {
   const profane: ModerationResult = { ...approved, decision: 'pending_review', canPublish: false, needsReview: true, flaggedCategories: ['turkish_profanity'], highestCategory: 'turkish_profanity', maxScore: 0.8, adminReason: 'Profanity' };
   const m = composeModeration(profane, badLink);
-  assert.deepEqual(m.flaggedCategories, ['turkish_profanity', 'unsafe_link']); assert.equal(m.isUrgent, true); assert.equal(m.adminReason, 'Profanity | Safe Browsing: MALWARE — https://p.example/');
+  assert.deepEqual(m.flaggedCategories, ['turkish_profanity', 'unsafe_link']); assert.equal(m.isUrgent, true); assert.equal(m.highestCategory, 'unsafe_link'); assert.equal(m.adminReason, 'Profanity | Safe Browsing: MALWARE — https://p.example/');
 });
 test('a flagged link in a short text (motto) is refused, not tolerated', () => {
   assert.equal(shortTextVerdict([badLink]), 'refused');

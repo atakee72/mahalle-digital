@@ -29,6 +29,7 @@ export type AdmSeverity = 'critical' | 'high' | 'mid' | 'info';
 
 export const ADM_CATS: Record<string, { sev: AdmSeverity }> = {
   hate: { sev: 'critical' },
+  unsafe_link: { sev: 'critical' },
   'hate/threatening': { sev: 'critical' },
   violence: { sev: 'critical' },
   harassment: { sev: 'high' },
