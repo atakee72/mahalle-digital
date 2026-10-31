@@ -1,0 +1,55 @@
+name: Auth Smoke
+# Every 30 min: fifteen requests against mahalle.digital (scripts/smoke-auth.mjs) — the sign-up,
+# login and password routes must answer exactly as expected. Born from the 2026-10-27 → 10-31
+# outage: a middleware 404 swallowed /api/auth/register for three days and nothing reported it
+# (a 404 is no exception → Sentry empty, no DB write, no Telegram ping). Only a request from
+# outside sees that class of failure. One retry after 60 s (no ping on a deploy blip), then a
+# Telegram message to the admin, repeated on every failing run until fixed.
+# Requires repo secrets TELEGRAM_BOT_TOKEN + TELEGRAM_ADMIN_CHAT_ID (same values as Vercel prod).
+# GitHub schedules jitter by minutes and are sometimes hours late — the cadence, not a guarantee.
+# Test the alert path by hand: `gh workflow run smoke-auth.yml -f origin=https://mahalle-das-kiezgesichterbuch.vercel.app`
+# (every check answers 308 there → red run + one Telegram message).
+on:
+  schedule:
+    - cron: '22,52 * * * *' # off :00/:30 to dodge top-of-hour Actions congestion
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: Base URL to probe (default prod; a wrong one tests the alert path)
+        default: https://mahalle.digital
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Probe, retry once, alert
+        env:
+          APP_ORIGIN: ${{ inputs.origin || 'https://mahalle.digital' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+        run: |
+          set +x
+          run_once() { node scripts/smoke-auth.mjs "$APP_ORIGIN" > /tmp/smoke.txt 2>&1; }
+          if run_once; then cat /tmp/smoke.txt; exit 0; fi
+          cat /tmp/smoke.txt; echo "--- failed, retry in 60 s"; sleep 60
+          if run_once; then cat /tmp/smoke.txt; echo "recovered on retry (blip, no alert)"; exit 0; fi
+          cat /tmp/smoke.txt
+          fails=$(grep '^FAIL' /tmp/smoke.txt | head -c 3000)
+          text="🚨 Mahalle Smoke: Auth-Routen antworten falsch ($APP_ORIGIN)
+          ${fails}
+          Lauf: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_ADMIN_CHAT_ID" ]; then
+            echo "::warning::TELEGRAM_BOT_TOKEN / TELEGRAM_ADMIN_CHAT_ID repo secret missing — no alert sent"
+            exit 1
+          fi
+          code=$(jq -n --arg c "$TELEGRAM_ADMIN_CHAT_ID" --arg t "$text" \
+                   '{chat_id:$c,text:$t,disable_web_page_preview:true}' \
+                 | curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+                   --data-binary @- "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage")
+          echo "telegram sendMessage → HTTP $code"
+          exit 1
