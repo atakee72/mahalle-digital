@@ -1,8 +1,8 @@
 // Run: npx tsx --test src/lib/moderationLinkMerge.test.ts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { composeModeration, type ModerationResult } from './moderation';
-import { unsafeLinkResult } from './linkReputation';
+import { composeModeration, createApprovedResult, type ModerationResult } from './moderation';
+import { unsafeLinkResult, checkLinkReputation } from './linkReputation';
 import { shortTextVerdict } from './shortTextVerdict';
 
 const approved: ModerationResult = { decision: 'approved', canPublish: true, needsReview: false, isUrgent: false, flaggedCategories: [], scores: { hate: 0.01 }, highestCategory: 'hate', maxScore: 0.01, userMessage: '', adminReason: '' };
@@ -17,7 +17,7 @@ test('an unsafe link alone makes the record urgent with the unsafe_link chip', (
 test('flagged omni + unsafe link merge into one record with both chips', () => {
   const profane: ModerationResult = { ...approved, decision: 'pending_review', canPublish: false, needsReview: true, flaggedCategories: ['turkish_profanity'], highestCategory: 'turkish_profanity', maxScore: 0.8, adminReason: 'Profanity' };
   const m = composeModeration(profane, badLink);
-  assert.deepEqual(m.flaggedCategories, ['turkish_profanity', 'unsafe_link']); assert.equal(m.isUrgent, true); assert.equal(m.highestCategory, 'unsafe_link'); assert.equal(m.adminReason, 'Profanity | Safe Browsing: MALWARE — https://p.example/');
+  assert.deepEqual(m.flaggedCategories, ['turkish_profanity', 'unsafe_link']); assert.equal(m.isUrgent, true); assert.equal(m.highestCategory, 'unsafe_link'); assert.equal(m.maxScore, 1); assert.equal(m.adminReason, 'Profanity | Safe Browsing: MALWARE — https://p.example/');
 });
 test('duplicate categories collapse', () => {
   const m = composeModeration(unsafeLinkResult([{ url: 'https://a.example/', threatType: 'MALWARE' }]), unsafeLinkResult([{ url: 'https://b.example/', threatType: 'MALWARE' }]));
@@ -30,4 +30,7 @@ test('clean link → the OpenAI result itself, scores intact', () => {
   assert.equal(composeModeration(approved, cleanLink), approved);
   const flagged: ModerationResult = { ...approved, decision: 'pending_review', canPublish: false, needsReview: true, flaggedCategories: ['hate'], maxScore: 0.9 };
   assert.equal(composeModeration(flagged, cleanLink), flagged);
+});
+test('the link check approved shape equals moderation.ts createApprovedResult()', async () => {
+  assert.deepEqual(await checkLinkReputation('kein link', { apiKey: undefined }), createApprovedResult());
 });

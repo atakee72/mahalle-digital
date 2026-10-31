@@ -1,7 +1,7 @@
 // Run: npx tsx --test src/lib/linkReputation.test.ts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkLinkReputation, unsafeLinkResult, LINK_CHECK_FAILED_MESSAGE } from './linkReputation';
+import { checkLinkReputation, unsafeLinkResult, defaultReport, LINK_CHECK_FAILED_MESSAGE } from './linkReputation';
 
 const PH = 'https://testsafebrowsing.appspot.com/s/phishing.html';
 const fakeFetch = (status: number, body: unknown, capture?: { url?: string; init?: RequestInit }) =>
@@ -26,6 +26,7 @@ test('clean answer → approved; request carries the key and the URL', async () 
   assert.equal(r.canPublish, true);
   assert.ok(cap.url!.startsWith('https://safebrowsing.googleapis.com/v4/threatMatches:find?key=K3Y'));
   assert.equal(cap.init!.method, 'POST');
+  assert.ok(cap.init!.signal instanceof AbortSignal);
   assert.deepEqual(JSON.parse(String(cap.init!.body)).threatInfo.threatEntries, [{ url: 'https://ok.example/seite' }]);
 });
 test('URLs are sent in canonical form', async () => {
@@ -114,4 +115,16 @@ test('HTTP 500 with a non-JSON body → reason is exactly the status', async () 
   const reasons: string[] = [];
   await checkLinkReputation(`siehe ${PH}`, { apiKey: 'k', fetchImpl: fakeFetch(500, '<html>oops</html>'), report: async (x) => { reasons.push(x); } });
   assert.deepEqual(reasons, ['status 500']);
+});
+test('defaultReport sends the static message with the reason, then flushes for 2000 ms', async () => {
+  const calls: { msg: unknown; ctx: any }[] = [];
+  let flushed: unknown;
+  const stub = {
+    captureMessage: ((msg: unknown, ctx: unknown) => { calls.push({ msg, ctx }); return 'id'; }) as any,
+    flush: (async (ms: unknown) => { flushed = ms; return true; }) as any,
+  };
+  await defaultReport('status 403 PERMISSION_DENIED', stub);
+  assert.equal(calls.length, 1); assert.equal(calls[0].msg, LINK_CHECK_FAILED_MESSAGE);
+  assert.equal(calls[0].ctx.level, 'warning'); assert.equal(calls[0].ctx.extra.reason, 'status 403 PERMISSION_DENIED');
+  assert.equal(flushed, 2000);
 });

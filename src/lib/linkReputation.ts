@@ -58,9 +58,12 @@ export function unsafeLinkResult(hits: LinkHit[]): ModerationResult {
   };
 }
 
-async function defaultReport(reason: string): Promise<void> {
-  Sentry.captureMessage(LINK_CHECK_FAILED_MESSAGE, { level: 'warning', extra: { reason } });
-  await Sentry.flush(2000);
+export async function defaultReport(
+  reason: string,
+  sentry: { captureMessage: typeof Sentry.captureMessage; flush: typeof Sentry.flush } = Sentry,
+): Promise<void> {
+  sentry.captureMessage(LINK_CHECK_FAILED_MESSAGE, { level: 'warning', extra: { reason } });
+  await sentry.flush(2000);
 }
 
 class LookupStatusError extends Error {

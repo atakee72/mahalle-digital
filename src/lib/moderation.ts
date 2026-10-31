@@ -602,7 +602,7 @@ function getHighestCategory(scores: Record<string, number>): string {
   return highest;
 }
 
-function createApprovedResult(): ModerationResult {
+export function createApprovedResult(): ModerationResult {
   return {
     decision: 'approved',
     canPublish: true,
