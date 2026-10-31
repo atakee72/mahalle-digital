@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { listingModerationText } from '../../../../lib/listingModerationText';
 import { connectDB } from '../../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 import type { Listing } from '../../../../types/listing';
@@ -122,11 +123,9 @@ export const PUT: APIRoute = async ({ request, params }) => {
       }
 
       const title = updateData.title || existingListing.title;
-      // Moderate the text the page renders: `description` when a string, else the plain text.
+      // Moderate both the rendered description and the plain text (cards, search).
       const rendered = updateData.description ?? existingListing.description;
-      const plainText = typeof rendered === 'string'
-        ? rendered
-        : updateData.descriptionPlainText || existingListing.descriptionPlainText || '';
+      const plainText = updateData.descriptionPlainText || existingListing.descriptionPlainText || '';
       const images = updateData.images || existingListing.images;
 
       // Admins are exempt from AI moderation (their content is auto-approved —
@@ -136,7 +135,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
 
       let mergedResult: ReturnType<typeof mergeModerationResults> = null;
       if (!skipModeration) {
-        const contentText = `${title}\n\n${plainText}`;
+        const contentText = listingModerationText(title, rendered, plainText);
 
         // Run all moderation checks in parallel: text safety, spam check, and image safety
         const [moderationResult, spamResult, imageResult] = await Promise.all([

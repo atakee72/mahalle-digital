@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { listingModerationText } from '../../../../../lib/listingModerationText';
 import { connectDB } from '../../../../../lib/mongodb';
 import { checkDailyLimit, limitReachedResponse } from '../../../../../lib/limits/dailyLimit';
 import { ObjectId } from 'mongodb';
@@ -86,8 +87,8 @@ export const POST: APIRoute = async ({ request, params }) => {
     let moderationStatus: 'approved' | 'pending' = 'approved';
     if (!skipModeration) {
       // Run full moderation pipeline
-      // Moderate the text the page renders: `description` when a string, else the plain text.
-      const contentText = `${draft.title}\n\n${typeof draft.description === 'string' ? draft.description : draft.descriptionPlainText}`;
+      // Moderate both the rendered description and the plain text (cards, search).
+      const contentText = listingModerationText(draft.title, draft.description, draft.descriptionPlainText);
       const [moderationResult, spamResult, imageResult] = await Promise.all([
         moderatePost(contentText, draft.images),
         checkSpamWithGPT(contentText, 'neighborhood marketplace listing'),

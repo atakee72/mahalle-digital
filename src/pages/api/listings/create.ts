@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { listingModerationText } from '../../../lib/listingModerationText';
 import { connectDB } from '../../../lib/mongodb';
 import { checkDailyLimit, limitReachedResponse } from '../../../lib/limits/dailyLimit';
 import type { Listing } from '../../../types/listing';
@@ -47,8 +48,8 @@ export const POST: APIRoute = async ({ request }) => {
     let moderationStatus: 'approved' | 'pending' = 'approved';
     if (!skipModeration) {
       // Run all moderation checks in parallel: text safety, spam check, and image safety (GPT-4o vision)
-      // Moderate the text the page renders: `description` when a string, else the plain text.
-      const contentText = `${title}\n\n${typeof description === 'string' ? description : descriptionPlainText}`;
+      // Moderate both the rendered description and the plain text (cards, search).
+      const contentText = listingModerationText(title, description, descriptionPlainText);
       const [moderationResult, spamResult, imageResult] = await Promise.all([
         moderatePost(contentText, images),
         checkSpamWithGPT(contentText, 'neighborhood marketplace listing'),
