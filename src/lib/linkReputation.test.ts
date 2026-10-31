@@ -105,3 +105,13 @@ test('a long URL is still sent', async () => {
   await checkLinkReputation(`siehe ${long}`, { apiKey: 'k', fetchImpl: fakeFetch(200, {}, cap) });
   assert.deepEqual(JSON.parse(String(cap.init!.body)).threatInfo.threatEntries, [{ url: long }]);
 });
+test('HTTP 403 with a Google error body → reason carries the status enum, not the message', async () => {
+  const reasons: string[] = [];
+  await checkLinkReputation(`siehe ${PH}`, { apiKey: 'k', fetchImpl: fakeFetch(403, { error: { code: 403, status: 'PERMISSION_DENIED', message: 'secret-ish text' } }), report: async (x) => { reasons.push(x); } });
+  assert.equal(reasons.length, 1); assert.match(reasons[0], /status 403 PERMISSION_DENIED/); assert.doesNotMatch(reasons[0], /secret-ish/);
+});
+test('HTTP 500 with a non-JSON body → reason is exactly the status', async () => {
+  const reasons: string[] = [];
+  await checkLinkReputation(`siehe ${PH}`, { apiKey: 'k', fetchImpl: fakeFetch(500, '<html>oops</html>'), report: async (x) => { reasons.push(x); } });
+  assert.deepEqual(reasons, ['status 500']);
+});

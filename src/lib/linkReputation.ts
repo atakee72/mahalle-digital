@@ -64,7 +64,10 @@ async function defaultReport(reason: string): Promise<void> {
 }
 
 class LookupStatusError extends Error {
-  constructor(readonly status: number) { super(`status ${status}`); }
+  // googleStatus: Google's error enum (e.g. INVALID_ARGUMENT) only — never error.message
+  constructor(readonly status: number, readonly googleStatus?: string) {
+    super(googleStatus ? `status ${status} ${googleStatus}` : `status ${status}`);
+  }
 }
 
 const scrub = (s: string) => s.replace(/key=[^&\s]+/g, 'key=[key]');
@@ -94,7 +97,14 @@ export async function checkLinkReputation(text: string, deps: LinkReputationDeps
       body: JSON.stringify(buildLookupBody(chunk)),
       signal: AbortSignal.timeout(5000),
     });
-    if (!res.ok) throw new LookupStatusError(res.status);
+    if (!res.ok) {
+      let googleStatus: string | undefined;
+      try {
+        const s = (await res.json())?.error?.status;
+        if (typeof s === 'string') googleStatus = s;
+      } catch { /* empty or non-JSON body */ }
+      throw new LookupStatusError(res.status, googleStatus);
+    }
     return hitsFromLookup(await res.json());
   }));
 
@@ -112,7 +122,7 @@ export async function checkLinkReputation(text: string, deps: LinkReputationDeps
   }
   if (failed) {
     let reason: string;
-    if (failure instanceof LookupStatusError) reason = `status ${failure.status}`;
+    if (failure instanceof LookupStatusError) reason = failure.message;
     else {
       const err = failure as { name?: string; message?: string };
       reason = scrub(`${err?.name ?? 'Error'}: ${err?.message ?? String(failure)}`);
