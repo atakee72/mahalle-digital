@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '../../../lib/kiosk-i18n';
+  import { reportUnexpectedAuth } from '../../../lib/sentry/reportUnexpectedAuth';
   import { ResetPasswordSchema } from '../../../schemas/auth.schema';
   import AuthField from './primitives/AuthField.svelte';
   import AuthPrimaryBtn from './primitives/AuthPrimaryBtn.svelte';
@@ -45,9 +46,10 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(parsed.data),
       });
-      if (!res.ok) { formErr = $t['auth.err.resetFailed']; loading = false; return; }
+      if (!res.ok) { reportUnexpectedAuth('reset-password', res); formErr = $t['auth.err.resetFailed']; loading = false; return; }
       stage = 'done';
-    } catch {
+    } catch (e) {
+      reportUnexpectedAuth('reset-password', null, e);
       formErr = $t['auth.err.generic'];
     }
     loading = false;

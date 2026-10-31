@@ -7,6 +7,7 @@
   import AuthPrimaryBtn from './primitives/AuthPrimaryBtn.svelte';
   import AuthBanner from './primitives/AuthBanner.svelte';
   import { safeInternalPath } from '../../../lib/auth/safeRedirect';
+  import { reportUnexpectedAuth } from '../../../lib/sentry/reportUnexpectedAuth';
   import DemoDoor from '../../demo/DemoDoor.svelte';
 
   // Read-only demo deployment (spec 2026-10-26): two buttons instead of the password form.
@@ -108,11 +109,13 @@
 
     status = 'loading';
     try {
-      await signIn('credentials', {
+      const signInRes = await signIn('credentials', {
         email: parsed.data.email,
         password: parsed.data.password,
         redirect: false,
       });
+      // Sensor (2026-10-31): auth-astro resolves with the callback's raw Response; a 404/5xx there is a dead door.
+      if (signInRes instanceof Response) reportUnexpectedAuth('signin', signInRes);
       // auth-astro's signIn() (redirect:false) resolves with a raw Response —
       // it never exposes `.error` — so failure is detected via the only
       // shape-independent signal: whether a session now exists. Preserves
@@ -127,6 +130,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: parsed.data.email }),
           });
+          reportUnexpectedAuth('login-status', res);
           const data = await res.json().catch(() => ({}));
           if (data?.banned) {
             bannedState = true;
@@ -138,7 +142,7 @@
             status = 'idle';
             return;
           }
-        } catch { /* fall through to generic */ }
+        } catch (e) { reportUnexpectedAuth('login-status', null, e); /* fall through to generic */ }
         // Anti-enumeration: ONE generic message for wrong-pw AND email-not-found.
         credErr = true;
         status = 'idle';
@@ -146,7 +150,9 @@
       }
       status = 'success';
       window.location.href = postLoginTarget();
-    } catch {
+    } catch (e) {
+      // signIn() throws when its own csrf fetch fails — the front door itself is down.
+      reportUnexpectedAuth('signin', null, e);
       credErr = true;
       status = 'idle';
     }

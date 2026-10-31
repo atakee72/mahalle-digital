@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from '../../../lib/kiosk-i18n';
   import { PasswordResetSchema } from '../../../schemas/auth.schema';
+  import { reportUnexpectedAuth } from '../../../lib/sentry/reportUnexpectedAuth';
   import AuthField from './primitives/AuthField.svelte';
   import AuthPrimaryBtn from './primitives/AuthPrimaryBtn.svelte';
 
@@ -17,11 +18,12 @@
     loading = true;
     try {
       // Anti-enum: response is always generic 200; we advance to "sent" regardless.
-      await fetch('/api/auth/forgot-password', {
+      const res = await fetch('/api/auth/forgot-password', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: parsed.data.email }),
       });
-    } catch { /* still show sent — never reveal anything */ }
+      reportUnexpectedAuth('forgot-password', res); // sensor (2026-10-31): the „sent" card stays, Sentry learns of a dead route
+    } catch (e) { reportUnexpectedAuth('forgot-password', null, e); /* still show sent — never reveal anything */ }
     loading = false;
     stage = 'sent';
   }

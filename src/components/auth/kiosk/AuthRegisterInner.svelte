@@ -2,6 +2,7 @@
   import { signIn } from 'auth-astro/client';
   import DemoDoor from '../../demo/DemoDoor.svelte';
   import { t, tStr } from '../../../lib/kiosk-i18n';
+  import { reportUnexpectedAuth } from '../../../lib/sentry/reportUnexpectedAuth';
   import { cleanDisplayName, isValidDisplayName } from '../../../lib/profile/nameRules';
   import { slugifyHandle, normalizeChosenHandle, chosenHandleProblem } from '../../../lib/profile/handle';
   import MemberTypeChoice from '../../profile/kiosk/atoms/MemberTypeChoice.svelte';
@@ -89,6 +90,8 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // Sensor (2026-10-31): a 404/5xx/non-JSON answer is one the form cannot explain — tell Sentry.
+        reportUnexpectedAuth('register', res);
         const code = String(data?.error ?? '');
         if (code === 'name_invalid') { nameErr = $t['auth.err.nameInvalid']; status = 'idle'; return; }
         if (code === 'name_protected') { nameErr = $t['auth.err.nameProtected']; status = 'idle'; return; }
@@ -124,7 +127,8 @@
       if (!sess?.user) { window.location.href = '/login'; return; }
       status = 'success';
       window.location.href = '/verify-email';
-    } catch {
+    } catch (e) {
+      reportUnexpectedAuth('register', null, e);
       nameErr = $t['auth.err.generic'];
       status = 'idle';
     }
