@@ -7,6 +7,10 @@
 // Sentry warning (variable detail in extra.reason) so an outage stays visible.
 // Missing SAFE_BROWSING_API_KEY = silent no-op (dev, preview).
 //
+// Every moderated text field is at most 5000 characters (forum, event, listing
+// schemas), so a submission can never hold 500 URLs and in practice exactly ONE
+// request is sent; the chunking is defence in depth, not a hot path.
+//
 // The key is read from process.env at call time (not import.meta.env, which
 // Vite would inline at build time). Only URLs are sent to Google — never the
 // surrounding text. Safe Browsing's terms cover non-commercial use only.
@@ -66,7 +70,12 @@ class LookupStatusError extends Error {
 const scrub = (s: string) => s.replace(/key=[^&\s]+/g, 'key=[key]');
 
 export async function checkLinkReputation(text: string, deps: LinkReputationDeps = {}): Promise<ModerationResult> {
-  const urls = extractUrls(text);
+  // An unparsable (or oversized) string is not a navigable link, and one bad
+  // entry would make Google answer 400 for the whole request (a bypass).
+  const urls = extractUrls(text).filter((u) => {
+    if (u.length > 2048) return false;
+    try { new URL(u); return true; } catch { return false; }
+  });
   if (urls.length === 0) return approved();
   const key = deps.apiKey !== undefined ? deps.apiKey : process.env.SAFE_BROWSING_API_KEY;
   if (!key) return approved();
@@ -76,28 +85,37 @@ export async function checkLinkReputation(text: string, deps: LinkReputationDeps
   const chunks: string[][] = [];
   for (let i = 0; i < urls.length; i += MAX_URLS_PER_REQUEST) chunks.push(urls.slice(i, i + MAX_URLS_PER_REQUEST));
 
-  let reason: string;
-  try {
-    const perChunk = await Promise.all(chunks.map(async (chunk) => {
-      const res = await doFetch(`${LOOKUP_ENDPOINT}?key=${encodeURIComponent(key)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildLookupBody(chunk)),
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!res.ok) throw new LookupStatusError(res.status);
-      return hitsFromLookup(await res.json());
-    }));
-    const byUrl = new Map<string, LinkHit>();
-    for (const h of perChunk.flat()) if (!byUrl.has(h.url)) byUrl.set(h.url, h);
-    return byUrl.size > 0 ? unsafeLinkResult([...byUrl.values()]) : approved();
-  } catch (e) {
-    if (e instanceof LookupStatusError) reason = `status ${e.status}`;
-    else {
-      const err = e as { name?: string; message?: string };
-      reason = scrub(`${err?.name ?? 'Error'}: ${err?.message ?? String(e)}`);
+  const settled = await Promise.allSettled(chunks.map(async (chunk) => {
+    const res = await doFetch(`${LOOKUP_ENDPOINT}?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildLookupBody(chunk)),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) throw new LookupStatusError(res.status);
+    return hitsFromLookup(await res.json());
+  }));
+
+  // Hits of every successful chunk count, even when another chunk failed.
+  const byUrl = new Map<string, LinkHit>();
+  let failure: unknown;
+  let failed = false;
+  for (const s of settled) {
+    if (s.status === 'fulfilled') {
+      for (const h of s.value) if (!byUrl.has(h.url)) byUrl.set(h.url, h);
+    } else if (!failed) {
+      failed = true;
+      failure = s.reason;
     }
   }
-  try { await report(reason); } catch { /* reporting must never break the submission */ }
-  return approved();
+  if (failed) {
+    let reason: string;
+    if (failure instanceof LookupStatusError) reason = `status ${failure.status}`;
+    else {
+      const err = failure as { name?: string; message?: string };
+      reason = scrub(`${err?.name ?? 'Error'}: ${err?.message ?? String(failure)}`);
+    }
+    try { await report(reason); } catch { /* reporting must never break the submission */ }
+  }
+  return byUrl.size > 0 ? unsafeLinkResult([...byUrl.values()]) : approved();
 }

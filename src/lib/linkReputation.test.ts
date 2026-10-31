@@ -76,3 +76,21 @@ test('a thrown error that embeds the key is scrubbed', async () => {
   assert.equal(r.canPublish, true); assert.equal(reasons.length, 1);
   assert.doesNotMatch(reasons[0], /SECRET/); assert.match(reasons[0], /key=\[key\]/);
 });
+test('one chunk fails, the other hits → still unsafe, reported once', async () => {
+  const text = Array.from({ length: 501 }, (_, i) => `https://x.example/${i}`).join(' ');
+  let calls = 0;
+  const reasons: string[] = [];
+  const f = (async () => {
+    calls++;
+    if (calls === 1) throw new Error('boom');
+    return new Response(JSON.stringify({ matches: [{ threatType: 'MALWARE', threat: { url: 'https://x.example/500' } }] }), { status: 200 });
+  }) as typeof fetch;
+  const r = await checkLinkReputation(text, { apiKey: 'k', fetchImpl: f, report: async (x) => { reasons.push(x); } });
+  assert.deepEqual(r.flaggedCategories, ['unsafe_link']); assert.equal(reasons.length, 1);
+});
+test('an unparsable URL is dropped before the lookup', async () => {
+  const cap: { url?: string; init?: RequestInit } = {};
+  const r = await checkLinkReputation('a https://[bad und https://ok.example/', { apiKey: 'k', fetchImpl: fakeFetch(200, {}, cap) });
+  assert.equal(r.canPublish, true);
+  assert.deepEqual(JSON.parse(String(cap.init!.body)).threatInfo.threatEntries, [{ url: 'https://ok.example/' }]);
+});
