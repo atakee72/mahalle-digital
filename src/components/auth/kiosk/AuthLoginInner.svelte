@@ -114,8 +114,17 @@
         password: parsed.data.password,
         redirect: false,
       });
-      // Sensor (2026-10-31): auth-astro resolves with the callback's raw Response; a 404/5xx there is a dead door.
-      if (signInRes instanceof Response) reportUnexpectedAuth('signin', signInRes);
+      // auth-astro (client.ts) navigates the page ITSELF on success — even with redirect:false it sets
+      // window.location.href and resolves `undefined`; only a refused login resolves with a Response.
+      // Stop here on success: the session + login-status fetches below would run while the page is
+      // already leaving, Safari rejects them („Load failed") and the sensor reported a HEALTHY login
+      // (Opus review 2026-10-31, reproduced in scratchpad/auth-sensor/login-race.cjs). A dead
+      // callback route throws (HTML body → SyntaxError) and lands in the outer catch below.
+      if (signInRes === undefined) {
+        status = 'success';
+        window.location.href = postLoginTarget();
+        return;
+      }
       // auth-astro's signIn() (redirect:false) resolves with a raw Response —
       // it never exposes `.error` — so failure is detected via the only
       // shape-independent signal: whether a session now exists. Preserves
