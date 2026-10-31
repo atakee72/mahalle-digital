@@ -21,10 +21,13 @@ export function scrubBreadcrumb<B extends { data?: Record<string, any> }>(b: B):
   if (!b.data) return b;
   const data: Record<string, any> = { ...b.data };
   for (const k of BREADCRUMB_URL_KEYS) if (typeof data[k] === 'string') data[k] = scrubUrl(data[k]);
+  // The Node SDK stores a fetch breadcrumb's query and fragment under their own keys.
+  delete data['http.query'];
+  delete data['http.fragment'];
   return { ...b, data };
 }
 
-/** Server events: url without query, no `query_string`, no `Referer` (it carries the previous page's query). */
+/** Both SDKs: url without query, no `query_string`, no `Referer` header (it carries the previous page's query — in the browser `document.referrer`). */
 export function scrubRequest<R extends { url?: string; query_string?: unknown; headers?: Record<string, string> } | undefined>(req: R): R {
   if (!req) return req;
   const { query_string: _q, headers, ...rest } = req;

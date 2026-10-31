@@ -5,7 +5,7 @@
 // with monitoring disabled until env vars land.
 import * as Sentry from '@sentry/astro';
 import { isClientNoise } from './src/lib/sentry/clientNoise';
-import { scrubUrl, scrubBreadcrumb } from './src/lib/sentry/scrubUrl';
+import { scrubRequest, scrubBreadcrumb } from './src/lib/sentry/scrubUrl';
 
 Sentry.init({
   // PUBLIC_ prefix REQUIRED: Astro only exposes PUBLIC_*-prefixed env vars
@@ -38,7 +38,7 @@ Sentry.init({
     // Never ship the query string: /reset-password, /verify-email, /confirm-email-change and
     // /widerrufen carry single-use tokens there, /login the redirect target, /search the query
     // (2026-10-31, found when the auth-form sensor reported from the reset page).
-    if (event.request?.url) event.request.url = scrubUrl(event.request.url);
+    if (event.request) event.request = scrubRequest(event.request); // url, query_string, Referer
     if (event.breadcrumbs) event.breadcrumbs = event.breadcrumbs.map(scrubBreadcrumb);
     return event;
   },

@@ -28,3 +28,8 @@ test('request: url scrubbed, query_string and referer dropped, other headers kep
   assert.deepEqual(r, { url: 'https://x.test/reset-password', headers: { 'User-Agent': 'ua' } });
   assert.equal(scrubRequest(undefined), undefined);
 });
+
+test('Node SDK breadcrumb shape: http.query and http.fragment are dropped', () => {
+  const b = scrubBreadcrumb({ category: 'http', data: { url: 'https://x.test/reset-password', 'http.method': 'GET', 'http.query': '?token=abc', 'http.fragment': '#x', status_code: 200 } });
+  assert.deepEqual(b.data, { url: 'https://x.test/reset-password', 'http.method': 'GET', status_code: 200 });
+});
