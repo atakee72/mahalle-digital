@@ -70,10 +70,10 @@ class LookupStatusError extends Error {
 const scrub = (s: string) => s.replace(/key=[^&\s]+/g, 'key=[key]');
 
 export async function checkLinkReputation(text: string, deps: LinkReputationDeps = {}): Promise<ModerationResult> {
-  // An unparsable (or oversized) string is not a navigable link, and one bad
-  // entry would make Google answer 400 for the whole request (a bypass).
+  // An unparsable string is not a navigable link, and one bad
+  // entry would make Google answer 400 for the whole request (a bypass). No
+  // length cap: a padded known-bad URL must still be checked.
   const urls = extractUrls(text).filter((u) => {
-    if (u.length > 2048) return false;
     try { new URL(u); return true; } catch { return false; }
   });
   if (urls.length === 0) return approved();

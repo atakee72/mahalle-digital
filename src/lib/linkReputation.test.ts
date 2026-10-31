@@ -94,3 +94,9 @@ test('an unparsable URL is dropped before the lookup', async () => {
   assert.equal(r.canPublish, true);
   assert.deepEqual(JSON.parse(String(cap.init!.body)).threatInfo.threatEntries, [{ url: 'https://ok.example/' }]);
 });
+test('a long URL is still sent', async () => {
+  const long = 'https://p.example/' + 'a'.repeat(3000);
+  const cap: { url?: string; init?: RequestInit } = {};
+  await checkLinkReputation(`siehe ${long}`, { apiKey: 'k', fetchImpl: fakeFetch(200, {}, cap) });
+  assert.deepEqual(JSON.parse(String(cap.init!.body)).threatInfo.threatEntries, [{ url: long }]);
+});
