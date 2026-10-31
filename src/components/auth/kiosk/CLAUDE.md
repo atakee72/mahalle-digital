@@ -50,7 +50,12 @@ Frontend-only, no backend. Both live in `AuthLayout` (login/register only).
 
 - **`KiezHeartbeat.svelte`** — ambient "live im Kiez" strip in the AuthLayout footer
   (`client:load`). Pulse dot keyframe is reduced-motion-gated. It is ambient, not
-  load-bearing — never throws, never blocks paint.
+  load-bearing — never throws, never blocks paint. **Phones since 2026-10-28 (`035664d1`):**
+  below 640 px the pill wraps WHOLE segments onto a second centred line (`.kh-seg`
+  `white-space: nowrap`, `.kh` `flex-wrap`, dividers hidden, max width = screen − 32 px) —
+  until then the one-row pill overflowed a 390 px screen and every label broke inside its
+  segment („LIVE IM / KIEZ"). Styles are classes now (the inline styles could not be
+  overridden by a media query); the `compact` prop only sets the desktop custom properties.
   - **Refit for the Aug 2026 landing release**: the per-surface list APIs
     (`/api/events`, `/api/news`, …) went login-gated, so the original three-GET
     fetch would 401 for logged-out visitors on exactly the page that needs it
@@ -249,6 +254,7 @@ On a demo deployment (`DEMO_MODE=1` + dev-named db) `/login` and `/register` ren
 
 ## Unknown `/api/auth/<action>` answers 404 (2026-10-27, `098892b1`) — pointer
 auth-astro's catch-all returns `undefined` when the first segment after `/api/auth/` is not one of its eight actions (also for bare `/api/auth` and `/api/auth//session`); Astro turned that into a 500 and Sentry into an issue per hit (MAHALLE-PROD-X, a scanner on the demo host an hour after go-live). The middleware answers 404 before the route, via the pure, tested `src/lib/auth/authRoutePath.ts` — keep its `AUTH_ACTIONS` equal to `node_modules/auth-astro/server.ts` on an upgrade. Astro reroutes a 404 `Response` from the middleware to `404.astro`; the body you give it never leaves.
+**Regression 2026-10-27 → 10-31 (`b1d9df1f`):** the path-only test also matched THIS area's own routes (`/api/auth/register`, `forgot-password`, `reset-password`, `verify-email`, `verification-status`, `resend-verification`, `login-status`, `account-status`, `cancel-deletion`) — registration, reset and confirmation answered 404 for three days, two newcomers failed to sign up, Sentry stayed empty. The gate is now `shouldAnswerAuth404(context.routePattern, pathname)`: only a request Astro routed to auth-astro's `/api/auth/[...auth]` can get the 404; `authRoutePath.test.ts` reads `src/pages/api/auth/` and pins every file. A new route under the prefix is covered automatically; probe it on the local prod build anyway (POST with `{}` → 400/401, never 404).
 
 ## One password rule for new passwords (2026-10-02)
 `isAcceptablePassword()` in the pure `src/lib/auth/passwordRule.ts` (8–100 characters, a lowercase letter, an uppercase letter, a digit; tests `passwordRule.test.ts`, one of them pins it against `ResetPasswordSchema`) is used by BOTH the signup form (`pwOk`) and `POST /api/auth/register` (400 `password_weak`, mapped to the password field's `auth.err.pwWeak`). Until that day the route accepted 6 characters of anything and a number/object as `password` slipped through. The check runs before the rate-limit charges and before any write. Password change and reset already enforced the same rule through their zod schemas. **Login is deliberately not bound to it** (`LoginSchema` min 6, `authorize` untouched): members with an older, shorter password keep logging in. Probes: `scratchpad/batch-1002/probe.cjs` (API) and `form.cjs` (form).
