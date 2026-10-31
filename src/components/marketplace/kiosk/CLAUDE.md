@@ -157,7 +157,7 @@ CONTACT_IP_SALT=           # 32+ chars, fixed across deploys (for hashing IPs in
 ALLOWED_ORIGINS=           # CSV of allowed origins, e.g. "https://mahalle.berlin" (defaults to this)
 ```
 
-**Link check (2026-10-31):** listing links are looked up in Google Safe Browsing inside `moderateContent()`; a hit queues the listing, and the contact relay REFUSES a buyer's message that carries a flagged link — rules in root CLAUDE.md → „Content Moderation“.
+**Link check (2026-10-31):** listing links are looked up in Google Safe Browsing inside `moderateContent()` (the moderated text is the rendered `description`); a hit queues the listing, and the contact relay REFUSES a buyer's message that carries a flagged link — rules in root CLAUDE.md → „Content Moderation“.
 
 ### Server-side projection — A5 `lastBumpedAt` is owner-only
 `listingsQuery.ts` strips `lastBumpedAt` from the non-owner serialization branch and exposes `isBumped: boolean` instead (computed server-side: `lastBumpedAt != null && Date.now() - lastBumpedAt < 7 * 86400 * 1000`).
