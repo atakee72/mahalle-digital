@@ -28,6 +28,11 @@ test('clean answer → approved; request carries the key and the URL', async () 
   assert.equal(cap.init!.method, 'POST');
   assert.deepEqual(JSON.parse(String(cap.init!.body)).threatInfo.threatEntries, [{ url: 'https://ok.example/seite' }]);
 });
+test('URLs are sent in canonical form', async () => {
+  const cap: { url?: string; init?: RequestInit } = {};
+  await checkLinkReputation('siehe https://straße.example/ä', { apiKey: 'k', fetchImpl: fakeFetch(200, {}, cap) });
+  assert.deepEqual(JSON.parse(String(cap.init!.body)).threatInfo.threatEntries, [{ url: 'https://xn--strae-oqa.example/%C3%A4' }]);
+});
 test('a hit → urgent review with the unsafe_link category and Google-naming reason', async () => {
   const r = await checkLinkReputation(`Konto prüfen: ${PH}`, { apiKey: 'k', fetchImpl: fakeFetch(200, { matches: [{ threatType: 'SOCIAL_ENGINEERING', threat: { url: PH } }] }) });
   assert.equal(r.decision, 'urgent_review'); assert.equal(r.isUrgent, true); assert.equal(r.canPublish, false);

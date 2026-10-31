@@ -73,9 +73,11 @@ export async function checkLinkReputation(text: string, deps: LinkReputationDeps
   // An unparsable string is not a navigable link, and one bad
   // entry would make Google answer 400 for the whole request (a bypass). No
   // length cap: a padded known-bad URL must still be checked.
-  const urls = extractUrls(text).filter((u) => {
-    try { new URL(u); return true; } catch { return false; }
-  });
+  // Sent in canonical form (punycode host, percent-encoded path) — what the browser navigates to.
+  const urls: string[] = [];
+  for (const u of extractUrls(text)) {
+    try { urls.push(new URL(u).href); } catch { /* unparsable: dropped */ }
+  }
   if (urls.length === 0) return approved();
   const key = deps.apiKey !== undefined ? deps.apiKey : process.env.SAFE_BROWSING_API_KEY;
   if (!key) return approved();
