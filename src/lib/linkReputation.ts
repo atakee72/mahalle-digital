@@ -13,7 +13,7 @@
 import * as Sentry from '@sentry/astro';
 import type { ModerationResult } from './moderation';
 import { extractUrls } from './linkify';
-import { buildLookupBody, hitsFromLookup, LOOKUP_ENDPOINT, type LinkHit } from './linkReputationRules';
+import { buildLookupBody, hitsFromLookup, LOOKUP_ENDPOINT, MAX_URLS_PER_REQUEST, type LinkHit } from './linkReputationRules';
 
 export const LINK_CHECK_FAILED_MESSAGE = 'link check: Safe Browsing lookup failed — content not held';
 
@@ -59,6 +59,10 @@ async function defaultReport(reason: string): Promise<void> {
   await Sentry.flush(2000);
 }
 
+class LookupStatusError extends Error {
+  constructor(readonly status: number) { super(`status ${status}`); }
+}
+
 const scrub = (s: string) => s.replace(/key=[^&\s]+/g, 'key=[key]');
 
 export async function checkLinkReputation(text: string, deps: LinkReputationDeps = {}): Promise<ModerationResult> {
@@ -69,23 +73,30 @@ export async function checkLinkReputation(text: string, deps: LinkReputationDeps
   const doFetch = deps.fetchImpl ?? fetch;
   const report = deps.report ?? defaultReport;
 
+  const chunks: string[][] = [];
+  for (let i = 0; i < urls.length; i += MAX_URLS_PER_REQUEST) chunks.push(urls.slice(i, i + MAX_URLS_PER_REQUEST));
+
   let reason: string;
   try {
-    const res = await doFetch(`${LOOKUP_ENDPOINT}?key=${encodeURIComponent(key)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildLookupBody(urls)),
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) {
-      reason = `status ${res.status}`;
-    } else {
-      const hits = hitsFromLookup(await res.json());
-      return hits.length > 0 ? unsafeLinkResult(hits) : approved();
-    }
+    const perChunk = await Promise.all(chunks.map(async (chunk) => {
+      const res = await doFetch(`${LOOKUP_ENDPOINT}?key=${encodeURIComponent(key)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildLookupBody(chunk)),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) throw new LookupStatusError(res.status);
+      return hitsFromLookup(await res.json());
+    }));
+    const byUrl = new Map<string, LinkHit>();
+    for (const h of perChunk.flat()) if (!byUrl.has(h.url)) byUrl.set(h.url, h);
+    return byUrl.size > 0 ? unsafeLinkResult([...byUrl.values()]) : approved();
   } catch (e) {
-    const err = e as { name?: string; message?: string };
-    reason = scrub(`${err?.name ?? 'Error'}: ${err?.message ?? String(e)}`);
+    if (e instanceof LookupStatusError) reason = `status ${e.status}`;
+    else {
+      const err = e as { name?: string; message?: string };
+      reason = scrub(`${err?.name ?? 'Error'}: ${err?.message ?? String(e)}`);
+    }
   }
   try { await report(reason); } catch { /* reporting must never break the submission */ }
   return approved();

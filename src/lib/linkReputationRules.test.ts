@@ -1,7 +1,7 @@
 // Run: npx tsx --test src/lib/linkReputationRules.test.ts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildLookupBody, hitsFromLookup, MAX_URLS_PER_CHECK, THREAT_TYPES } from './linkReputationRules';
+import { buildLookupBody, hitsFromLookup, MAX_URLS_PER_REQUEST, THREAT_TYPES } from './linkReputationRules';
 
 test('body names the four threat types on ANY_PLATFORM with URL entries', () => {
   const b = buildLookupBody(['https://a.example/']);
@@ -12,11 +12,11 @@ test('body names the four threat types on ANY_PLATFORM with URL entries', () => 
   assert.deepEqual(b.threatInfo.threatEntryTypes, ['URL']);
   assert.deepEqual(b.threatInfo.threatEntries, [{ url: 'https://a.example/' }]);
 });
-test('cap at 50', () => {
-  const urls = Array.from({ length: 60 }, (_, i) => `https://x.example/${i}`);
-  assert.equal(MAX_URLS_PER_CHECK, 50);
-  assert.equal(buildLookupBody(urls).threatInfo.threatEntries.length, 50);
-  assert.equal(buildLookupBody(urls).threatInfo.threatEntries[49].url, 'https://x.example/49');
+test('cap at 500 per request', () => {
+  const urls = Array.from({ length: 600 }, (_, i) => `https://x.example/${i}`);
+  assert.equal(MAX_URLS_PER_REQUEST, 500);
+  assert.equal(buildLookupBody(urls).threatInfo.threatEntries.length, 500);
+  assert.equal(buildLookupBody(urls).threatInfo.threatEntries[499].url, 'https://x.example/499');
 });
 test('empty object is clean', () => { assert.deepEqual(hitsFromLookup({}), []); });
 test('empty matches is clean', () => { assert.deepEqual(hitsFromLookup({ matches: [] }), []); });

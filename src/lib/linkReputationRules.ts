@@ -6,7 +6,8 @@
 // echo a canonicalised form of a URL, and an exact-string filter would
 // silently drop real hits. Google only ever answers for what was sent.
 
-export const MAX_URLS_PER_CHECK = 50;
+// Google's documented per-request limit; callers chunk, the slice is a guard.
+export const MAX_URLS_PER_REQUEST = 500;
 export const LOOKUP_ENDPOINT = 'https://safebrowsing.googleapis.com/v4/threatMatches:find';
 export const THREAT_TYPES = [
   'MALWARE',
@@ -37,7 +38,7 @@ export function buildLookupBody(urls: string[]): LookupBody {
       threatTypes: THREAT_TYPES,
       platformTypes: ['ANY_PLATFORM'],
       threatEntryTypes: ['URL'],
-      threatEntries: urls.slice(0, MAX_URLS_PER_CHECK).map((url) => ({ url })),
+      threatEntries: urls.slice(0, MAX_URLS_PER_REQUEST).map((url) => ({ url })),
     },
   };
 }

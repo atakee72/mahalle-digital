@@ -52,4 +52,7 @@ test('extractUrls: http(s) only, trailing punctuation stripped, duplicates colla
   const text = 'Siehe https://a.example/x. Und http://b.example/y), nochmal https://a.example/x und ftp://c.example javascript:alert(1)';
   assert.deepEqual(extractUrls(text), ['https://a.example/x', 'http://b.example/y']);
   assert.deepEqual(extractUrls('kein link'), []);
+  const sample = 'a https://x.example/wiki_(band). b https://y.example/z, https://x.example/wiki_(band) c';
+  const fromRenderer = [...new Set(linkifySegments(sample).filter((s) => s.type === 'link').map((s) => s.value))];
+  assert.deepEqual(extractUrls(sample), fromRenderer);
 });

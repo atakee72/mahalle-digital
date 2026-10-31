@@ -56,3 +56,23 @@ test('non-JSON body → approved, reported', async () => {
 test('the static message is the one Sentry groups on', () => {
   assert.equal(LINK_CHECK_FAILED_MESSAGE, 'link check: Safe Browsing lookup failed — content not held');
 });
+
+test('501 links → two requests, hits from both merged', async () => {
+  const text = Array.from({ length: 501 }, (_, i) => `https://x.example/${i}`).join(' ');
+  let calls = 0;
+  const f = (async (_u: any, init?: RequestInit) => {
+    calls++;
+    const sent = JSON.parse(String(init!.body)).threatInfo.threatEntries as { url: string }[];
+    const bad = sent.find((e) => e.url === 'https://x.example/500');
+    return new Response(JSON.stringify(bad ? { matches: [{ threatType: 'MALWARE', threat: { url: bad.url } }] } : {}), { status: 200 });
+  }) as typeof fetch;
+  const r = await checkLinkReputation(text, { apiKey: 'k', fetchImpl: f });
+  assert.equal(calls, 2); assert.deepEqual(r.flaggedCategories, ['unsafe_link']);
+});
+test('a thrown error that embeds the key is scrubbed', async () => {
+  const reasons: string[] = [];
+  const f = (async () => { throw new Error('request to https://safebrowsing.googleapis.com/v4/threatMatches:find?key=SECRET failed'); }) as typeof fetch;
+  const r = await checkLinkReputation(`siehe ${PH}`, { apiKey: 'SECRET', fetchImpl: f, report: async (x) => { reasons.push(x); } });
+  assert.equal(r.canPublish, true); assert.equal(reasons.length, 1);
+  assert.doesNotMatch(reasons[0], /SECRET/); assert.match(reasons[0], /key=\[key\]/);
+});
