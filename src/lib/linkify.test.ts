@@ -1,7 +1,7 @@
 // Run: npx tsx src/lib/linkify.test.ts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { displayUrl, linkifySegments, shortenUrlsInText } from './linkify';
+import { displayUrl, linkifySegments, shortenUrlsInText, extractUrls } from './linkify';
 
 test('short URLs lose only scheme, www and trailing slash', () => {
   assert.equal(displayUrl('https://www.berlin.de/'), 'berlin.de');
@@ -46,4 +46,10 @@ test('mentions are linked inside text, never inside a URL', () => {
 
 test('without mentions the output is unchanged', () => {
   assert.deepEqual(linkifySegments('Hallo @petra2'), [{ type: 'text', value: 'Hallo @petra2' }]);
+});
+
+test('extractUrls: http(s) only, trailing punctuation stripped, duplicates collapse, order kept', () => {
+  const text = 'Siehe https://a.example/x. Und http://b.example/y), nochmal https://a.example/x und ftp://c.example javascript:alert(1)';
+  assert.deepEqual(extractUrls(text), ['https://a.example/x', 'http://b.example/y']);
+  assert.deepEqual(extractUrls('kein link'), []);
 });

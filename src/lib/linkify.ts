@@ -18,6 +18,17 @@ const URL_RE = /https?:\/\/[^\s<>"']+/g;
 // than part of the URL („… siehe https://example.com/pfad.")
 const TRAILING_PUNCT = /[.,!?;:)\]]+$/;
 
+// Every http(s) URL in a text: ordered, deduplicated, trailing sentence
+// punctuation stripped. Used by the server-side link reputation check.
+export function extractUrls(text: string): string[] {
+  const seen = new Set<string>();
+  for (const match of text.matchAll(URL_RE)) {
+    const url = match[0].replace(TRAILING_PUNCT, '');
+    if (url) seen.add(url);
+  }
+  return [...seen];
+}
+
 // `mentions` = what the SERVER resolved when the text was saved (post/comment
 // field `mentions`). Without it the output is exactly what it always was.
 export function linkifySegments(text: string, mentions: readonly MentionRef[] = []): LinkifySegment[] {
