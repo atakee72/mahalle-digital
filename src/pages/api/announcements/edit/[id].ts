@@ -190,6 +190,21 @@ export const PUT: APIRoute = async ({ request, params }) => {
       author
     };
 
+    // Flagged edit: say so, like topic edits do
+    if (mergedModerationResult) {
+      return new Response(
+        JSON.stringify({
+          announcement: updatedAnnouncement,
+          message: mergedModerationResult.userMessage,
+          moderationStatus: 'pending'
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     return new Response(
       JSON.stringify({
         announcement: updatedAnnouncement,
