@@ -1,0 +1,58 @@
+// Run: npx tsx --test src/lib/linkReputation.test.ts
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { checkLinkReputation, unsafeLinkResult, LINK_CHECK_FAILED_MESSAGE } from './linkReputation';
+
+const PH = 'https://testsafebrowsing.appspot.com/s/phishing.html';
+const fakeFetch = (status: number, body: unknown, capture?: { url?: string; init?: RequestInit }) =>
+  (async (url: any, init?: RequestInit) => {
+    if (capture) { capture.url = String(url); capture.init = init; }
+    return new Response(typeof body === 'string' ? body : JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch;
+
+test('no link → approved without a request', async () => {
+  let called = false;
+  const r = await checkLinkReputation('nur text', { apiKey: 'k', fetchImpl: (async () => { called = true; return new Response('{}'); }) as typeof fetch });
+  assert.equal(called, false); assert.equal(r.canPublish, true); assert.equal(r.needsReview, false);
+});
+test('no key → approved without a request', async () => {
+  let called = false;
+  const r = await checkLinkReputation(`siehe ${PH}`, { apiKey: undefined, fetchImpl: (async () => { called = true; return new Response('{}'); }) as typeof fetch });
+  assert.equal(called, false); assert.equal(r.canPublish, true);
+});
+test('clean answer → approved; request carries the key and the URL', async () => {
+  const cap: { url?: string; init?: RequestInit } = {};
+  const r = await checkLinkReputation(`siehe https://ok.example/seite.`, { apiKey: 'K3Y', fetchImpl: fakeFetch(200, {}, cap) });
+  assert.equal(r.canPublish, true);
+  assert.ok(cap.url!.startsWith('https://safebrowsing.googleapis.com/v4/threatMatches:find?key=K3Y'));
+  assert.equal(cap.init!.method, 'POST');
+  assert.deepEqual(JSON.parse(String(cap.init!.body)).threatInfo.threatEntries, [{ url: 'https://ok.example/seite' }]);
+});
+test('a hit → urgent review with the unsafe_link category and Google-naming reason', async () => {
+  const r = await checkLinkReputation(`Konto prüfen: ${PH}`, { apiKey: 'k', fetchImpl: fakeFetch(200, { matches: [{ threatType: 'SOCIAL_ENGINEERING', threat: { url: PH } }] }) });
+  assert.equal(r.decision, 'urgent_review'); assert.equal(r.isUrgent, true); assert.equal(r.canPublish, false);
+  assert.deepEqual(r.flaggedCategories, ['unsafe_link']); assert.equal(r.highestCategory, 'unsafe_link'); assert.equal(r.maxScore, 1);
+  assert.equal(r.adminReason, `Safe Browsing: SOCIAL_ENGINEERING — ${PH}`);
+});
+test('two hits join with "; "', () => {
+  const r = unsafeLinkResult([{ url: 'https://a.example/', threatType: 'MALWARE' }, { url: 'https://b.example/', threatType: 'UNWANTED_SOFTWARE' }]);
+  assert.equal(r.adminReason, 'Safe Browsing: MALWARE — https://a.example/; Safe Browsing: UNWANTED_SOFTWARE — https://b.example/');
+});
+test('HTTP 403 → approved, reported once with the status and without the key', async () => {
+  const reasons: string[] = [];
+  const r = await checkLinkReputation(`siehe ${PH}`, { apiKey: 'SECRET', fetchImpl: fakeFetch(403, { error: 'x' }), report: async (reason) => { reasons.push(reason); } });
+  assert.equal(r.canPublish, true); assert.equal(reasons.length, 1); assert.match(reasons[0], /403/); assert.doesNotMatch(reasons[0], /SECRET/);
+});
+test('thrown fetch (timeout) → approved, reported', async () => {
+  const reasons: string[] = [];
+  const r = await checkLinkReputation(`siehe ${PH}`, { apiKey: 'k', fetchImpl: (async () => { throw Object.assign(new Error('The operation was aborted'), { name: 'TimeoutError' }); }) as typeof fetch, report: async (reason) => { reasons.push(reason); } });
+  assert.equal(r.canPublish, true); assert.equal(reasons.length, 1); assert.match(reasons[0], /TimeoutError/);
+});
+test('non-JSON body → approved, reported', async () => {
+  const reasons: string[] = [];
+  const r = await checkLinkReputation(`siehe ${PH}`, { apiKey: 'k', fetchImpl: fakeFetch(200, '<html>'), report: async (reason) => { reasons.push(reason); } });
+  assert.equal(r.canPublish, true); assert.equal(reasons.length, 1);
+});
+test('the static message is the one Sentry groups on', () => {
+  assert.equal(LINK_CHECK_FAILED_MESSAGE, 'link check: Safe Browsing lookup failed — content not held');
+});
