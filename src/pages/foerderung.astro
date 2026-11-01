@@ -2,10 +2,11 @@
 // Förderung — public transparency page in the style of the legal pages
 // (Impressum / Datenschutz): who supported Mahalle, how much, for what, and
 // what that does not mean. ITZ shape (Geber, Summe, Zweck, Zeitraum,
-// Einflussklausel). Text = the owner's (brief „foerderung v1", 2026-10-27);
+// Einflussklausel). Text = the owner's (brief „foerderung v1", 2026-10-27; v2 with the
+// Sylff block, 2026-11-01, Claude-Desktop proposal audited by CC and approved by the owner);
 // the Logoleiste lives ONLY here, never in a footer. German only, like the
 // other legal pages. Linked from the landing footer and the member footer.
-// source: foerderung v1 (2026-10-27)
+// source: foerderung v2 (2026-11-01)
 import LandingLayout from '../layouts/LandingLayout.astro';
 ---
 
@@ -15,8 +16,9 @@ import LandingLayout from '../layouts/LandingLayout.astro';
     <h1 class="font-bricolage">Förderung und Unterstützung</h1>
 
     <p>
-      Mahalle wird ehrenamtlich entwickelt und betrieben. Für einzelne Vorhaben haben wir
-      Unterstützung erhalten. Hier steht, von wem, wie viel, wofür – und was das nicht bedeutet.
+      Mahalle wird von einem Nachbarn entwickelt und betrieben, bisher ehrenamtlich; für einzelne
+      Vorhaben und das Projektjahr 2026/27 haben wir Unterstützung erhalten. Hier steht, von wem,
+      wie viel, wofür – und was das nicht bedeutet.
     </p>
 
     <h2 class="font-bricolage">Gebietsfonds Schillerpromenade</h2>
@@ -44,14 +46,34 @@ import LandingLayout from '../layouts/LandingLayout.astro';
       />
     </figure>
 
-    <h2 class="font-bricolage">Weitere Förderung (zugesagt)</h2>
-    <p>
-      Für das Projektjahr 2026/27 hat uns eine internationale Stiftung, die gesellschaftliches
-      Engagement von Stipendiat:innen fördert, eine Projektförderung zugesagt. Sie unterstützt
-      Kiez-Veranstaltungen, die Ausbildung mehrsprachiger „Mahalle Guides" und das
-      Mahalle-Playbook – nicht den Betrieb der Plattform. Name, Summe und Zeitraum tragen wir
-      nach, sobald der Vertrag unterschrieben und die Förderung offiziell bekannt gegeben ist.
-    </p>
+    <h2 class="font-bricolage">Sylff Leadership Initiatives (SLI)</h2>
+    <p class="lgl-sub"><em>Sylff Association · The Tokyo Foundation (Japan)</em></p>
+    <ul class="lgl-list">
+      <li><strong>Projekt:</strong> „Mahalle: Community-Owned Digital Neighborhood Infrastructure for Intercultural Cohesion in Neukölln, Berlin"</li>
+      <li><strong>Bewilligt:</strong> 20. Oktober 2026; Vereinbarung unterzeichnet am 31. Oktober 2026</li>
+      <li><strong>Summe:</strong> 9.660 US-Dollar, einmalig</li>
+      <li><strong>Zeitraum:</strong> 1. Oktober 2026 bis 30. September 2027</li>
+      <li>
+        <strong>Wofür:</strong> Kiez-Veranstaltungen (Räume, Technik, Verpflegung, Musik); gedruckte
+        Materialien und Roll-ups in vier Sprachen (DE/TR/AR/EN); Server, Übersetzung und
+        Entwicklungswerkzeuge für ein Jahr; die Begleitung mehrsprachiger Mahalle-Guides; Nutzertests,
+        Dokumentation und das Mahalle-Playbook, mit dem andere Kieze die Plattform nachbauen können.
+        Enthalten ist auch ein Honorar für die Projektarbeit.
+      </li>
+      <li>
+        <strong>Hintergrund:</strong> Sylff (Ryoichi Sasakawa Young Leaders Fellowship Fund) ist ein
+        Stipendienprogramm, das seit 1987 an Universitäten weltweit vergeben wird; SLI fördert
+        gesellschaftliche Projekte ehemaliger Stipendiat:innen. Ercan Atak war 1995 Sylff-Stipendiat an
+        der Universität Ankara.
+      </li>
+      <li>
+        <strong>Was das nicht bedeutet:</strong> die Plattform gehört weiterhin niemandem außer den
+        Menschen, die sie benutzen (siehe <a href="/blog/das-mahalle-manifest">Manifest</a>). Die
+        Stiftung hat kein Mitspracherecht bei Inhalten, Regeln, Moderation oder Daten und keines
+        verlangt. Nach Ablauf des Projektjahres legen wir ihr einen Bericht und die Belege vor; eine
+        Zusammenfassung veröffentlichen wir auch hier.
+      </li>
+    </ul>
 
     <h2 class="font-bricolage">Was Förderung bei Mahalle bedeutet – und was nicht</h2>
     <p>
@@ -60,7 +82,7 @@ import LandingLayout from '../layouts/LandingLayout.astro';
       auf dieser Seite und unseren Dank – keine Stimme.
     </p>
 
-    <p class="lgl-stand"><em>Stand: 27. Oktober 2026. Weitere Förderungen tragen wir hier mit Datum nach.</em></p>
+    <p class="lgl-stand"><em>Stand: 1. November 2026. Weitere Förderungen tragen wir hier mit Datum nach.</em></p>
   </div>
 </LandingLayout>
 
