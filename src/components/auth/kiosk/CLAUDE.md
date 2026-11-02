@@ -1,5 +1,7 @@
 # Auth (kiosk) notes
 
+**2026-11-02 (`56ea4c30`) — `EmailBounceBanner.svelte`:** mounted by `KioskLayout` for every session after `SuspendedBanner`; its own fetch of `GET /api/auth/account-status` (now `{ banned, emailBounced }` from ONE `findOne`), NO sessionStorage cache (the ban banner caches a negative answer for the session — a bounce must show on the next page load), not dismissable, „Zum Profil →". Shown only for a Permanent bounce stamp (`users.emailBounce`), never for a spam complaint. `src/lib/auth/emailChange.ts`'s confirm step unsets the stamp and, with the filter `'newsletterOff.via': 'bounce'`, restores the Kiez-Brief the bounce had switched off. Copy `auth.bounce.*` DRAFT. Rules + data: root CLAUDE.md → `users` and „Outgoing Email" → „Bounce webhook".
+
 Loaded when working in `src/components/auth/kiosk/`. The login + register front
 door, migrated to the Editorial Kiosk system (Phase 1, June 2026). Plan:
 `docs/superpowers/plans/2026-06-26-auth-kiosk-redesign-phase1.md`.

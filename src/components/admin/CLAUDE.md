@@ -2,6 +2,8 @@
 
 Loaded lazily when Claude reads/edits files in `src/components/admin/`.
 
+**2026-11-02 (`56ea4c30`) — Kiez-Brief pill prints the reason:** `MitgliederApp.svelte`'s pill reads „Kiez-Brief: aus · <reason>" from the row's `briefReason` (`GET /api/admin/users` derives it with the pure `briefReasonFor()`: banned > deleting > the stored `newsletterOff.via`; keys `admin.users.brief.reason.*`, DRAFT), under a small mono legend line in the title block (`admin.users.brief.legend`, DRAFT). The optimistic row AND the server-echo merge in `patchRow()` set the reason through `briefReasonAfterAdminToggle()` (banned/deleting stay, off → `admin`, weekly → none). The pill column is 190 px (was 128 — the reason was clipped) and the pill wraps; the admin's „an" also `$unset`s `emailBounce` (manual way out of a wrong bounce). Rules + data: root CLAUDE.md → `users` and „Outgoing Email" → „Bounce webhook".
+
 ## Auth gate
 - All admin pages auth-gate at the page level (frontmatter `getSession()` + redirect to `/login` if no session). `moderation.astro` additionally checks `session.user.role !== 'admin'` and renders the §09 "no access" state inline (see below) rather than redirecting — the page itself is reachable by any logged-in user, only the queue content is gated.
 - API endpoints under `/api/admin/*` gate via `requireAdminSession()` from `src/lib/auth.ts` — returns a pre-shaped 401/403 `Response` if there's no session or the session lacks admin role. Used by every `/api/admin/announcements/*` and `/api/admin/moderation/*` endpoint. No `ADMIN_USER_IDS` fallback.
