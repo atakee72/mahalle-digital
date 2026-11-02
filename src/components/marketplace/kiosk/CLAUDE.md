@@ -1,5 +1,7 @@
 # Marketplace (kiosk) notes
 
+> **2026-11-02 (`0c8d6f66`):** `description` in the create/update/draft schemas is a plain string capped at 2000 (`src/schemas/listing.schema.ts`, tested in `listing.schema.test.ts`); the `typewriter-editor` Delta shape accepted since the legacy composer is gone from the WRITE path — it was never rendered or moderated. Old rows holding a Delta object stay readable (the detail shell falls back to `descriptionPlainText`; the `Delta` types in `src/types/listing.ts` describe them).
+
 > **Whole surface login-gated since 2026-08-25** (`src/middleware.ts`: `/marketplace` in `GATED_PAGES`, `/api/listings` in `GATED_APIS`) — user decision: inner-community, not a public market; this closed the "keep public for SEO" question from the landing release. "Public" in the notes below means *visible to logged-in non-owners*, not anonymous visitors.
 
 > **A5 superseded May 2026** — see "Bump — no rate limit" and "Freshness decay
