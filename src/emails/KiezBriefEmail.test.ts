@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import React from 'react';
 import { render } from '@react-email/render';
 import KiezBriefEmail from './KiezBriefEmail';
@@ -110,4 +111,20 @@ test('the confirm-your-address placeholder sits once, under the top link and out
     assert.ok(out.indexOf(top) < at, 'after the top link');
     assert.ok(at < out.indexOf('icon-192.png'), 'before the masthead — not inside the letter');
   }
+});
+
+test('the browser view loads images only from where its page policy allows them', async () => {
+  const withImages: BriefData = {
+    ...full,
+    posts: [{ ...full.posts[0], image: 'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_160,h_160,c_fill/mahalle/posts/a.jpg' }],
+    listings: [{ ...full.listings[0], image: 'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_160,h_160,c_fill/mahalle/listings/b.jpg' }],
+    blog: [{ ...full.blog[0], cover: '/_astro/cover.abc123.png' }],
+  };
+  const out = await render(React.createElement(KiezBriefEmail, { data: withImages, baseUrl: '', web: true }));
+  const sources = [...out.matchAll(/src="([^"]*)"/g)].map((m) => m[1]);
+  assert.ok(sources.length >= 4, sources.join(' '));
+  for (const src of sources) assert.ok(src.startsWith('/') || src.startsWith('https://res.cloudinary.com/'), src);
+
+  const route = readFileSync(new URL('../pages/kiez-brief/[week].ts', import.meta.url), 'utf8');
+  assert.equal(/img-src ([^;]*);/.exec(route)?.[1], "'self' https://res.cloudinary.com");
 });

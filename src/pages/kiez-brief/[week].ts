@@ -17,7 +17,7 @@ const HEADERS = {
   'Cache-Control': 'private, no-store',
   'X-Robots-Tag': 'noindex',
   // Member text sits in this same-origin document: no script, no frame, no form, whatever it contains.
-  'Content-Security-Policy': "default-src 'none'; img-src * data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  'Content-Security-Policy': "default-src 'none'; img-src 'self' https://res.cloudinary.com; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
 };
 
 export const GET: APIRoute = async ({ params, request, redirect }) => {
