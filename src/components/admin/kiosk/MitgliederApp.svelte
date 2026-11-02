@@ -16,6 +16,7 @@
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
   import { showError } from '../../../utils/toast';
   import { emailFragment } from '../../../lib/members/emailLookup';
+  import { briefReasonAfterAdminToggle, type BriefReason } from '../../../lib/newsletter/briefReason';
 
   type AdminUserRow = {
     id: string;
@@ -29,6 +30,8 @@
     memberType: MemberType;
     dailyLimit: number | null;
     newsletter: 'weekly' | 'off';
+    /** Why the Kiez-Brief is off (or why the member gets none whatever the switch says); null = no word. */
+    briefReason: BriefReason | null;
     /** Who issued the invitation link this member came through (null = plain registration). */
     invitedBy: { name: string; handle: string | null } | null;
     /** How many members came through this member's link. */
@@ -129,7 +132,7 @@
       if (!res.ok) throw new Error(`patch failed (${res.status})`);
       const j = await res.json();
       users = users.map((u) => (u.id === row.id
-        ? { ...u, verified: j.verified === true, memberType: j.memberType, dailyLimit: j.dailyLimit ?? null, newsletter: j.newsletter === 'off' ? 'off' : 'weekly', invitesPaused: j.invitesPaused === true }
+        ? { ...u, verified: j.verified === true, memberType: j.memberType, dailyLimit: j.dailyLimit ?? null, newsletter: j.newsletter === 'off' ? 'off' : 'weekly', briefReason: patch.newsletter !== undefined ? briefReasonAfterAdminToggle(prev.briefReason ?? null, j.newsletter === 'off' ? 'off' : 'weekly') : u.briefReason, invitesPaused: j.invitesPaused === true }
         : u));
       // The type selector and the limit field save without a button — say so.
       // (The verify button already changes its own label; no mark for it.)
@@ -154,7 +157,7 @@
   // Kiez-Brief on/off for this member (test accounts, addresses that bounce).
   function toggleBrief(row: AdminUserRow) {
     const next = row.newsletter === 'off' ? 'weekly' : 'off';
-    return patchRow(row, { newsletter: next }, { newsletter: next });
+    return patchRow(row, { newsletter: next }, { newsletter: next, briefReason: briefReasonAfterAdminToggle(row.briefReason ?? null, next) });
   }
 
   // Invitations on/off for this member (their personal link stops working while paused).
@@ -212,6 +215,9 @@
     </h1>
     <p class="font-instrument" style="font-style: italic; font-size: 14px; color: var(--k-ink-soft); margin: 0;">
       {$t['admin.users.sub']}
+    </p>
+    <p class="font-dmmono" style="font-size: 10px; color: var(--k-ink-mute); margin: 6px 0 0;">
+      {$t['admin.users.brief.legend']}
     </p>
   </div>
 
@@ -370,7 +376,7 @@
                 disabled={busy.has(row.id)}
                 onclick={() => toggleBrief(row)}
               >
-                {row.newsletter === 'off' ? $t['admin.users.brief.off'] : $t['admin.users.brief.on']}
+                {row.newsletter === 'off' ? $t['admin.users.brief.off'] : $t['admin.users.brief.on']}{row.briefReason ? ` · ${$t['admin.users.brief.reason.' + row.briefReason]}` : ''}
               </button>
               <button
                 type="button"

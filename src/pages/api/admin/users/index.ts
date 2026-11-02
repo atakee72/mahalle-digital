@@ -4,6 +4,7 @@ import { connectDB } from '../../../../lib/mongodb';
 import { requireAdminSession } from '../../../../lib/auth';
 import { storedMemberType } from '../../../../lib/members/memberType';
 import { storedNewsletterMode } from '../../../../lib/newsletter/kiezBriefRules';
+import { briefReasonFor } from '../../../../lib/newsletter/briefReason';
 import { emailFragment, escapeRegex } from '../../../../lib/members/emailLookup';
 
 // GET /api/admin/users — full members list for /admin/mitglieder.
@@ -56,7 +57,7 @@ export const GET: APIRoute = async ({ request }) => {
       .collection('users')
       .find(
         { anonymized: { $ne: true } },
-        { projection: { name: 1, handle: 1, email: 1, createdAt: 1, emailVerified: 1, verified: 1, role: 1, memberType: 1, dailyLimit: 1, newsletter: 1, invitedBy: 1, invitesPaused: 1 } }
+        { projection: { name: 1, handle: 1, email: 1, createdAt: 1, emailVerified: 1, verified: 1, role: 1, memberType: 1, dailyLimit: 1, newsletter: 1, newsletterOff: 1, isBanned: 1, deletionScheduledAt: 1, invitedBy: 1, invitesPaused: 1 } }
       )
       .sort({ createdAt: -1 })
       .limit(1000)
@@ -97,6 +98,7 @@ export const GET: APIRoute = async ({ request }) => {
       verified: u.verified === true,
       // Kiez-Brief: 'weekly' (absent) or 'off' — the admin can switch it for test accounts and bounced addresses.
       newsletter: storedNewsletterMode(u.newsletter),
+      briefReason: briefReasonFor(u),
       role: u.role === 'admin' ? ('admin' as const) : ('user' as const),
       memberType: storedMemberType(u),
       // The stored number, shown only for an organisation (it counts for no one else).
