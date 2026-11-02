@@ -7,7 +7,7 @@ export type BriefReason =
 
 const VIAS: readonly string[] = ['profile', 'link', 'one-click', 'admin', 'bounce', 'complaint'];
 
-type UserLike = { isBanned?: unknown; deletionScheduledAt?: unknown; newsletter?: unknown; newsletterOff?: unknown } | null | undefined;
+type UserLike = { [k: string]: any } | null | undefined;
 
 export function briefReasonFor(u: UserLike): BriefReason | null {
   if (!u) return null;
