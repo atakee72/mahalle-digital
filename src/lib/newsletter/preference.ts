@@ -13,7 +13,9 @@ export async function setOwnNewsletterMode(userId: string, mode: NewsletterMode,
   // so two simultaneous requests cannot both count as the change).
   const before = await db.collection('users').findOneAndUpdate(
     { _id: new ObjectId(userId) },
-    mode === 'weekly' ? { $unset: { newsletter: '' } } : { $set: { newsletter: mode } },
+    mode === 'weekly'
+      ? { $unset: { newsletter: '', newsletterOff: '' } }
+      : { $set: { newsletter: mode, newsletterOff: { via, at: new Date() } } },
     { returnDocument: 'before', projection: { name: 1, handle: 1, newsletter: 1, role: 1, anonymized: 1 } },
   );
   if (!before || before.role === 'admin' || before.anonymized === true) return;

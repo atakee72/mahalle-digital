@@ -4,6 +4,7 @@
 // silent no-op when env is unset (dev + preview deploys stay quiet).
 import * as Sentry from '@sentry/astro';
 import { isMailerConfigured, sendMail } from './email/mailer';
+import type { NewsletterVia } from './newsletter/kiezBriefRules';
 
 type AdminAlertKind =
   | 'member_new'
@@ -214,10 +215,10 @@ export function alertKiezBrief(p: {
  * unsubscribe page or with the mail program's own button. Never sent for the admin's pill.
  */
 export function alertKiezBriefChoice(p: {
-  name: string; handle: string | null; change: 'off' | 'on'; via: 'profile' | 'link' | 'one-click';
+  name: string; handle: string | null; change: 'off' | 'on'; via: NewsletterVia;
 }): Promise<void> {
   const at = p.handle ? ` (@${p.handle})` : '';
-  const via = p.via === 'profile' ? 'im Profil' : p.via === 'link' ? 'über den Abmelde-Link' : 'über das Mail-Programm';
+  const via = ({ profile: 'im Profil', link: 'über den Abmelde-Link', 'one-click': 'über das Mail-Programm', bounce: 'Adresse unzustellbar (Bounce)', complaint: 'als Spam markiert' } as const)[p.via];
   const what = p.change === 'off' ? '📭 Kiez-Brief abbestellt' : '📬 Kiez-Brief wieder abonniert';
   return sendAdminAlert({ kind: 'kiez_brief', text: `${what}: ${trunc(p.name)}${at} — ${via}` });
 }

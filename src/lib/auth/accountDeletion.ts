@@ -449,6 +449,8 @@ export async function runDeletionPipeline(
           lastVisit: '',
           forumNotify: '',
           newsletter: '',
+          newsletterOff: '',
+          emailBounce: '',
           locale: '',
           inviteCode: '',
           invitesPaused: '',

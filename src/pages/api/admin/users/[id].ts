@@ -95,8 +95,8 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     // The switch is the admin's decision: it replaces a vouch (src/lib/invites/vouch.ts), so the
     // vouch stamps go with it — and a stored false blocks a later vouch (see vouchGrants()).
     if (!outsideOnly && rest.verified !== undefined) unset.push('vouchedBy', 'vouchedAt');
-    if (newsletter === 'off') set.newsletter = 'off';
-    if (newsletter === 'weekly') unset.push('newsletter');
+    if (newsletter === 'off') { set.newsletter = 'off'; set.newsletterOff = { via: 'admin', at: new Date() }; }
+    if (newsletter === 'weekly') unset.push('newsletter', 'newsletterOff');
     // Absent = may invite; only `true` is stored.
     if (invitesPaused === true) set.invitesPaused = true;
     if (invitesPaused === false) unset.push('invitesPaused');
