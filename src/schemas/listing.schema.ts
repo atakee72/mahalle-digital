@@ -1,15 +1,5 @@
 import { z } from 'zod';
 
-// Delta format schema (from typewriter-editor)
-const DeltaOpSchema = z.object({
-  insert: z.union([z.string(), z.record(z.unknown())]),
-  attributes: z.record(z.unknown()).optional()
-});
-
-const DeltaSchema = z.object({
-  ops: z.array(DeltaOpSchema)
-});
-
 // A1: add 'gift' listing type
 const ListingTypeSchema = z.enum(['sell', 'exchange', 'gift']);
 
@@ -72,8 +62,7 @@ export const ListingCreateSchema = z.object({
     .min(5, 'Title must be at least 5 characters')
     .max(100, 'Title must be less than 100 characters')
     .trim(),
-  // Accept either Delta (rich text) or string (legacy plain text)
-  description: z.union([DeltaSchema, z.string()]),
+  description: z.string().max(2000),
   // Plain text version for validation and search
   descriptionPlainText: z
     .string()
@@ -139,8 +128,7 @@ export const ListingUpdateSchema = z.object({
     .max(100, 'Title must be less than 100 characters')
     .trim()
     .optional(),
-  // Accept either Delta (rich text) or string (legacy plain text)
-  description: z.union([DeltaSchema, z.string()]).optional(),
+  description: z.string().max(2000).optional(),
   // Plain text version for validation and search
   descriptionPlainText: z
     .string()
@@ -212,7 +200,7 @@ export const ListingDraftSchema = z.object({
     .min(1, 'Title is required to save a draft')
     .max(100, 'Title must be less than 100 characters')
     .trim(),
-  description: z.union([DeltaSchema, z.string()]).optional(),
+  description: z.string().max(2000).optional(),
   descriptionPlainText: z
     .string()
     .max(2000, 'Description must be less than 2000 characters')
