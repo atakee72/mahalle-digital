@@ -97,7 +97,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     // vouch stamps go with it — and a stored false blocks a later vouch (see vouchGrants()).
     if (!outsideOnly && rest.verified !== undefined) unset.push('vouchedBy', 'vouchedAt');
     if (newsletter === 'off') { set.newsletter = 'off'; const stamp = nextOffStamp(stored, 'admin', new Date()); if (stamp) set.newsletterOff = stamp; }
-    if (newsletter === 'weekly') unset.push('newsletter', 'newsletterOff');
+    if (newsletter === 'weekly') unset.push('newsletter', 'newsletterOff', 'emailBounce'); // the admin's „an" is also the way out of a wrong bounce
     // Absent = may invite; only `true` is stored.
     if (invitesPaused === true) set.invitesPaused = true;
     if (invitesPaused === false) unset.push('invitesPaused');

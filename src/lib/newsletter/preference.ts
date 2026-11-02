@@ -1,5 +1,6 @@
-// src/lib/newsletter/preference.ts — SERVER-ONLY. The one writer of a member's OWN Kiez-Brief
-// choice (profile switch, unsubscribe page, one-click route) and the admin's Telegram ping about it.
+// src/lib/newsletter/preference.ts — SERVER-ONLY. The one writer of the Kiez-Brief switch for
+// member-side causes: the member's own choice (profile switch, unsubscribe page, one-click route)
+// and the Resend bounce/complaint webhook — plus the admin's Telegram ping about a real change.
 // The admin's pill on /admin/mitglieder writes the same field through its own route and stays silent.
 import { ObjectId } from 'mongodb';
 import { connectDB } from '../mongodb';
@@ -10,16 +11,13 @@ import { newsletterChange, type NewsletterMode, type NewsletterVia } from './kie
 
 export async function setOwnNewsletterMode(userId: string, mode: NewsletterMode, via: NewsletterVia): Promise<void> {
   const db = await connectDB();
-  // The document BEFORE the write tells a real change from a repeated click (atomic per member,
-  // so two simultaneous requests cannot both count as the change).
+  // The stamp (who switched it off) follows nextOffStamp()'s precedence. A deliberate via writes
+  // unconditionally (a member's opt-out is never dropped); only a bounce is a compare-and-swap on
+  // the state it read and yields on a miss. The write's `before` document tells a real change
+  // from a repeated click.
   const users = db.collection('users');
   const _id = new ObjectId(userId);
-  // The stamp (who switched it off) follows nextOffStamp()'s precedence: a deliberate opt-out
-  // beats a bounce, a bounce never relabels one. Read first, then write; the write's own
-  // `before` document still tells a real change from a repeated click.
   let update: Record<string, unknown>;
-  // Compare-and-swap: the 'off' write only lands on the state it was decided on; if someone else
-  // wrote in between, that write won (no retry, no ping).
   let filter: Record<string, unknown> = { _id };
   if (mode === 'weekly') {
     update = { $unset: { newsletter: '', newsletterOff: '' } };
@@ -28,11 +26,9 @@ export async function setOwnNewsletterMode(userId: string, mode: NewsletterMode,
     if (!prev) return;
     const stamp = nextOffStamp(prev, via, new Date());
     update = { $set: stamp ? { newsletter: mode, newsletterOff: stamp } : { newsletter: mode } };
-    filter = {
-      _id,
-      newsletter: prev.newsletter ?? { $exists: false },
-      'newsletterOff.via': prev.newsletterOff?.via ?? { $exists: false },
-    };
+    if (via === 'bounce') {
+      filter = { _id, newsletter: prev.newsletter ?? null, 'newsletterOff.via': prev.newsletterOff?.via ?? null };
+    }
   }
   const before = await users.findOneAndUpdate(
     filter,

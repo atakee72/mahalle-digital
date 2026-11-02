@@ -211,8 +211,9 @@ export function alertKiezBrief(p: {
 }
 
 /**
- * A member switched the Kiez-Brief off or on again by themselves — in the profile, on the mail's
- * unsubscribe page or with the mail program's own button. Never sent for the admin's pill.
+ * A member's Kiez-Brief changed through the member-side writer: their own switch (profile, the
+ * mail's unsubscribe page, the mail program's button) or the Resend webhook (bounce, spam
+ * complaint). Never sent for the admin's pill.
  */
 export function alertKiezBriefChoice(p: {
   name: string; handle: string | null; change: 'off' | 'on'; via: NewsletterVia;

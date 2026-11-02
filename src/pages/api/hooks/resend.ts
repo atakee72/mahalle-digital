@@ -13,7 +13,8 @@ const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 export const POST: APIRoute = async ({ request }) => {
-  const secret = import.meta.env.RESEND_WEBHOOK_SECRET;
+  // process.env: read at request time (import.meta.env would be inlined at build time).
+  const secret = process.env.RESEND_WEBHOOK_SECRET;
   if (!secret) return json(401, { error: 'not_configured' });
 
   const raw = await request.text();
@@ -49,8 +50,13 @@ export const POST: APIRoute = async ({ request }) => {
     matched++;
     const id = String(u._id);
     if (action.kind === 'bounce') {
-      await users.updateOne({ _id: u._id }, { $set: { emailBounce: { at: action.at, type: action.type, subType: action.subType } } });
-      await setOwnNewsletterMode(id, 'off', 'bounce');
+      // Filter on the address too: an address change between lookup and write must not stamp the new one.
+      const w = await users.updateOne(
+        { _id: u._id, email: addr },
+        { $set: { emailBounce: { at: action.at, type: action.type, subType: action.subType } } },
+        { collation: { locale: 'en', strength: 2 } },
+      );
+      if (w.matchedCount === 1) await setOwnNewsletterMode(id, 'off', 'bounce');
     } else {
       await setOwnNewsletterMode(id, 'off', 'complaint');
     }

@@ -322,7 +322,7 @@
 
             <!-- Phones: the controls flow and wrap. From lg: five fixed columns (type · limit · Kiez-Brief ·
                  invites · verify) so every row has the same shape; the limit column stays empty unless Initiative. -->
-            <div data-admin-controls class="flex flex-wrap items-center gap-2.5 lg:grid lg:grid-cols-[214px_158px_128px_150px_112px]">
+            <div data-admin-controls class="flex flex-wrap items-center gap-2.5 lg:grid lg:grid-cols-[214px_158px_190px_150px_112px]">
               <label class="font-dmmono" style="display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; color: var(--k-ink-mute);">
                 {$t['admin.users.type.label']}
                 <select
@@ -368,7 +368,7 @@
                 aria-pressed={row.newsletter !== 'off'}
                 style="
                   border: 1.5px {row.newsletter === 'off' ? 'dashed' : 'solid'} var(--k-ink); border-radius: 999px;
-                  padding: 6px 12px; font-size: 11px; font-weight: 700; white-space: nowrap;
+                  padding: 6px 12px; font-size: 11px; font-weight: 700; line-height: 1.25;
                   cursor: pointer; min-height: 32px; background: var(--k-paper);
                   color: {row.newsletter === 'off' ? 'var(--k-ink-mute)' : 'var(--k-ink)'};
                   {busy.has(row.id) ? 'opacity: 0.5; cursor: wait;' : ''}
@@ -386,7 +386,7 @@
                 aria-pressed={!row.invitesPaused}
                 style="
                   border: 1.5px {row.invitesPaused ? 'dashed' : 'solid'} var(--k-ink); border-radius: 999px;
-                  padding: 6px 12px; font-size: 11px; font-weight: 700; white-space: nowrap;
+                  padding: 6px 12px; font-size: 11px; font-weight: 700; line-height: 1.25;
                   cursor: pointer; min-height: 32px; background: var(--k-paper);
                   color: {row.invitesPaused ? 'var(--k-ink-mute)' : 'var(--k-ink)'};
                   {busy.has(row.id) ? 'opacity: 0.5; cursor: wait;' : ''}
