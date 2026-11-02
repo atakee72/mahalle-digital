@@ -29,3 +29,22 @@ export function reenableAfterAddressChange(before: unknown): boolean {
   const via = (before as { newsletterOff?: { via?: unknown } } | null | undefined)?.newsletterOff;
   return typeof via === 'object' && via !== null && (via as { via?: unknown }).via === 'bounce';
 }
+
+export type OffStamp = { via: string; at: Date };
+
+/**
+ * The `newsletterOff` stamp to store when the Kiez-Brief is switched off with `via`.
+ * A deliberate opt-out (anything but 'bounce') beats a bounce; a bounce never relabels a
+ * deliberate stamp, nor an old opt-out that has no stamp (-> null: write no stamp);
+ * the same via again keeps the first stamp (idempotent redelivery).
+ */
+export function nextOffStamp(prev: UserLike, via: string, at: Date): OffStamp | null {
+  const wasOff = !!prev && prev.newsletter === 'off';
+  const raw = (prev?.newsletterOff ?? null) as { via?: unknown; at?: unknown } | null;
+  const prevVia = wasOff && raw && typeof raw.via === 'string' ? raw.via : null;
+  if (!wasOff) return { via, at };
+  if (prevVia === null) return via === 'bounce' ? null : { via, at };
+  if (prevVia === via) return { via: prevVia, at: raw!.at as Date };
+  if (via === 'bounce') return { via: prevVia, at: raw!.at as Date };
+  return { via, at };
+}

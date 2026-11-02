@@ -5,6 +5,7 @@ import { connectDB } from '../../../../lib/mongodb';
 import { requireAdminSession } from '../../../../lib/auth';
 import { MEMBER_TYPES, MAX_DAILY_LIMIT } from '../../../../lib/members/memberType';
 import { planAdminPatch } from '../../../../lib/members/memberTypeChange';
+import { nextOffStamp } from '../../../../lib/newsletter/briefReason';
 import { NEWSLETTER_MODES, storedNewsletterMode } from '../../../../lib/newsletter/kiezBriefRules';
 
 // PATCH /api/admin/users/[id] — admin writes on a member: `verified` (Kiez-
@@ -63,7 +64,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     // Read first: the limit rule depends on the member's type AFTER this call.
     const stored = await users.findOne(
       { _id, anonymized: { $ne: true } },
-      { projection: { memberType: 1, dailyLimit: 1, verified: 1, newsletter: 1, invitesPaused: 1 } }
+      { projection: { memberType: 1, dailyLimit: 1, verified: 1, newsletter: 1, newsletterOff: 1, invitesPaused: 1 } }
     );
     if (!stored) {
       return new Response(JSON.stringify({ error: 'not_found' }), {
@@ -95,7 +96,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     // The switch is the admin's decision: it replaces a vouch (src/lib/invites/vouch.ts), so the
     // vouch stamps go with it — and a stored false blocks a later vouch (see vouchGrants()).
     if (!outsideOnly && rest.verified !== undefined) unset.push('vouchedBy', 'vouchedAt');
-    if (newsletter === 'off') { set.newsletter = 'off'; set.newsletterOff = { via: 'admin', at: new Date() }; }
+    if (newsletter === 'off') { set.newsletter = 'off'; const stamp = nextOffStamp(stored, 'admin', new Date()); if (stamp) set.newsletterOff = stamp; }
     if (newsletter === 'weekly') unset.push('newsletter', 'newsletterOff');
     // Absent = may invite; only `true` is stored.
     if (invitesPaused === true) set.invitesPaused = true;

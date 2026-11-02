@@ -5,26 +5,29 @@ import { ObjectId } from 'mongodb';
 import { connectDB } from '../mongodb';
 import { consumeRateLimit } from '../auth/rateLimit';
 import { alertKiezBriefChoice } from '../adminAlerts';
+import { nextOffStamp } from './briefReason';
 import { newsletterChange, type NewsletterMode, type NewsletterVia } from './kiezBriefRules';
 
 export async function setOwnNewsletterMode(userId: string, mode: NewsletterMode, via: NewsletterVia): Promise<void> {
   const db = await connectDB();
   // The document BEFORE the write tells a real change from a repeated click (atomic per member,
   // so two simultaneous requests cannot both count as the change).
-  const before = await db.collection('users').findOneAndUpdate(
-    { _id: new ObjectId(userId) },
-    mode === 'weekly'
-      ? { $unset: { newsletter: '', newsletterOff: '' } }
-      // Pipeline: a repeated 'off' (redelivered webhook, second click) keeps the FIRST reason and
-      // stamp, so the write is idempotent down to the byte.
-      : [{ $set: {
-          newsletter: mode,
-          newsletterOff: { $cond: [
-            { $and: [{ $eq: ['$newsletter', 'off'] }, { $ne: [{ $type: '$newsletterOff.via' }, 'missing'] }] },
-            '$newsletterOff',
-            { via, at: new Date() },
-          ] },
-        } }],
+  const users = db.collection('users');
+  const _id = new ObjectId(userId);
+  // The stamp (who switched it off) follows nextOffStamp()'s precedence: a deliberate opt-out
+  // beats a bounce, a bounce never relabels one. Read first, then write; the write's own
+  // `before` document still tells a real change from a repeated click.
+  let update: Record<string, unknown>;
+  if (mode === 'weekly') {
+    update = { $unset: { newsletter: '', newsletterOff: '' } };
+  } else {
+    const prev = await users.findOne({ _id }, { projection: { newsletter: 1, newsletterOff: 1 } });
+    const stamp = nextOffStamp(prev, via, new Date());
+    update = { $set: stamp ? { newsletter: mode, newsletterOff: stamp } : { newsletter: mode } };
+  }
+  const before = await users.findOneAndUpdate(
+    { _id },
+    update,
     { returnDocument: 'before', projection: { name: 1, handle: 1, newsletter: 1, role: 1, anonymized: 1 } },
   );
   if (!before || before.role === 'admin' || before.anonymized === true) return;

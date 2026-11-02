@@ -140,7 +140,7 @@ export async function confirmEmailChange(
   // A bounce switched the Kiez-Brief off; the new address switches it back on (no Telegram).
   // Best-effort: the address change itself already succeeded.
   if (reenableAfterAddressChange(before)) {
-    await db.collection('users').updateOne({ _id: userId }, { $unset: { newsletter: '', newsletterOff: '' } })
+    await db.collection('users').updateOne({ _id: userId, 'newsletterOff.via': 'bounce' }, { $unset: { newsletter: '', newsletterOff: '' } })
       .catch((e) => console.error('confirmEmailChange: Kiez-Brief re-enable failed (change still succeeded):', e));
   }
 

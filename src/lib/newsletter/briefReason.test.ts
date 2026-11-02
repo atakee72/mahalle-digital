@@ -39,3 +39,38 @@ test('address change re-enables only after a bounce', () => {
   for (const b of [{ newsletterOff: { via: 'complaint' } }, { newsletterOff: { via: 'link' } }, {}, null, undefined, { newsletterOff: 'bounce' }])
     assert.equal(reenableAfterAddressChange(b), false);
 });
+
+import { nextOffStamp, reenableAfterAddressChange as reenable } from './briefReason';
+
+const T0 = new Date('2026-11-01T00:00:00Z');
+const T1 = new Date('2026-11-02T00:00:00Z');
+const prevOff = (via?: string) => ({ newsletter: 'off', ...(via ? { newsletterOff: { via, at: T0 } } : {}) });
+
+test('nextOffStamp: weekly before -> new stamp', () => {
+  assert.deepEqual(nextOffStamp({}, 'bounce', T1), { via: 'bounce', at: T1 });
+  assert.deepEqual(nextOffStamp(null, 'link', T1), { via: 'link', at: T1 });
+  assert.deepEqual(nextOffStamp({ newsletterOff: { via: 'link', at: T0 } }, 'bounce', T1), { via: 'bounce', at: T1 });
+});
+test('nextOffStamp: same via keeps the stamp (idempotent)', () => {
+  assert.deepEqual(nextOffStamp(prevOff('bounce'), 'bounce', T1), { via: 'bounce', at: T0 });
+  assert.deepEqual(nextOffStamp(prevOff('link'), 'link', T1), { via: 'link', at: T0 });
+});
+test('nextOffStamp: deliberate opt-out overrides a bounce', () => {
+  for (const v of ['profile', 'link', 'one-click', 'complaint', 'admin'] as const)
+    assert.deepEqual(nextOffStamp(prevOff('bounce'), v, T1), { via: v, at: T1 });
+});
+test('nextOffStamp: bounce never overrides a deliberate stamp', () => {
+  for (const v of ['profile', 'link', 'one-click', 'complaint', 'admin'])
+    assert.deepEqual(nextOffStamp(prevOff(v), 'bounce', T1), { via: v, at: T0 });
+});
+test('nextOffStamp: old off without stamp stays reason-less on a bounce', () => {
+  assert.equal(nextOffStamp(prevOff(), 'bounce', T1), null);
+  assert.deepEqual(nextOffStamp(prevOff(), 'complaint', T1), { via: 'complaint', at: T1 });
+  assert.deepEqual(nextOffStamp(prevOff(), 'profile', T1), { via: 'profile', at: T1 });
+});
+test('bounce -> complaint -> address change leaves newsletter off', () => {
+  const s1 = nextOffStamp({}, 'bounce', T0)!;
+  const s2 = nextOffStamp({ newsletter: 'off', newsletterOff: s1 }, 'complaint', T1)!;
+  assert.equal(s2.via, 'complaint');
+  assert.equal(reenable({ newsletter: 'off', newsletterOff: s2 }), false);
+});
