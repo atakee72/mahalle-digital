@@ -8,7 +8,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { t, locale } from '../../../lib/kiosk-i18n';
-  import { pickTargetLang, requestBlogTranslation, wantsAutoTranslate } from '../../../lib/translation/client';
+  import { pickTargetLang, requestBlogTranslation, reusableTranslation, wantsAutoTranslate } from '../../../lib/translation/client';
   import type { Block } from '../../../lib/blog/markdownBlocks';
 
   let {
@@ -61,14 +61,15 @@
       publish(null);
       return;
     }
-    if (cache) {
-      shown = cache;
+    const lang = pickTargetLang($locale);
+    const kept = reusableTranslation(cache, lang);
+    if (kept) {
+      shown = kept;
       phase = 'shown';
-      publish(cache);
+      publish(kept);
       return;
     }
     phase = 'working';
-    const lang = pickTargetLang($locale);
     const res = await requestBlogTranslation(slug, lang);
     if (destroyed) return;
     if (!res.ok) {

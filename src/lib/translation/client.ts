@@ -13,6 +13,11 @@ export function pickTargetLang(kioskLocale: string): string {
   return kioskLocale || 'de';
 }
 
+/** A kept translation counts only in the language asked for now: the target can change with the DE/EN toggle. */
+export function reusableTranslation<T extends { lang: string }>(cache: T | null, lang: string): T | null {
+  return cache?.lang === lang ? cache : null;
+}
+
 /**
  * A link from the English Kiez-Brief carries `?translate=1`: open the translation on load — but
  * only when the target language is not German (a German reader would get a German→German

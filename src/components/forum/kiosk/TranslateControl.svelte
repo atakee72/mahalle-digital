@@ -3,7 +3,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { t, locale } from '../../../lib/kiosk-i18n';
-  import { pickTargetLang, requestTranslation } from '../../../lib/translation/client';
+  import { pickTargetLang, requestTranslation, reusableTranslation } from '../../../lib/translation/client';
 
   let {
     contentType,
@@ -27,7 +27,7 @@
   // in isolation; renaming is a no-op behaviorally.
   let phase = $state<'idle' | 'working' | 'shown'>('idle');
   let error = $state<string | null>(null);
-  let cache: { title: string | null; body: string } | null = null;
+  let cache: { title: string | null; body: string; lang: string } | null = null;
   let destroyed = false;
   onDestroy(() => {
     destroyed = true;
@@ -41,13 +41,14 @@
       onTranslated(null);
       return;
     }
-    if (cache) {
+    const target = pickTargetLang($locale);
+    const kept = reusableTranslation(cache, target);
+    if (kept) {
       phase = 'shown';
-      onTranslated(cache);
+      onTranslated(kept);
       return;
     }
     phase = 'working';
-    const target = pickTargetLang($locale);
     const res = await requestTranslation(contentType, contentId, target);
     if (destroyed) return;
     if (!res.ok) {
@@ -57,7 +58,7 @@
       error = $t[(known.includes(res.error) ? `tr.err.${key}` : 'tr.err.generic') as keyof typeof $t] ?? $t['tr.err.generic'];
       return;
     }
-    cache = { title: res.title, body: res.body };
+    cache = { title: res.title, body: res.body, lang: target };
     phase = 'shown';
     onTranslated(cache);
   }
