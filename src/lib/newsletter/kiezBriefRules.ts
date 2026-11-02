@@ -249,8 +249,16 @@ export function preheaderFor(d: BriefData, locale: MailLocale = 'de'): string {
   return d.posts[0]?.title ?? d.blog[0]?.title ?? d.listings[0]?.title ?? d.official[0]?.title ?? d.events[0]?.title ?? MAIL_COPY[locale].preheaderFallback;
 }
 
-/** The Kurier teaser: one sentence with the week's real article count (the caller omits it at 0). */
+/** The news board lists at most this many: mirrors fetchNewsForSSR (newsQuery.ts) and the fetch in NewsboardIndexInner.svelte. */
+export const KURIER_BOARD_CAP = 40;
+
+/** The Kurier teaser: one sentence with the week's real article count, never more than the board shows (the caller omits it at 0). */
 export function newsLineFor(n: number, locale: MailLocale = 'de'): string {
+  if (n > KURIER_BOARD_CAP) {
+    return locale === 'en'
+      ? `Curious what happened this week? On the news board: more than ${KURIER_BOARD_CAP} articles.`
+      : `Neugierig, was diese Woche los war? Im Kurier: über ${KURIER_BOARD_CAP} Artikel.`;
+  }
   return locale === 'en'
     ? `Curious what happened this week? On the news board: ${plural(n, 'article', 'articles')}.`
     : `Neugierig, was diese Woche los war? Im Kurier: ${n} Artikel.`;

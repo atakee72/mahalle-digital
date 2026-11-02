@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   storedNewsletterMode, newsletterChange, isoWeek, issueWeek, weekLabel, windowFor, arrangeData, isQuiet, subjectFor,
   preheaderFor, withUtm, berlinWeekday, fmtEventWhen, fmtPrice, unsubscribeHeaders, excerptOf, thumb, inert, personalize, LISTING_KIND_SYMBOL,
-  storedMailLocale, escapeHtml, isIssueWeekKey, newsLineFor, pairs, groupDue, utcDay, verifyNoteHtml, GROUP_SIZE, TEST_LEAD_MINUTES, VERIFY_PLACEHOLDER, MAX_OFFICIAL, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
+  storedMailLocale, escapeHtml, isIssueWeekKey, KURIER_BOARD_CAP, newsLineFor, pairs, groupDue, utcDay, verifyNoteHtml, GROUP_SIZE, TEST_LEAD_MINUTES, VERIFY_PLACEHOLDER, MAX_OFFICIAL, MAIL_COPY, NAME_PLACEHOLDER, MAX_POSTS, MAX_EVENTS, MAX_LISTINGS, WINDOW_MS,
   type BriefData,
 } from './kiezBriefRules';
 
@@ -243,6 +243,14 @@ test('the Kurier teaser is garnish: a week with only news is still quiet; a brok
   assert.equal(newsLineFor(1), 'Neugierig, was diese Woche los war? Im Kurier: 1 Artikel.');
   assert.equal(newsLineFor(23, 'en'), 'Curious what happened this week? On the news board: 23 articles.');
   assert.equal(newsLineFor(1, 'en'), 'Curious what happened this week? On the news board: 1 article.');
+});
+
+test('the Kurier teaser never promises more than the board shows', () => {
+  assert.equal(KURIER_BOARD_CAP, 40);
+  assert.equal(newsLineFor(40), 'Neugierig, was diese Woche los war? Im Kurier: 40 Artikel.');
+  assert.equal(newsLineFor(40, 'en'), 'Curious what happened this week? On the news board: 40 articles.');
+  assert.equal(newsLineFor(41, 'de'), 'Neugierig, was diese Woche los war? Im Kurier: über 40 Artikel.');
+  assert.equal(newsLineFor(41, 'en'), 'Curious what happened this week? On the news board: more than 40 articles.');
 });
 
 test('pairs: two to a row, an odd list ends on a single', () => {
