@@ -11,6 +11,7 @@ import { ObjectId } from 'mongodb';
 import type { Document } from 'mongodb';
 import { connectDB } from '../mongodb';
 import { grantVouchedBadge } from '../invites/vouch';
+import { reenableAfterAddressChange } from '../newsletter/briefReason';
 
 const TOKEN_TTL_MS = 30 * 60 * 1000;  // 30 minutes per design
 const RESEND_GUARD_MS = 60 * 1000;           // at most one new token per user per 60s
@@ -106,7 +107,7 @@ export async function confirmEmailChange(
       { _id: userId },
       {
         $set: { email: newEmail, emailVerified: true, updatedAt: new Date().toISOString() },
-        $unset: { pendingEmail: '' },
+        $unset: { pendingEmail: '', emailBounce: '' },
       },
       { returnDocument: 'before' }
     );
@@ -135,6 +136,13 @@ export async function confirmEmailChange(
   // Kiez-verification by vouch (2026-10-19): first confirmation of an INVITED member whose inviter
   // carries the badge. Best-effort, never fails the confirmation.
   if (before && before.emailVerified !== true) await grantVouchedBadge(db, before);
+
+  // A bounce switched the Kiez-Brief off; the new address switches it back on (no Telegram).
+  // Best-effort: the address change itself already succeeded.
+  if (reenableAfterAddressChange(before)) {
+    await db.collection('users').updateOne({ _id: userId }, { $unset: { newsletter: '', newsletterOff: '' } })
+      .catch((e) => console.error('confirmEmailChange: Kiez-Brief re-enable failed (change still succeeded):', e));
+  }
 
   // Email is already swapped — clear any other unused tokens for this user.
   // Best-effort + POST-success: a failure here must NOT undo the change.
