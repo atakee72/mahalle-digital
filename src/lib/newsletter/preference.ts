@@ -15,7 +15,16 @@ export async function setOwnNewsletterMode(userId: string, mode: NewsletterMode,
     { _id: new ObjectId(userId) },
     mode === 'weekly'
       ? { $unset: { newsletter: '', newsletterOff: '' } }
-      : { $set: { newsletter: mode, newsletterOff: { via, at: new Date() } } },
+      // Pipeline: a repeated 'off' (redelivered webhook, second click) keeps the FIRST reason and
+      // stamp, so the write is idempotent down to the byte.
+      : [{ $set: {
+          newsletter: mode,
+          newsletterOff: { $cond: [
+            { $and: [{ $eq: ['$newsletter', 'off'] }, { $ne: [{ $type: '$newsletterOff.via' }, 'missing'] }] },
+            '$newsletterOff',
+            { via, at: new Date() },
+          ] },
+        } }],
     { returnDocument: 'before', projection: { name: 1, handle: 1, newsletter: 1, role: 1, anonymized: 1 } },
   );
   if (!before || before.role === 'admin' || before.anonymized === true) return;
