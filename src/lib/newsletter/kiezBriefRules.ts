@@ -10,7 +10,7 @@ export function storedNewsletterMode(v: unknown): NewsletterMode {
 }
 
 /** Where a member switched the Kiez-Brief: the profile, the mail's unsubscribe page, the mail program's own button. */
-export type NewsletterVia = 'profile' | 'link' | 'one-click';
+export type NewsletterVia = 'profile' | 'link' | 'one-click' | 'bounce' | 'complaint';
 
 /** What a member's own switch changed — `null` when the stored choice already was `next` (a repeated click). */
 export function newsletterChange(before: unknown, next: NewsletterMode): 'off' | 'on' | null {
