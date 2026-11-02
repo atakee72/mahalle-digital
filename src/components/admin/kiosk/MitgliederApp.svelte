@@ -376,7 +376,7 @@
                 disabled={busy.has(row.id)}
                 onclick={() => toggleBrief(row)}
               >
-                {row.newsletter === 'off' ? $t['admin.users.brief.off'] : $t['admin.users.brief.on']}{row.briefReason ? ` · ${$t['admin.users.brief.reason.' + row.briefReason]}` : ''}
+                {row.newsletter === 'off' ? $t['admin.users.brief.off'] : $t['admin.users.brief.on']}{row.briefReason ? ` · ${($t as Record<string, string>)['admin.users.brief.reason.' + row.briefReason]}` : ''}
               </button>
               <button
                 type="button"

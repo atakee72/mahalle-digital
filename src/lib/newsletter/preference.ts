@@ -18,15 +18,24 @@ export async function setOwnNewsletterMode(userId: string, mode: NewsletterMode,
   // beats a bounce, a bounce never relabels one. Read first, then write; the write's own
   // `before` document still tells a real change from a repeated click.
   let update: Record<string, unknown>;
+  // Compare-and-swap: the 'off' write only lands on the state it was decided on; if someone else
+  // wrote in between, that write won (no retry, no ping).
+  let filter: Record<string, unknown> = { _id };
   if (mode === 'weekly') {
     update = { $unset: { newsletter: '', newsletterOff: '' } };
   } else {
     const prev = await users.findOne({ _id }, { projection: { newsletter: 1, newsletterOff: 1 } });
+    if (!prev) return;
     const stamp = nextOffStamp(prev, via, new Date());
     update = { $set: stamp ? { newsletter: mode, newsletterOff: stamp } : { newsletter: mode } };
+    filter = {
+      _id,
+      newsletter: prev.newsletter ?? { $exists: false },
+      'newsletterOff.via': prev.newsletterOff?.via ?? { $exists: false },
+    };
   }
   const before = await users.findOneAndUpdate(
-    { _id },
+    filter,
     update,
     { returnDocument: 'before', projection: { name: 1, handle: 1, newsletter: 1, role: 1, anonymized: 1 } },
   );
