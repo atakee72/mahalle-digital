@@ -7,6 +7,15 @@ import vercel from '@astrojs/vercel';
 import auth from 'auth-astro';
 import mdx from '@astrojs/mdx';
 
+// `vite.ssr.noExternal` below is a BUILD setting (cold-start CPU, 2026-10-13). In `astro dev` the
+// same list broke every page from 2026-10-13 to 2026-11-02 (found by the ui-polish peer): the
+// Sentry server entry also exports the build-time integration, which imports
+// @sentry/vite-plugin → @sentry/bundler-plugin-core → @sentry/cli, a CommonJS package. Vite's
+// dev runner inlines it as ESM and `require is not defined` is the result on `/`, `/login`,
+// everywhere. Rollup converts CommonJS in the build, so prod never saw it. Dev keeps the
+// pre-10-13 behaviour (every package external); the build keeps the bundling.
+const isBuild = process.argv.includes('build');
+
 // https://astro.build/config
 export default defineConfig({
   site: 'https://mahalle.digital',
@@ -89,7 +98,8 @@ export default defineConfig({
       // ~2 000 requests a day — the bill was cold starts, not traffic. mongodb/bcrypt and the
       // native optional deps stay external (above); `import-in-the-middle` must stay external
       // (Sentry's ESM hook). Re-measure with scratchpad/coldstart/ before adding a heavy package.
-      noExternal: ['date-fns', /^@sentry\//, /^@opentelemetry\//, 'jose', '@auth/core', '@panva/hkdf', 'preact']
+      // Build only — see the note at the top of this file (dev broke on @sentry/cli, CommonJS).
+      noExternal: isBuild ? ['date-fns', /^@sentry\//, /^@opentelemetry\//, 'jose', '@auth/core', '@panva/hkdf', 'preact'] : []
     },
     resolve: {
       alias: {
