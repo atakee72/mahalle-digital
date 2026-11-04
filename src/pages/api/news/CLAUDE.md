@@ -1,5 +1,7 @@
 # Newsboard notes
 
+**2026-11-04:** the „GPT scoring degraded" Sentry event (tripwire in `fetch-daily.ts`) now carries `extra.reason` — `http <status>` | `timeout` | `json parse` | `<ErrorName>` via the pure `src/lib/newsboard/scoringFailure.ts` (tested). The first such event, MAHALLE-PROD-Y (afternoon run 21:25, 167 new articles, 0 saved), carried no cause; the message stays static so it remains ONE issue. Candidate causes for a single-call failure on ~170 articles: the 30 s `AbortSignal.timeout`, a `max_tokens: 4000` truncation (→ json parse), an OpenAI 5xx/429. If it repeats, chunk the scoring call (~40 articles each) and retry once.
+
 Loaded lazily when Claude reads/edits files in `src/pages/api/news/`. Note: the frontend (`src/components/NewsCardsWrapper.tsx`, `src/components/ui/NewsCards.tsx`) lives elsewhere — root `CLAUDE.md` keeps a pointer here so this file can be pulled in for UI tasks too.
 
 ### Newsboard

@@ -9,6 +9,7 @@ import { isDemoDeployment } from '../../../lib/demo/demoMode';
 import type { NewsItem } from '../../../types';
 import { decodeHtmlEntities } from '../../../utils/decodeHtmlEntities';
 import crypto from 'crypto';
+import { scoringFailureReason } from '../../../lib/newsboard/scoringFailure';
 
 // ============================================================================
 // TYPES
@@ -220,7 +221,7 @@ async function fetchNewsDataIO(apiKey: string): Promise<FetchedArticle[]> {
 async function scoreArticlesWithGPT(
   articles: FetchedArticle[],
   openaiKey: string
-): Promise<{ scored: ScoredArticle[]; degraded: boolean }> {
+): Promise<{ scored: ScoredArticle[]; degraded: boolean; reason?: string }> {
   if (articles.length === 0) return { scored: [], degraded: false };
 
   const articleList = articles.map((a, i) => ({
@@ -272,6 +273,7 @@ ${JSON.stringify(articleList)}`;
       // Fallback: return all articles with default score (below threshold)
       return {
         degraded: true,
+        reason: `http ${response.status}`,
         scored: articles.map(a => ({
           ...a,
           relevanceScore: 50,
@@ -308,6 +310,7 @@ ${JSON.stringify(articleList)}`;
     console.error('GPT-4o scoring error:', error);
     return {
       degraded: true,
+      reason: scoringFailureReason(error),
       scored: articles.map(a => ({
         ...a,
         relevanceScore: 50,
@@ -439,7 +442,7 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     // Step 3: Score with GPT-4o
-    const { scored: scoredArticles, degraded } = await scoreArticlesWithGPT(newArticles, openaiKey);
+    const { scored: scoredArticles, degraded, reason } = await scoreArticlesWithGPT(newArticles, openaiKey);
 
     // Scoring failure is swallowed above (fallback score 50 < threshold), so
     // without an explicit capture the cron "succeeds" daily while the board
@@ -450,7 +453,9 @@ export const GET: APIRoute = async ({ request }) => {
     if (degraded) {
       Sentry.captureMessage('news: GPT scoring degraded — daily fetch will save nothing', {
         level: 'error',
-        extra: { fetched: allArticles.length, newArticles: newArticles.length },
+        // `reason` = the failure class only (http <status> | timeout | json parse | <ErrorName>), 2026-11-04:
+        // the first event of this kind (MAHALLE-PROD-Y) carried no cause at all.
+        extra: { fetched: allArticles.length, newArticles: newArticles.length, reason: reason ?? 'unknown' },
       });
       await Sentry.flush(2000);
     }
