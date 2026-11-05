@@ -1242,7 +1242,7 @@ const de = {
   'news.forumcta.heading': 'Was meinst du dazu?',
   'news.forumcta.body': 'Eröffne ein Thema im Forum — der Artikel-Link wird automatisch eingefügt.',
   'news.forumcta.button': 'im Forum diskutieren →',
-  'news.forumcta.exhausted': 'Tageslimit für Forenbeiträge erreicht — morgen geht’s weiter.', // DRAFT
+  'news.forumcta.exhausted': 'Tageslimit für Forenbeiträge erreicht — morgen geht’s weiter.',
   'news.forumcta.exhaustedButton': 'Tageskontingent erreicht',
   // ── Newsboard · Phase 2 (submit) ──────────────────────────
   'news.submit.section': 'Sektion',
@@ -1737,8 +1737,8 @@ const de = {
   'admin.users.toast.fail': 'Änderung fehlgeschlagen — bitte erneut versuchen.',
   'admin.users.type.label': 'TYP',
   'admin.users.limit.label': 'LIMIT / TAG',
-  'admin.users.limit.hint': 'leer = 5', // DRAFT
-  'admin.users.toast.limit': 'Limit: ganze Zahl von 1 bis 50.', // DRAFT
+  'admin.users.limit.hint': 'leer = 5',
+  'admin.users.toast.limit': 'Limit: ganze Zahl von 1 bis 50.',
   'admin.users.saved': '✓ gespeichert',
 
   // ── Profile (Task 5 scaffold) — "Meldebogen" ────────────────────────────
@@ -2121,7 +2121,7 @@ const de = {
   'blog.foot.discuss.pre': 'Und was sagst ',
   'blog.foot.discuss.it': 'du',
   'blog.foot.discuss.post': ' dazu?',
-  'blog.foot.discuss.note': 'öffnet ein vorbereitetes Thema mit Titel + Link auf diesen Beitrag — zählt zu deinem Tageslimit', // DRAFT
+  'blog.foot.discuss.note': 'öffnet ein vorbereitetes Thema mit Titel + Link auf diesen Beitrag — zählt zu deinem Tageslimit',
   'blog.foot.discuss.prefix': 'Beilage: ',
   'blog.rail.title': 'MEHR AUS DER BEILAGE',
   'blog.rail.note': 'sortiert nach geteilten Rubriken · ohne diesen Beitrag · max 3',
@@ -3372,7 +3372,7 @@ const en: Dict = {
   'news.forumcta.heading': 'What do you think?',
   'news.forumcta.body': 'Start a topic in the forum — the article link is added automatically.',
   'news.forumcta.button': 'discuss in forum →',
-  'news.forumcta.exhausted': 'Daily limit for forum posts reached — back tomorrow.', // DRAFT
+  'news.forumcta.exhausted': 'Daily limit for forum posts reached — back tomorrow.',
   'news.forumcta.exhaustedButton': 'Daily quota reached',
   // ── Newsboard · Phase 2 (submit) ──────────────────────────
   'news.submit.section': 'Section',
@@ -3865,8 +3865,8 @@ const en: Dict = {
   'admin.users.toast.fail': 'Change failed — please try again.',
   'admin.users.type.label': 'TYPE',
   'admin.users.limit.label': 'LIMIT / DAY',
-  'admin.users.limit.hint': 'empty = 5', // DRAFT
-  'admin.users.toast.limit': 'Limit: a whole number from 1 to 50.', // DRAFT
+  'admin.users.limit.hint': 'empty = 5',
+  'admin.users.toast.limit': 'Limit: a whole number from 1 to 50.',
   'admin.users.saved': '✓ saved',
 
   // ── Profile (Task 5 scaffold) — "Meldebogen" ────────────────────────────
@@ -4247,7 +4247,7 @@ const en: Dict = {
   'blog.foot.discuss.pre': 'And what do ',
   'blog.foot.discuss.it': 'you',
   'blog.foot.discuss.post': ' think?',
-  'blog.foot.discuss.note': 'opens a pre-filled topic with title + link to this post — counts toward your daily limit', // DRAFT
+  'blog.foot.discuss.note': 'opens a pre-filled topic with title + link to this post — counts toward your daily limit',
   'blog.foot.discuss.prefix': 'Beilage: ',
   'blog.rail.title': 'MORE FROM THE SUPPLEMENT',
   'blog.rail.note': 'ranked by shared rubrics · excluding this post · max 3',
