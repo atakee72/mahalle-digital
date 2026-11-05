@@ -1313,12 +1313,12 @@ const de = {
   'auth.register.handle': 'Dein @Name (optional)',
   'auth.register.handlePh': '@dein_name',
   'auth.register.handleHint': 'einmalig wählbar',
-  'member.type.label': 'ICH BIN HIER ALS', // DRAFT
+  'member.type.label': 'ICH BIN HIER ALS',
   'member.type.person': 'Privatperson',
   'member.type.organisation': 'Verein · Initiative',
   'member.type.business': 'Gewerbe',
-  'member.type.hint': 'Initiativen und Gewerbe tragen ein kleines Schild am Namen. Im Profil jederzeit änderbar.', // DRAFT
-  'auth.err.memberType': 'Bitte wähle eine der drei Angaben.', // DRAFT
+  'member.type.hint': 'Initiativen und Gewerbe tragen ein kleines Schild am Namen. Im Profil jederzeit änderbar.',
+  'auth.err.memberType': 'Bitte wähle eine der drei Angaben.',
   'auth.register.email': 'E-Mail',
   'auth.register.emailPh': 'du@beispiel.de',
   'auth.register.pw': 'Passwort',
@@ -3443,12 +3443,12 @@ const en: Dict = {
   'auth.register.handle': 'Your @name (optional)',
   'auth.register.handlePh': '@your_name',
   'auth.register.handleHint': 'can be chosen once',
-  'member.type.label': 'I AM HERE AS', // DRAFT
+  'member.type.label': 'I AM HERE AS',
   'member.type.person': 'Private person',
   'member.type.organisation': 'Association · initiative',
   'member.type.business': 'Business',
-  'member.type.hint': 'Initiatives and businesses carry a small tag beside their name. Changeable any time in your profile.', // DRAFT
-  'auth.err.memberType': 'Please pick one of the three.', // DRAFT
+  'member.type.hint': 'Initiatives and businesses carry a small tag beside their name. Changeable any time in your profile.',
+  'auth.err.memberType': 'Please pick one of the three.',
   'auth.register.email': 'Email',
   'auth.register.emailPh': 'you@example.com',
   'auth.register.pw': 'Password',
