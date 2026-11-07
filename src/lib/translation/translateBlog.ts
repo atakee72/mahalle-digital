@@ -21,9 +21,16 @@ export type BlogTranslateOutcome =
   | { status: 'not_found' }
   | { status: 'bad_lang' }
   | { status: 'too_long' }
-  | { status: 'unavailable' };
+  | { status: 'unavailable' }
+  /** Cache miss while the caller forbade a DeepL call (visitor budget spent). */
+  | { status: 'budget' };
 
-export async function translateBlogPost(input: { slug: string; targetLang: string }): Promise<BlogTranslateOutcome> {
+export async function translateBlogPost(input: {
+  slug: string;
+  targetLang: string;
+  /** false = serve the cache only, never call DeepL (visitor daily budget spent). Default true. */
+  allowFetch?: boolean;
+}): Promise<BlogTranslateOutcome> {
   const target = deeplTargetFor(input.targetLang);
   if (!target) return { status: 'bad_lang' };
   const normLang = input.targetLang.trim().toLowerCase().split('-')[0];
@@ -58,6 +65,7 @@ export async function translateBlogPost(input: { slug: string; targetLang: strin
       cached: true,
     };
   }
+  if (input.allowFetch === false) return { status: 'budget' };
 
   let trBlocks: Block[];
   let trTitle: string;
