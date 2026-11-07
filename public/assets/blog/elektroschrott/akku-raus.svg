@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 400" width="320" height="400" role="img" stroke-linecap="round" stroke-linejoin="round" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<title>Zeichnung: eine Batterie liegt neben dem geöffneten Gerät, über ihrem Pluspol klebt ein Streifen Klebeband.</title>
+<rect x="12" y="12" width="300" height="380" rx="18" fill="#a3552e"/>
+<rect x="8" y="8" width="300" height="380" rx="18" fill="#f7f0de" stroke="#1b1a17" stroke-width="2"/>
+<text x="160" y="48" font-size="15" font-weight="700" letter-spacing=".08em" text-anchor="middle" fill="#a3552e">1 · AKKU RAUS</text>
+<!-- the device: a small box with an empty battery bay -->
+<g fill="#f3ead8" stroke="#1b1a17" stroke-width="3">
+  <rect x="48" y="82" width="222" height="110" rx="14"/>
+  <rect x="80" y="112" width="158" height="50" rx="8" fill="#ebe1c7"/>
+  <path d="M96 137h126" stroke="#1b1a17" stroke-width="2" stroke-dasharray="4 5" fill="none"/>
+</g>
+<!-- arrow out of the bay -->
+<path d="M160 170v40" fill="none" stroke="#1b1a17" stroke-width="3"/><path d="M150 200l10 12 10-12" fill="none" stroke="#1b1a17" stroke-width="3"/>
+<!-- the battery, with the tape over the plus pole -->
+<g transform="translate(76 232)">
+  <rect x="0" y="0" width="150" height="54" rx="10" fill="#f3ead8" stroke="#1b1a17" stroke-width="3"/>
+  <rect x="150" y="16" width="14" height="22" rx="4" fill="#1b1a17"/>
+  <text x="32" y="34" font-size="22" font-weight="700" fill="#1b1a17">−</text>
+  <text x="118" y="34" font-size="22" font-weight="700" fill="#1b1a17">+</text>
+  <!-- tape strip, a little askew, over the plus end -->
+  <g transform="rotate(-8 140 27)"><rect x="118" y="-10" width="44" height="74" rx="3" fill="#e9c98a" fill-opacity=".9" stroke="#1b1a17" stroke-width="2"/><path d="M126 0v54M154 0v54" stroke="#1b1a17" stroke-width="1" opacity=".4"/></g>
+</g>
+<text x="160" y="330" font-size="15" text-anchor="middle" fill="#1b1a17">Pole abkleben</text>
+<text x="160" y="354" font-size="13" text-anchor="middle" fill="#3a362e">Lithium nie in den Hausmüll</text>
+</svg>

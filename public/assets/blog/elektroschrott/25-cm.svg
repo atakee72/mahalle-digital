@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" width="640" height="320" role="img" stroke-linecap="round" stroke-linejoin="round" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<title>Zeichnung: ein Lineal bis 30 cm, bei 25 cm eine Marke. Handy und Fernbedienung liegen innerhalb der Marke, ein Laptop ragt darüber hinaus.</title>
+<rect x="12" y="12" width="620" height="300" rx="18" fill="#a3552e"/>
+<rect x="8" y="8" width="620" height="300" rx="18" fill="#f7f0de" stroke="#1b1a17" stroke-width="2"/>
+<text x="34" y="46" font-size="15" font-weight="700" letter-spacing=".08em" fill="#a3552e">KLEINGERÄT: KEINE KANTE ÜBER 25 CM</text>
+<!-- devices on the ruler, 1 cm = 17 px, origin x=52 -->
+<g fill="#f3ead8" stroke="#1b1a17" stroke-width="3">
+  <!-- phone, 15 cm -->
+  <rect x="52" y="150" width="255" height="60" rx="12"/><rect x="66" y="160" width="227" height="40" rx="5" fill="#1b1a17" stroke="none"/>
+  <!-- remote, 18 cm, above -->
+  <rect x="52" y="104" width="306" height="34" rx="12"/>
+  <g fill="#1b1a17" stroke="none"><circle cx="78" cy="121" r="6"/><circle cx="104" cy="121" r="5"/><circle cx="126" cy="121" r="5"/><rect x="150" y="113" width="60" height="16" rx="5"/></g>
+  <!-- laptop, 32 cm, closed, below the ruler line -->
+  <rect x="52" y="246" width="544" height="26" rx="6"/><rect x="290" y="252" width="68" height="6" rx="3" fill="#1b1a17" stroke="none"/>
+</g>
+<!-- the ruler -->
+<path d="M52 230H562" fill="none" stroke="#1b1a17" stroke-width="3"/>
+<g stroke="#1b1a17" stroke-width="2">
+  <path d="M52 230v-12M86 230v-7M120 230v-7M154 230v-7M188 230v-7M222 230v-12M256 230v-7M290 230v-7M324 230v-7M358 230v-7M392 230v-12M426 230v-7M460 230v-7M494 230v-7M528 230v-7M562 230v-12"/>
+</g>
+<!-- the 25 cm mark -->
+<path d="M477 236V96" fill="none" stroke="#a3552e" stroke-width="3" stroke-dasharray="6 6"/>
+<path d="M477 236v-12" stroke="#a3552e" stroke-width="4"/>
+<rect x="446" y="60" width="62" height="26" rx="13" fill="#a3552e"/>
+<text x="477" y="78" font-size="14" font-weight="700" text-anchor="middle" fill="#f7f0de">25 cm</text>
+<text x="52" y="296" font-size="12" fill="#3a362e">0</text><text x="222" y="296" font-size="12" text-anchor="middle" fill="#3a362e">10</text><text x="392" y="296" font-size="12" text-anchor="middle" fill="#3a362e">20</text>
+<!-- the verdicts -->
+<text x="372" y="130" font-size="13" font-weight="700" fill="#1b1a17">✓ passt</text>
+<text x="596" y="296" font-size="13" font-weight="700" text-anchor="end" fill="#a3552e">✗ zu groß</text>
+</svg>

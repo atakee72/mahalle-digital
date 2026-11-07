@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 400" width="320" height="400" role="img" stroke-linecap="round" stroke-linejoin="round" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<title>Zeichnung: ein Handy, auf dem Bildschirm ein Haken und das Wort „zurückgesetzt“.</title>
+<rect x="12" y="12" width="300" height="380" rx="18" fill="#a3552e"/>
+<rect x="8" y="8" width="300" height="380" rx="18" fill="#f7f0de" stroke="#1b1a17" stroke-width="2"/>
+<text x="160" y="48" font-size="15" font-weight="700" letter-spacing=".08em" text-anchor="middle" fill="#a3552e">2 · DATEN LÖSCHEN</text>
+<g fill="#f3ead8" stroke="#1b1a17" stroke-width="3">
+  <rect x="100" y="76" width="120" height="226" rx="18"/>
+  <rect x="112" y="98" width="96" height="182" rx="8" fill="#1b1a17" stroke="none"/>
+</g>
+<circle cx="160" cy="170" r="30" fill="none" stroke="#f7f0de" stroke-width="4"/>
+<path d="M144 171l11 11 22-24" fill="none" stroke="#f7f0de" stroke-width="5"/>
+<text x="160" y="232" font-size="12" font-weight="700" text-anchor="middle" fill="#f7f0de">zurückgesetzt</text>
+<text x="160" y="330" font-size="15" text-anchor="middle" fill="#1b1a17">Werkseinstellungen</text>
+<text x="160" y="354" font-size="13" text-anchor="middle" fill="#3a362e">Festplatte überschreiben</text>
+</svg>
