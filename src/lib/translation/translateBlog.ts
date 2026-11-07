@@ -22,14 +22,19 @@ export type BlogTranslateOutcome =
   | { status: 'bad_lang' }
   | { status: 'too_long' }
   | { status: 'unavailable' }
-  /** Cache miss while the caller forbade a DeepL call (visitor budget spent). */
+  /** Cache miss, and the caller's `reserveFetch` refused the DeepL call (visitor budget spent). */
   | { status: 'budget' };
 
 export async function translateBlogPost(input: {
   slug: string;
   targetLang: string;
-  /** false = serve the cache only, never call DeepL (visitor daily budget spent). Default true. */
-  allowFetch?: boolean;
+  /**
+   * Called ONLY on a cache miss, right before DeepL; `false` = do not call, answer `budget`.
+   * The visitor path passes an atomic rate-limit `$inc` here, so concurrent misses each
+   * reserve their own slot and the daily budget cannot be overshot (a failed DeepL call
+   * stays charged). Members pass nothing.
+   */
+  reserveFetch?: () => Promise<boolean>;
 }): Promise<BlogTranslateOutcome> {
   const target = deeplTargetFor(input.targetLang);
   if (!target) return { status: 'bad_lang' };
@@ -65,7 +70,7 @@ export async function translateBlogPost(input: {
       cached: true,
     };
   }
-  if (input.allowFetch === false) return { status: 'budget' };
+  if (input.reserveFetch && !(await input.reserveFetch())) return { status: 'budget' };
 
   let trBlocks: Block[];
   let trTitle: string;

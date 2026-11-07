@@ -269,7 +269,7 @@ indicators etc. stay whatever they were).
 
 ## Übersetzung anzeigen (2026-09-26)
 
-**2026-11-07 — visitors can use the toggle too:** `POST /api/translate` accepts a request WITHOUT a session for `contentType: 'blog'` (10/h per IP hash + a shared budget of 10 fresh DeepL calls per UTC day; cache hits always served; `translateBlogPost` gained `allowFetch` and the outcome `budget` → 429 `rate_limited`). Rules: `src/lib/translation/translateAccess.ts` (pure, tested); root CLAUDE.md → `DEEPL_API_KEY`. The `tr.err.login` mapping in `BlogTranslate.svelte` stays for the non-blog callers that share the client helper. Probed on the local prod build: visitor blog 200 + cached repeat, topic 401, unknown slug 404, 11th request from one IP 429, auth smoke 15/15.
+**2026-11-07 — visitors can use the toggle too:** `POST /api/translate` accepts a request WITHOUT a session for `contentType: 'blog'` (10/h per IP hash + a shared budget of 10 fresh DeepL calls per UTC day; cache hits always served; `translateBlogPost` gained `reserveFetch` (an atomic rate-limit `$inc` run only on a cache miss, right before DeepL — no TOCTOU, a failed call stays charged) and the outcome `budget` → 429 `rate_limited`). Rules: `src/lib/translation/translateAccess.ts` (pure, tested); root CLAUDE.md → `DEEPL_API_KEY`. The `tr.err.login` mapping in `BlogTranslate.svelte` stays for the non-blog callers that share the client helper. Probed on the local prod build: visitor blog 200 + cached repeat, topic 401, unknown slug 404, 11th request from one IP 429, auth smoke 15/15.
 
 Every article carries the app's translation toggle, like forum posts, events and listings — but posts are repo MDX, not Mongo documents, so the path is its own:
 

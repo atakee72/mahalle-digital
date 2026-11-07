@@ -3,7 +3,7 @@ import { getSession } from 'auth-astro/server';
 import { translateContent } from '../../lib/translation/translateContent';
 import { translateBlogPost } from '../../lib/translation/translateBlog';
 import { TranslateRequestSchema } from '../../schemas/translate.schema';
-import { consumeRateLimit, peekRateLimit, hashIp, clientIpFrom } from '../../lib/auth/rateLimit';
+import { consumeRateLimit, hashIp, clientIpFrom } from '../../lib/auth/rateLimit';
 import {
   decideTranslateAccess,
   MEMBER_MAX_PER_HOUR,
@@ -52,20 +52,18 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   if (parsed.data.contentType === 'blog') {
     // A visitor gets a fresh DeepL call only while the shared daily budget lasts;
-    // cached translations are served either way. The budget is charged after a
-    // real miss (a concurrent pair may overshoot by one — accepted).
-    const visitor = access.kind === 'visitor';
-    const allowFetch = visitor
-      ? !(await peekRateLimit(access.freshKey, VISITOR_FRESH_MAX_PER_DAY, DAY_MS)).limited
-      : true;
+    // cached translations are served either way. The budget slot is RESERVED
+    // atomically (rate-limit $inc) on a real cache miss, right before DeepL —
+    // concurrent misses cannot overshoot it, and a failed call stays charged.
+    const reserveFetch =
+      access.kind === 'visitor'
+        ? async () => !(await consumeRateLimit(access.freshKey, VISITOR_FRESH_MAX_PER_DAY, DAY_MS)).limited
+        : undefined;
     const outcome = await translateBlogPost({
       slug: parsed.data.contentId,
       targetLang: parsed.data.targetLang,
-      allowFetch,
+      reserveFetch,
     });
-    if (visitor && outcome.status === 'ok' && !outcome.cached) {
-      await consumeRateLimit(access.freshKey, VISITOR_FRESH_MAX_PER_DAY, DAY_MS);
-    }
     switch (outcome.status) {
       case 'ok':
         return json(200, {
