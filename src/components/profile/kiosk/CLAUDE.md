@@ -14,6 +14,8 @@ deletion (7-day grace + day-7 anonymization pipeline). Both plans are
 profile", "Kiez-Chronik strip" (resolver + cache), "Steckbrief + motto",
 "E-mail change", "Password change", "Account deletion".
 
+- **Public profile loads `profile.css` since 2026-11-09:** `src/pages/nachbarn/[handle].astro` had no `<style is:global>@import '../../styles/profile.css'>` (only `/profile.astro` had it), so `.prof-ledger-scroll` had no max-height/overflow there — the half-row-cut action still set an inline max-height and the Archiv rows spilled out of the card over the footer on desktop (owner's screenshot of `/nachbarn/juliette`); the Chronik strip's pulse styles were missing too. A page that mounts a `P*` component must import that stylesheet. Probe: `scratchpad/nachbarn-archiv-probe.cjs` (4 checks on the local prod build).
+
 ## Architecture
 
 `src/pages/profile.astro` — thin shell: SSR session + `getProfileMe()` +
