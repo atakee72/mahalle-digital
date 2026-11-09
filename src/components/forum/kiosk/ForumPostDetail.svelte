@@ -32,7 +32,7 @@
   import CommentComposerMobile from './compose/CommentComposerMobile.svelte';
   import OwnStatusBanner from './states/OwnStatusBanner.svelte';
   import KioskReportModal from './KioskReportModal.svelte';
-  import { confirmAction, showError, showToast } from '../../../utils/toast';
+  import { confirmAction, showError, showSuccess, showToast } from '../../../utils/toast';
   import { optimizeCloudinary } from '../../../utils/cloudinary';
 
   let {
@@ -299,6 +299,29 @@
       })
       .catch(() => {});
   });
+  // „teilen": the market's recipe (MarketDetailInner.handleShare, 2026-11-09 —
+  // the button had no handler since the kiosk migration). Native share sheet
+  // where it exists, else the canonical page URL (origin + path, no hash) to
+  // the clipboard with a toast. The link lands non-members on the login page,
+  // so this is a member-to-member link, like the market's.
+  async function handleShare() {
+    const url = window.location.origin + window.location.pathname;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: topic.title, url });
+      } catch {
+        // cancelled or failed — nothing to say
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      showSuccess($t['detail.share.copied'] as string);
+    } catch {
+      showToast($t['detail.share.failed'] as string, { type: 'error' });
+    }
+  }
+
   async function toggleBookmark() {
     if (!currentUserId || bookmarkBusy) return;
     const next = !bookmarked;
@@ -963,9 +986,11 @@
           <span class="ml-auto flex gap-3.5 text-ink-mute">
             <button
               type="button"
-              class="inline-flex items-center gap-1 hover:text-ink transition-colors"
+              onclick={handleShare}
+              class="relative inline-flex items-center gap-1 hover:text-ink transition-colors"
             >
               <span aria-hidden="true">↗</span> {$t['detail.share']}
+              <span aria-hidden="true" style="position:absolute; inset:-14px -7px;"></span>
             </button>
             {#if currentUserId && !isAuthor}
               <button
