@@ -15,6 +15,12 @@ if [ ! -d "$BACKUP_DIR" ]; then
   exit 0
 fi
 
+# A lock left behind by an interrupted run blocks every later bundle (it did from
+# 2026-11-04 to 11-16, unnoticed). Older than an hour = stale, never a write in progress.
+if [ -n "$(find "$BUNDLE.lock" -mmin +60 2>/dev/null)" ]; then
+  rm -f "$BUNDLE.lock" && echo "backup: removed a stale lock file"
+fi
+
 n=1
 while [ $n -le 3 ]; do
   if git bundle create "$BUNDLE" --all --quiet; then
