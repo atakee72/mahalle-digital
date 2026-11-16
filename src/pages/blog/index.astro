@@ -34,8 +34,31 @@ const posts: BeilagePost[] = entries
 ---
 
 <KioskLayout title="Die Beilage" description="Die Beilage — das Magazin des Schillerkiez Kurier. Geschichten, Orte und Menschen aus dem Kiez." page="blog">
-  <BeilageIndex client:only="svelte" posts={posts} currentUserId={session?.user?.id ?? null} />
+  <BeilageIndex client:only="svelte" posts={posts} currentUserId={session?.user?.id ?? null}>
+    <!-- Server-rendered link list (2026-11-16): the island is client-only, so without this the HTML
+         held no link to any post and search engines knew them from the sitemap alone. Astro swaps
+         the fallback out when the island mounts; without JavaScript the list is shown. -->
+    <nav slot="fallback" class="bl-index-fallback" aria-label="Alle Artikel">
+      <ul>
+        {posts.map((p) => (
+          <li><a href={`/blog/${p.id}`}>{p.title}</a></li>
+        ))}
+      </ul>
+    </nav>
+  </BeilageIndex>
+  <noscript>
+    <style>
+      .bl-index-fallback { position: static !important; width: auto !important; height: auto !important; clip-path: none !important; overflow: visible !important; padding: 24px 16px; }
+      .bl-index-fallback li { margin: 0 0 10px; }
+      .bl-index-fallback a { text-decoration: underline; }
+    </style>
+  </noscript>
 </KioskLayout>
+
+<style is:global>
+  /* Visually hidden until the island replaces it (no flash of a bare list). */
+  .bl-index-fallback { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
 
 <style is:global>
   @import '../../styles/blog.css';
