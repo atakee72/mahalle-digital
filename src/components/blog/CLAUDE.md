@@ -308,6 +308,9 @@ Members can comment under an article, directly below the footer card (Forum-CTA 
 - **Parent resolution:** `findBlogCommentParent()` (`src/lib/blog/blogCommentParent.ts`, server-only, `astro:content` imported dynamically so reviewAction/mentionsStore stay loadable in tests) applies the same draft gate as `blog/[...slug].astro`; pure rules + slug regex in `blogCommentRules.ts`. `findAnyCommentParent()` in `mentionsStore.ts` maps any comment to forum or blog parent (mentions-on-approval, edit route); `reviewAction.ts` has a `parentCollection === 'blog'` branch (no `$addToSet`, only the notification). Held blog comments store `parentPostId = slug`, `parentCollection = 'blog'` on the flagged record. Site search ignores them (`relevantPostId: { $exists: true }`).
 - No index, no prod step.
 
+## Server-rendered link list on the index (2026-11-16, `7958186b`)
+`BeilageIndex` is `client:only` (it reads the locale store), so until that day the HTML of `/blog` held no link to any post — Search Console listed eight posts as „Discovered – currently not indexed", known from the sitemap alone. `src/pages/blog/index.astro` now passes a `<nav slot="fallback" class="bl-index-fallback">` with one `<a href="/blog/<id>">` per post: Astro renders the fallback on the server and swaps it out when the island mounts. It is visually hidden (no flash of a bare list; the rule sits in the page's global style) and a `<noscript>` style shows it as a plain list without JavaScript. Keep it when touching the page. The tag pages have the same construction but are `noindex`, so they carry no list. A new `client:only` surface that should be found by search engines needs the same fallback.
+
 ## Audit record (2026-09-10, 4 passes: visual / functional / routes-SSR / mobile @390)
 
 0 critical, 10 important, 5 minor — all importants shipped the same night
