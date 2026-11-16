@@ -159,7 +159,7 @@ CONTACT_IP_SALT=           # 32+ chars, fixed across deploys (for hashing IPs in
 ALLOWED_ORIGINS=           # CSV of allowed origins, e.g. "https://mahalle.berlin" (defaults to this)
 ```
 
-**Link check (2026-10-31):** listing links are looked up in Google Safe Browsing inside `moderateContent()` (the moderated text is the rendered `description` plus the plain text); a hit queues the listing, and the contact relay REFUSES a buyer's message that carries a flagged link — rules in root CLAUDE.md → „Content Moderation“.
+**Link check (2026-10-31):** listing links are looked up in Google Safe Browsing inside `moderateContent()` (the moderated text is the rendered `description` plus the plain text); a hit queues the listing, and the contact relay REFUSES a buyer's message that carries a flagged link — rules in `docs/reference/content-moderation.md` (short version: root CLAUDE.md → „Content Moderation“).
 
 ### Server-side projection — A5 `lastBumpedAt` is owner-only
 `listingsQuery.ts` strips `lastBumpedAt` from the non-owner serialization branch and exposes `isBumped: boolean` instead (computed server-side: `lastBumpedAt != null && Date.now() - lastBumpedAt < 7 * 86400 * 1000`).
@@ -359,4 +359,4 @@ only when the named condition appears.
 - Listing delete confirm is i18n'd (`market.owner.deleteConfirm*`); the shared `ConfirmDialog`'s defaults are locale-aware (root `CLAUDE.md` „Confirm dialog").
 - Parked for the UI-polish peer: „bearbeiten / veröffentlichen / löschen" on the Entwürfe rows measure 27px tall (`browse/OwnerDraftsSection.svelte`).
 - Photo uploads (`ImageSlots.svelte`) shrink the file in the browser first via `shrinkForUpload()` (`src/lib/images/`), 4 MB cap — see root CLAUDE.md „Uploads vs Vercel's 4.5 MB body cap“.
-- **AI moderation of a listing's photos (2026-10-25):** OpenAI's moderation endpoint takes ONE image per request — listings with two or more photos had silently fallen into the manual queue since August. The batching + per-category merge live in `src/lib/omniModerationBatches.ts` (called from `moderateContent()` in `src/lib/moderation.ts`); the story and the probes are in the root `CLAUDE.md` → „Content Moderation" → the „ONE image per request" bullet.
+- **AI moderation of a listing's photos (2026-10-25):** OpenAI's moderation endpoint takes ONE image per request — listings with two or more photos had silently fallen into the manual queue since August. The batching + per-category merge live in `src/lib/omniModerationBatches.ts` (called from `moderateContent()` in `src/lib/moderation.ts`); the story and the probes are in `docs/reference/content-moderation.md` → the „ONE image per request" bullet.
