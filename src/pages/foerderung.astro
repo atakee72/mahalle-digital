@@ -74,6 +74,22 @@ import LandingLayout from '../layouts/LandingLayout.astro';
         Zusammenfassung veröffentlichen wir auch hier.
       </li>
     </ul>
+    <!-- Sylff Association logo (2026-11-22): the Secretariat's own file `sylff_h_full_s.png`, unchanged
+         (horizontal full colour = their preferred version). Their Logo Usage Guidelines (v2, 03/2018):
+         never recolour, stretch or redraw it; on screen the lowercase "l" must stay at least 17 px tall,
+         so the logo is never shown narrower than 220 px. -->
+    <figure class="lgl-logos lgl-logos--single">
+      <a href="https://www.sylff.org/" target="_blank" rel="noopener noreferrer">
+        <img
+          src="/assets/foerderung/sylff-association-logo.png"
+          width="1181"
+          height="146"
+          loading="lazy"
+          decoding="async"
+          alt="Logo der Sylff Association – zur Website sylff.org"
+        />
+      </a>
+    </figure>
 
     <h2 class="font-bricolage">Was Förderung bei Mahalle bedeutet – und was nicht</h2>
     <p>
@@ -82,12 +98,15 @@ import LandingLayout from '../layouts/LandingLayout.astro';
       auf dieser Seite und unseren Dank – keine Stimme.
     </p>
 
-    <p class="lgl-stand"><em>Stand: 1. November 2026. Weitere Förderungen tragen wir hier mit Datum nach.</em></p>
+    <p class="lgl-stand"><em>Stand: 22. November 2026. Weitere Förderungen tragen wir hier mit Datum nach.</em></p>
   </div>
 </LandingLayout>
 
 <style>
-  .lgl-wrap { max-width: 680px; margin: 0 auto; padding: 40px 22px 60px; }
+  /* width + box-sizing: the body is a flex column and `margin: 0 auto` makes this block shrink to
+     its content; the 720 px logo strip then held it at 680 px on phones and the text ran off the
+     screen (live from 2026-10-27, found 2026-11-22). */
+  .lgl-wrap { width: 100%; box-sizing: border-box; max-width: 680px; margin: 0 auto; padding: 40px 22px 60px; }
   .lgl-back { display: inline-block; font-size: 11px; letter-spacing: 0.1em; color: var(--k-ink-mute); text-decoration: none; margin-bottom: 24px; }
   .lgl-wrap h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 20px; }
   .lgl-wrap h2 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; margin: 26px 0 8px; }
@@ -106,5 +125,9 @@ import LandingLayout from '../layouts/LandingLayout.astro';
     .lgl-logos { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .lgl-logos img { min-width: 720px; }
   }
+  /* One logo, not a strip: its own modest width, never stretched and never scrolled. */
+  .lgl-logos--single { overflow-x: visible; }
+  .lgl-logos--single a { display: block; width: fit-content; max-width: 100%; text-decoration: none; }
+  .lgl-logos--single img { width: 340px; max-width: 100%; min-width: 220px; }
   .lgl-stand { margin-top: 28px; font-size: 12px; color: var(--k-ink-mute); }
 </style>
