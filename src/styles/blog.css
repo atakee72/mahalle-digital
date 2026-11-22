@@ -132,12 +132,19 @@
 [data-page="blog"] .bl-prose .bl-steps:has(> img:only-child) { max-width: 240px; }
 [data-page="blog"] .bl-prose .bl-steps:has(> img:first-child:nth-last-child(2)) { max-width: 440px; }
 [data-page="blog"] .bl-prose .bl-steps--wide:has(> img:only-child) { max-width: 560px; }
+/* A single cut-out drawing may be larger on wide screens (its lettering is small at 240 px). */
+@media (min-width: 768px) {
+  [data-page="blog"] .bl-prose .bl-steps:has(> img:only-child[src$="-bare.png"]) { max-width: 320px; }
+}
 [data-page="blog"] .bl-prose .bl-steps img {
   width: 100%;
   height: auto;
   display: block;
 }
-[data-page="blog"] .bl-prose .bl-steps img[src$=".svg"] {
+/* `-bare.png` = a cut-out drawing on a transparent ground (first: the Kairanban, 2026-11-22);
+   named by file so the translated view, which rebuilds the group from its fields, frees it too. */
+[data-page="blog"] .bl-prose .bl-steps img[src$=".svg"],
+[data-page="blog"] .bl-prose .bl-steps img[src$="-bare.png"] {
   border: 0;
   border-radius: 0;
 }
