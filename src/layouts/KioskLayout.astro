@@ -17,6 +17,7 @@ import DemoBanner from '../components/demo/DemoBanner.svelte';
 import SuspendedBanner from '../components/auth/kiosk/SuspendedBanner.svelte';
 import EmailBounceBanner from '../components/auth/kiosk/EmailBounceBanner.svelte';
 import ToastProvider from '../components/ToastProvider';
+import KioskLoader from '../components/KioskLoader.astro';
 import TourController from '../components/tour/TourController.svelte';
 import SeoHead from '../components/SeoHead.astro';
 import { ViewTransitions } from 'astro:transitions';
@@ -107,6 +108,7 @@ const {
     {session?.user && <EmailBounceBanner client:load />}
     {session?.user && session.user.emailVerified !== true && <VerifyEmailBanner client:load />}
     <ToastProvider client:load />
+    <KioskLoader />
     {tour && <TourController client:load user={session?.user ?? null} page={page} />}
 
     <main class="flex-1">

@@ -1,0 +1,281 @@
+---
+// Page-change loader (2026-11-24, owner's idea): the Mahalle ladybird — the mascot of the
+// flyers, posters and stickers — walks ON THE SPOT in the middle of the screen while a little
+// street slides past behind it (terraced houses of different heights, trees, a lamp, a mast).
+// The moving background makes the beetle look as if it walks, and it separates the beetle from
+// the page without a frame: the scene fades out softly at its edges and sits on a blurred paper
+// patch. It always shows for a short minimum time (MIN_MS), even when the page is there sooner;
+// the page itself is never held back.
+//
+// Drawing: Claude Desktop's `mahalle-marienkaefer.svg` (the `bug()` of the print set), unchanged
+// in shape. Ink parts use `currentColor` (the app's ink), the wing case keeps the print red.
+// No house is red, so the beetle stays the only red thing in the scene.
+//
+// Why requestAnimationFrame and not CSS: the router replaces <body> in the middle of the walk.
+// A CSS animation would restart on the new element; the script looks the element up again on
+// every frame and writes the scroll offsets and the opacity from ONE clock, so the street keeps
+// flowing across the swap. The scene has its own `view-transition-name`, with the old snapshot
+// hidden, so the browser's page fade shows only the live scene (no frozen ghost).
+//
+// Rejected by the owner the same evening: (1) a full-width strip under the masthead with a sine
+// wave drawn behind a fast beetle („too fast, too wavy, why at the top?"); (2) a framed paper
+// card in the centre with the beetle walking along a pre-drawn line („no frame").
+
+const GROUND = 72; // y of the street in the 320 × 100 scene
+const HOUSES_W = 360; // width of the house row; it repeats seamlessly
+const FRONT_W = 300; // width of the front row (ground line, trees, lamp, mast)
+
+type House = { x: number; w: number; h: number; fill: string; roof: 'flat' | 'gable' | 'step'; cols: number; rows: number };
+const CREAM = '#f1dfba';
+const OCHRE = '#e3a13a';
+const TEAL = '#4f9a94';
+const SAGE = '#9bb07c';
+const houses: House[] = [
+  { x: 0, w: 50, h: 44, fill: CREAM, roof: 'flat', cols: 3, rows: 2 },
+  { x: 50, w: 44, h: 54, fill: TEAL, roof: 'gable', cols: 2, rows: 3 },
+  { x: 94, w: 56, h: 36, fill: OCHRE, roof: 'flat', cols: 3, rows: 2 },
+  { x: 150, w: 46, h: 50, fill: CREAM, roof: 'step', cols: 2, rows: 3 },
+  { x: 196, w: 54, h: 40, fill: SAGE, roof: 'gable', cols: 3, rows: 2 },
+  { x: 250, w: 48, h: 56, fill: OCHRE, roof: 'flat', cols: 2, rows: 3 },
+  { x: 298, w: 62, h: 34, fill: TEAL, roof: 'flat', cols: 4, rows: 1 },
+];
+
+function roofPath(h: House): string {
+  const top = GROUND - h.h;
+  const { x, w } = h;
+  if (h.roof === 'gable') return `M${x},${top} L${x + w / 2},${top - 11} L${x + w},${top} Z`;
+  if (h.roof === 'step') {
+    const s = w / 6;
+    return `M${x},${top} V${top - 4} H${x + s} V${top - 8} H${x + 2 * s} V${top - 12} H${x + 4 * s} V${top - 8} H${x + 5 * s} V${top - 4} H${x + w} V${top} Z`;
+  }
+  return `M${x - 1.5},${top} H${x + w + 1.5} V${top - 3.5} H${x - 1.5} Z`; // a cornice
+}
+
+function windows(h: House): { x: number; y: number }[] {
+  const top = GROUND - h.h;
+  const out: { x: number; y: number }[] = [];
+  const gap = (h.w - h.cols * 6) / (h.cols + 1);
+  for (let r = 0; r < h.rows; r++) {
+    for (let c = 0; c < h.cols; c++) out.push({ x: h.x + gap + c * (6 + gap), y: top + 6 + r * 12 });
+  }
+  return out;
+}
+
+// The door replaces the lowest window of one column when the house is tall enough for it.
+const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
+---
+
+<div id="k-loader" aria-hidden="true">
+  <svg viewBox="0 0 320 100" width="320" height="100">
+    <defs>
+      <g id="kl-houses" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round">
+        {
+          houses.map((h) => (
+            <g>
+              <rect x={h.x} y={GROUND - h.h} width={h.w} height={h.h} fill={h.fill} />
+              <path d={roofPath(h)} fill={h.fill} />
+              {windows(h).map((w) => (
+                <rect x={w.x.toFixed(1)} y={w.y} width="6" height="8" fill="#fbf6ea" stroke-width="1" />
+              ))}
+              <rect x={doorX(h).toFixed(1)} y={GROUND - 11} width="7" height="11" fill="currentColor" stroke="none" />
+            </g>
+          ))
+        }
+      </g>
+      <g id="kl-front" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <!-- the street: hand-drawn, a little uneven, seamless over FRONT_W -->
+        <path d="M0,72 C25,70.6 45,73 75,72 S125,70.6 150,71.6 S200,73.4 225,72.2 S275,73.4 300,72" stroke-width="1.8" />
+        <!-- tree -->
+        <path d="M38,72 V52" stroke-width="1.7" />
+        <circle cx="38" cy="45" r="9.5" fill="#7f9a5e" stroke-width="1.3" />
+        <!-- street lamp -->
+        <path d="M118,72 V38 q0,-5 6,-5" stroke-width="1.5" />
+        <circle cx="125.5" cy="34.5" r="2.6" fill="#f2c14e" stroke-width="1.1" />
+        <!-- taller tree -->
+        <path d="M192,72 V48" stroke-width="1.7" />
+        <ellipse cx="192" cy="38" rx="8" ry="12" fill="#5f8f6d" stroke-width="1.3" />
+        <!-- mast -->
+        <path d="M252,72 V26 M245,31 H259 M247,36.5 H257" stroke-width="1.5" />
+        <!-- a flower, as on the flyers -->
+        <path d="M282,72 V63" stroke-width="1.2" />
+        <circle cx="282" cy="61" r="2.8" fill="#fffdf6" stroke-width="1" />
+        <circle cx="282" cy="61" r="0.9" fill="#f2c14e" stroke="none" />
+      </g>
+    </defs>
+
+    <g class="kl-back" opacity="0.88">
+      <use href="#kl-houses" />
+      <use href="#kl-houses" x="360" />
+    </g>
+    <g class="kl-mid">
+      <use href="#kl-front" />
+      <use href="#kl-front" x="300" />
+      <use href="#kl-front" x="600" />
+    </g>
+    <!-- same street line once more, invisible: the script reads the ground height under the beetle from it -->
+    <path class="kl-ground" visibility="hidden" fill="none" d="M0,72 C25,70.6 45,73 75,72 S125,70.6 150,71.6 S200,73.4 225,72.2 S275,73.4 300,72" />
+
+    <g class="kl-bug" transform="translate(160 71.1) scale(2.3) translate(0 -3.35)">
+      <g fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round">
+        <path data-kl="leg-b" d="M-3,0 L-5,2.5" />
+        <path data-kl="leg-m" d="M0,0.5 L0,3" />
+        <path data-kl="leg-f" d="M3,0 L5,2.5" />
+        <g data-kl="feelers">
+          <path d="M6,-3.5 Q9,-8 10,-8" />
+          <path d="M7,-2.5 Q11,-5 12,-4.5" />
+        </g>
+      </g>
+      <circle cx="6.2" cy="-2" r="2.6" fill="currentColor" />
+      <path d="M-6,0 A6,5 0 0 1 6,0 Z" fill="#DB472D" stroke="currentColor" stroke-width="0.7" stroke-linejoin="round" />
+      <path d="M0,0 L0,-5" fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round" />
+      <g fill="currentColor">
+        <circle cx="-3" cy="-2" r="0.95" />
+        <circle cx="2.6" cy="-2.8" r="0.95" />
+        <circle cx="3.3" cy="-0.8" r="0.7" />
+      </g>
+    </g>
+  </svg>
+</div>
+
+<style is:global>
+  #k-loader {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: 320px;
+    height: 100px;
+    margin: -50px 0 0 -160px; /* centred; no transform (keeps the box simple for the view transition) */
+    z-index: 45; /* above the page and the masthead, below dialogs and toasts */
+    pointer-events: none;
+    color: var(--k-ink);
+    opacity: 0;
+    visibility: hidden;
+    view-transition-name: k-loader;
+  }
+  #k-loader[data-on] {
+    visibility: visible;
+  }
+  /* The paper patch: no border, blurred edges. It keeps page text from showing through the
+     houses. The blur is on this small pseudo-element only (never on a page-sized layer). */
+  #k-loader::before {
+    content: '';
+    position: absolute;
+    inset: 6px 18px 8px;
+    border-radius: 44px;
+    background: var(--k-paper);
+    filter: blur(14px);
+  }
+  /* The scene fades out to the left and right, like a small window onto the street. */
+  #k-loader svg {
+    position: relative;
+    display: block;
+    -webkit-mask-image: linear-gradient(to right, transparent 3%, #000 24%, #000 76%, transparent 97%);
+    mask-image: linear-gradient(to right, transparent 3%, #000 24%, #000 76%, transparent 97%);
+  }
+  ::view-transition-old(k-loader) {
+    display: none;
+  }
+  ::view-transition-new(k-loader) {
+    animation: none;
+  }
+</style>
+
+<script is:inline>
+  (() => {
+    if (window.__kLoader) return;
+    window.__kLoader = true;
+
+    const MIN_MS = 1100; // shown at least this long, however fast the page arrives
+    const FADE_IN_MS = 140;
+    const FADE_OUT_MS = 280;
+    const GIVE_UP_MS = 20000; // a navigation that never reports back
+    const HOUSES_W = 360; // must match the frontmatter
+    const FRONT_W = 300;
+    const FRONT_SPEED = 55; // px per second: the street under the beetle — a calm walk
+    const BACK_SPEED = 30; // the houses, further away, pass more slowly
+    const BUG_X = 160; // where the beetle stands
+    const SCALE = 2.3; // drawing units → px (beetle ≈ 48 px wide: the hero of the scene)
+
+    let startAt = 0;
+    let doneAt = 0;
+    let raf = 0;
+
+    const still = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function stop() {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      startAt = 0;
+      doneAt = 0;
+      const host = document.getElementById('k-loader');
+      if (host) {
+        host.removeAttribute('data-on');
+        host.style.opacity = '';
+      }
+    }
+
+    function frame(now) {
+      raf = requestAnimationFrame(frame);
+      const t = now - startAt;
+      if (!doneAt && t > GIVE_UP_MS) return stop();
+
+      // One clock for the opacity too: in, hold, out.
+      let alpha = Math.min(1, t / FADE_IN_MS);
+      if (doneAt) {
+        const endAt = Math.max(doneAt, startAt + MIN_MS);
+        if (now > endAt) alpha = 1 - (now - endAt) / FADE_OUT_MS;
+        if (alpha <= 0) return stop();
+      }
+
+      const host = document.getElementById('k-loader');
+      if (!host) return; // a page without the scene (login, landing): keep the clock, draw nothing
+      const back = host.querySelector('.kl-back');
+      const mid = host.querySelector('.kl-mid');
+      const ground = host.querySelector('.kl-ground');
+      const bug = host.querySelector('.kl-bug');
+      if (!back || !mid || !ground || !bug) return;
+      host.setAttribute('data-on', '');
+      host.style.opacity = alpha.toFixed(2);
+
+      // Reduced motion: the street stands still, like a small picture.
+      const sec = still() ? 0 : t / 1000;
+      const front = (sec * FRONT_SPEED) % FRONT_W;
+      back.setAttribute('transform', `translate(${(-((sec * BACK_SPEED) % HOUSES_W)).toFixed(1)} 0)`);
+      mid.setAttribute('transform', `translate(${(-front).toFixed(1)} 0)`);
+
+      // The beetle follows the street: height and slope of the line under its feet.
+      const len = ground.getTotalLength();
+      const at = (((BUG_X + front) % FRONT_W) / FRONT_W) * len;
+      const p = ground.getPointAtLength(at);
+      const a = ground.getPointAtLength(Math.max(0, at - 2));
+      const b = ground.getPointAtLength(Math.min(len, at + 2));
+      const tilt = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+      bug.setAttribute(
+        'transform',
+        `translate(${BUG_X} ${(p.y - 0.9).toFixed(2)}) rotate(${tilt.toFixed(1)}) scale(${SCALE}) translate(0 -3.35)`
+      );
+
+      if (!sec) return;
+      // Steps: the outer legs swing together, the middle one against them.
+      const step = 18 * Math.sin((2 * Math.PI * now) / 420);
+      const set = (name, value) => {
+        const el = bug.querySelector(`[data-kl="${name}"]`);
+        if (el) el.setAttribute('transform', value);
+      };
+      set('leg-b', `rotate(${step.toFixed(1)} -3 0)`);
+      set('leg-m', `rotate(${(-step).toFixed(1)} 0 0.5)`);
+      set('leg-f', `rotate(${step.toFixed(1)} 3 0)`);
+      set('feelers', `rotate(${(4 * Math.sin((2 * Math.PI * now) / 900)).toFixed(1)} 6.5 -3)`);
+    }
+
+    document.addEventListener('astro:before-preparation', () => {
+      startAt = performance.now();
+      doneAt = 0;
+      if (!raf) raf = requestAnimationFrame(frame);
+    });
+    document.addEventListener('astro:page-load', () => {
+      if (!startAt || doneAt) return; // the first load of a document has no walk to finish
+      doneAt = performance.now();
+    });
+  })();
+</script>
