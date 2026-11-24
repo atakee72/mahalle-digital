@@ -319,3 +319,5 @@ missed it); generic 200 on forgot-password, 409 on taken email, GET on
 as documented. Left open: favicon.ico 404 (only `favicon.svg` ships), no
 diacritic folding anywhere, `/login?redirect=` shows no hint of where you'll
 land.
+
+- **2026-11-25 — ladybird (`33667827`):** on the ochre logo disc in `AuthLayout.astro` and, via `AuthPrimaryBtn`'s `ladybird` prop, on „anmelden" and „Konto erstellen" ONLY (left end of the button: the „Passwort vergessen?" link sits above the right end). Not on forgot/reset/verify. Rule: root `CLAUDE.md` → „Page-change loader".
