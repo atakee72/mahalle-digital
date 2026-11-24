@@ -22,17 +22,20 @@ if (typeof document !== 'undefined') {
 
 // sonner's own default; stated here so the time band and the toast agree.
 const DEFAULT_DURATION_MS = 4000;
+// The fill is complete this long before the toast closes (never more than half its life).
+const FILL_HOLD_MS = 1000;
 
 export default function ToastProvider() {
   useEffect(() => {
     const handler = (e: Event) => {
       const { type, message, description, duration, action } = (e as CustomEvent).detail;
-      // Time fill (2026-11-24): a tint in the type's colour fills the toast and drains over
-      // its lifetime (a background layer on `.kiosk-toast` in global.css). The CSS needs the
-      // real duration; a toast that never closes by itself gets no fill.
+      // Time fill (2026-11-24): a tint in the type's colour grows from the left, covers the
+      // toast FILL_HOLD_MS before it closes and holds (a background layer on `.kiosk-toast`
+      // in global.css). The CSS needs the fill time; a toast that never closes by itself
+      // gets no fill. The lifetime itself is not changed.
       const ms = duration ?? DEFAULT_DURATION_MS;
       const vars: Record<string, string> = Number.isFinite(ms)
-        ? { '--kt-dur': `${ms}ms` }
+        ? { '--kt-dur': `${Math.max(ms - FILL_HOLD_MS, ms / 2)}ms` }
         : { '--kt-band-h': '0px' };
       const style = vars as CSSProperties;
       const opts = { description, duration, action, style };

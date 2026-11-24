@@ -570,11 +570,16 @@ option:disabled {
   color: var(--k-ink-mute);
 }
 /* Time fill (2026-11-24, owner's choice after two trials): every toast wears the
-   ink print shadow, and the type's colour is a light tint that fills the WHOLE
-   toast and drains from right to left over the toast's lifetime (was: a coloured
-   shadow per type; trial A was a 4 px strip on the bottom edge). The tint is 30 %
+   ink print shadow, and the type's colour is a light tint that GROWS from the
+   left until it covers the whole toast about 1 s before the toast closes, then
+   holds (owner, same evening: the first shipped version drained from full to
+   empty; before that: a coloured shadow per type; trial A was a 4 px strip on
+   the bottom edge). Because the toast starts as plain paper, the ICON carries
+   the type colour from the first moment (darkened with ink so it holds against
+   its own tint). The tint is 30 %
    of the type colour on paper, so the ink text stays readable on both halves.
-   `--kt-dur` comes from ToastProvider.tsx per toast (`--kt-band-h: 0px` for a
+   `--kt-dur` is the FILL time (lifetime minus the hold) and comes from
+   ToastProvider.tsx per toast (`--kt-band-h: 0px` for a
    toast that never closes by itself). It is a BACKGROUND layer on the toast, not
    a pseudo-element: sonner owns both `::before` (swipe) and `::after` (the hover
    bridge between stacked toasts) — a first version on `::after` turned into
@@ -587,17 +592,18 @@ option:disabled {
   background-image: linear-gradient(var(--kt-band-tint), var(--kt-band-tint));
   background-repeat: no-repeat;
   background-position: left bottom;
-  background-size: 100% var(--kt-band-h, 100%);
-  animation: kiosk-toast-drain var(--kt-dur, 4000ms) linear forwards;
+  background-size: 0 var(--kt-band-h, 100%);
+  animation: kiosk-toast-fill var(--kt-dur, 3000ms) linear forwards;
 }
+.kiosk-toast [data-icon] { color: color-mix(in srgb, var(--kt-band-color, var(--k-ink)) 72%, var(--k-ink)); }
 .kiosk-toast[data-expanded='true'] { animation-play-state: paused; }
 .kiosk-toast--success { --kt-band-color: var(--k-success); }
 .kiosk-toast--info    { --kt-band-color: var(--k-wine); }
 .kiosk-toast--warning { --kt-band-color: var(--k-warn); }
 .kiosk-toast--error   { --kt-band-color: var(--k-danger); }
-@keyframes kiosk-toast-drain {
-  from { background-size: 100% var(--kt-band-h, 100%); }
-  to   { background-size: 0 var(--kt-band-h, 100%); }
+@keyframes kiosk-toast-fill {
+  from { background-size: 0 var(--kt-band-h, 100%); }
+  to   { background-size: 100% var(--kt-band-h, 100%); }
 }
 @media (prefers-reduced-motion: reduce) {
   .kiosk-toast { background-image: none; animation: none; }
