@@ -205,8 +205,12 @@ export async function processReviewAction(
         reviewedBy: reviewerId
       };
 
+      // An admin never collects strikes: their content skips the pipeline, but a
+      // member's report can still put it in the queue, and three rejections
+      // would ban the only admin account. The filter makes the skip atomic;
+      // no match = no strike, no ban, the notice goes out without a number.
       const userUpdate = await usersCollection.findOneAndUpdate(
-        { _id: new ObjectId(flaggedContent.authorId) },
+        { _id: new ObjectId(flaggedContent.authorId), role: { $ne: 'admin' } },
         {
           $inc: { moderationStrikes: 1 },
           $push: { strikeHistory: strikeRecord },
