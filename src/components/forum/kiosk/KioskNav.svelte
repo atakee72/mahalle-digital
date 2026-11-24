@@ -285,9 +285,48 @@
     <!-- Brand: wine disc + wordmark + place tagline below -->
     <a href="/" class="flex items-center gap-3 group shrink-0 kiosk-tap">
       <span
-        class="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-wine text-paper flex items-center justify-center font-bricolage font-bold text-xl leading-none group-hover:scale-105 transition-transform duration-[180ms] ease-out"
+        class="relative w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-wine text-paper flex items-center justify-center font-bricolage font-bold text-xl leading-none group-hover:scale-105 transition-transform duration-[180ms] ease-out"
         style="box-shadow: var(--k-bar-disc-ring), inset 0 -0.25px 0 1.75px var(--k-wine), inset 0 0 0 2px var(--k-ink);"
-      >m</span>
+      >m<!-- The Mahalle ladybird hugs the disc at 2 o'clock, climbing towards 12 (2026-11-24, owner's
+             idea; he chose 32 px and „it should hug the logo", no line between the two). Same
+             drawing as the page-change loader (KioskLoader.astro). Everything is relative to the
+             disc (D): width 80 % of D; the middle foot is pinned INSIDE the disc at 0.36 D from the
+             centre (left 81.2 %, top 32 %), so the legs stand on the wine and the wing case covers
+             the logo's paper ring. The paper halo keeps the beetle readable on the bar (red on the
+             wine and rust bars, the ink head on the News bar) and is masked away over the logo: in
+             the drawing's own units the disc centre lies straight under the foot at y = 12.45, and
+             the logo incl. its ring has r ≈ 14.5 (both independent of the angle). Below lg the
+             bar is only 54 px high and the antennae were cut off at its top edge, so there the
+             beetle sits lower on the rim (10° above 3 o'clock: left 85.5 %, top 43.7 %,
+             rotate 80°); from lg it sits at 2 o'clock (30°: left 81.2 %, top 32 %, rotate 60°). -->
+        <svg
+          data-logo-bug
+          aria-hidden="true"
+          viewBox="-7.5 -9.5 21 14"
+          class="absolute pointer-events-none overflow-visible w-[80%] h-auto left-[85.5%] top-[43.7%] [transform:translate(-35.7%,-89.3%)_rotate(80deg)_scaleX(-1)] lg:left-[81.2%] lg:top-[32%] lg:[transform:translate(-35.7%,-89.3%)_rotate(60deg)_scaleX(-1)]"
+          style="transform-origin: 35.7% 89.3%; color: var(--k-ink);"
+        >
+          <mask id="logo-bug-halo" maskUnits="userSpaceOnUse" x="-40" y="-40" width="80" height="80">
+            <rect x="-40" y="-40" width="80" height="80" fill="#fff" />
+            <circle cx="0" cy="12.45" r="14.5" fill="#000" />
+          </mask>
+          <g mask="url(#logo-bug-halo)" fill="var(--k-paper)" stroke="var(--k-paper)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M-3,0 L-5,2.5 M0,0.5 L0,3 M3,0 L5,2.5 M6,-3.5 Q9,-8 10,-8 M7,-2.5 Q11,-5 12,-4.5" fill="none" />
+            <circle cx="6.2" cy="-2" r="2.6" />
+            <path d="M-6,0 A6,5 0 0 1 6,0 Z" />
+          </g>
+          <g fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M-3,0 L-5,2.5 M0,0.5 L0,3 M3,0 L5,2.5 M6,-3.5 Q9,-8 10,-8 M7,-2.5 Q11,-5 12,-4.5" />
+          </g>
+          <circle cx="6.2" cy="-2" r="2.6" fill="currentColor" />
+          <path d="M-6,0 A6,5 0 0 1 6,0 Z" fill="#DB472D" stroke="currentColor" stroke-width="0.75" stroke-linejoin="round" />
+          <path d="M0,0 L0,-5" fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round" />
+          <g fill="currentColor">
+            <circle cx="-3" cy="-2" r="0.95" />
+            <circle cx="2.6" cy="-2.8" r="0.95" />
+            <circle cx="3.3" cy="-0.8" r="0.7" />
+          </g>
+        </svg></span>
       <span class="hidden sm:flex flex-col leading-tight">
         <span class="font-bricolage font-bold text-xl tracking-tight" style="color: var(--k-bar-fg);">
           {$t['brand.name']}
