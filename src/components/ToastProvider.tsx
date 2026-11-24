@@ -2,6 +2,24 @@ import { Toaster, toast } from 'sonner';
 import { useEffect } from 'react';
 import ConfirmDialog from './ConfirmDialog';
 
+// sonner injects its own CSS (the toaster's `position: fixed`, the stacking maths) as a <style>
+// into <head> when its module loads. Astro's ClientRouter drops every head element the next page
+// does not carry, so after ANY client-side navigation the toaster fell into the page flow: the
+// toast appeared under the masthead in the page itself and pushed the page down ~35 px instead of
+// floating at the bottom (owner report 2026-11-24: „teilen does nothing, the page jumps"; a reload
+// cured it). Carry the style into the incoming document before the swap, so the router keeps it.
+if (typeof document !== 'undefined') {
+  const isSonnerStyle = (el: Element) =>
+    el.tagName === 'STYLE' && (el.textContent ?? '').includes('[data-sonner-toaster]');
+  const find = (doc: Document) => Array.from(doc.head.children).find(isSonnerStyle) ?? null;
+  let kept: Element | null = find(document);
+  document.addEventListener('astro:before-swap', (e) => {
+    kept = find(document) ?? kept;
+    const next = (e as Event & { newDocument?: Document }).newDocument;
+    if (kept && next && !find(next)) next.head.appendChild(kept.cloneNode(true));
+  });
+}
+
 export default function ToastProvider() {
   useEffect(() => {
     const handler = (e: Event) => {
