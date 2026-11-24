@@ -17,6 +17,15 @@
 // flowing across the swap. The scene has its own `view-transition-name`, with the old snapshot
 // hidden, so the browser's page fade shows only the live scene (no frozen ghost).
 //
+// Direction (same evening): the nav bar is the map. A target further right walks right, further
+// left walks left (rules + tests: src/lib/loader/walkDirection.ts). Walking left is the WHOLE
+// scene mirrored (`data-dir="l"` → scaleX(-1) on the svg): the beetle faces left, the street
+// flows to the right, and the open stretch around the beetle is mirrored with it.
+//
+// Three depths: houses (slowest), a small far tree + far lamp post (a little faster), then the
+// street with the near trees, lamp and mast (the beetle's own speed). Everything is drawn BEHIND
+// the beetle.
+//
 // Rejected by the owner the same evening: (1) a full-width strip under the masthead with a sine
 // wave drawn behind a fast beetle („too fast, too wavy, why at the top?"); (2) a framed paper
 // card in the centre with the beetle walking along a pre-drawn line („no frame").
@@ -88,6 +97,15 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
           ))
         }
       </g>
+      <!-- far row: small, pale, slow. Tile = 360. At the start the tree stands left of the
+           beetle (x 120) and the lamp post right of it (x 250); at FAR_SPEED they move ~55 px
+           in a normal page change and never come within a beetle's width of x = 160. -->
+      <g id="kl-far" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1">
+        <path d="M120,72 V61" />
+        <circle cx="120" cy="57" r="5.2" fill="#a9bd8f" />
+        <path d="M250,72 V54 q0,-3 3.5,-3" />
+        <circle cx="254.5" cy="52" r="1.6" fill="#f2c14e" stroke-width="0.8" />
+      </g>
       <g id="kl-front" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
         <!-- the street: hand-drawn, a little uneven, seamless over FRONT_W (420) -->
         <path d="M0,72 C25,70.6 45,73 75,72 S125,70.6 150,71.6 S200,73.4 225,72.2 S275,73.4 300,72 S345,70.8 365,71.8 S400,73.2 420,72" stroke-width="1.8" />
@@ -113,6 +131,10 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
     <g class="kl-back" opacity="0.88">
       <use href="#kl-houses" />
       <use href="#kl-houses" x="360" />
+    </g>
+    <g class="kl-far" opacity="0.72">
+      <use href="#kl-far" />
+      <use href="#kl-far" x="360" />
     </g>
     <g class="kl-mid">
       <use href="#kl-front" />
@@ -179,6 +201,9 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
     -webkit-mask-image: linear-gradient(to right, transparent 3%, #000 24%, #000 76%, transparent 97%);
     mask-image: linear-gradient(to right, transparent 3%, #000 24%, #000 76%, transparent 97%);
   }
+  #k-loader[data-dir='l'] svg {
+    transform: scaleX(-1); /* walking left = the whole scene mirrored */
+  }
   ::view-transition-old(k-loader) {
     display: none;
   }
@@ -187,11 +212,12 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
   }
 </style>
 
-<script is:inline>
-  (() => {
-    if (window.__kLoader) return;
-    window.__kLoader = true;
+<script>
+  // A bundled module script: it runs once per document, and its listeners sit on `document`,
+  // which survives every ClientRouter swap.
+  import { walkDirection } from '../lib/loader/walkDirection';
 
+  {
     const MIN_MS = 1100; // shown at least this long, however fast the page arrives
     const FADE_IN_MS = 140;
     const FADE_OUT_MS = 280;
@@ -199,13 +225,15 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
     const HOUSES_W = 360; // must match the frontmatter
     const FRONT_W = 420;
     const FRONT_SPEED = 55; // px per second: the street under the beetle — a calm walk
-    const BACK_SPEED = 30; // the houses, further away, pass more slowly
+    const FAR_SPEED = 38; // the small far tree and lamp post
+    const BACK_SPEED = 30; // the houses, furthest away, pass most slowly
     const BUG_X = 160; // where the beetle stands
     const SCALE = 2.3; // drawing units → px (beetle ≈ 48 px wide: the hero of the scene)
 
     let startAt = 0;
     let doneAt = 0;
     let raf = 0;
+    let dir = 'right';
 
     const still = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -221,7 +249,7 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
       }
     }
 
-    function frame(now) {
+    function frame(now: number) {
       raf = requestAnimationFrame(frame);
       const t = now - startAt;
       if (!doneAt && t > GIVE_UP_MS) return stop();
@@ -237,17 +265,20 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
       const host = document.getElementById('k-loader');
       if (!host) return; // a page without the scene (login, landing): keep the clock, draw nothing
       const back = host.querySelector('.kl-back');
+      const far = host.querySelector('.kl-far');
       const mid = host.querySelector('.kl-mid');
-      const ground = host.querySelector('.kl-ground');
+      const ground = host.querySelector<SVGPathElement>('.kl-ground');
       const bug = host.querySelector('.kl-bug');
-      if (!back || !mid || !ground || !bug) return;
+      if (!back || !far || !mid || !ground || !bug) return;
       host.setAttribute('data-on', '');
+      host.setAttribute('data-dir', dir === 'left' ? 'l' : 'r');
       host.style.opacity = alpha.toFixed(2);
 
       // Reduced motion: the street stands still, like a small picture.
       const sec = still() ? 0 : t / 1000;
       const front = (sec * FRONT_SPEED) % FRONT_W;
       back.setAttribute('transform', `translate(${(-((sec * BACK_SPEED) % HOUSES_W)).toFixed(1)} 0)`);
+      far.setAttribute('transform', `translate(${(-((sec * FAR_SPEED) % HOUSES_W)).toFixed(1)} 0)`);
       mid.setAttribute('transform', `translate(${(-front).toFixed(1)} 0)`);
 
       // The beetle follows the street: height and slope of the line under its feet.
@@ -265,7 +296,7 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
       if (!sec) return;
       // Steps: the outer legs swing together, the middle one against them.
       const step = 18 * Math.sin((2 * Math.PI * now) / 420);
-      const set = (name, value) => {
+      const set = (name: string, value: string) => {
         const el = bug.querySelector(`[data-kl="${name}"]`);
         if (el) el.setAttribute('transform', value);
       };
@@ -275,7 +306,10 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
       set('feelers', `rotate(${(4 * Math.sin((2 * Math.PI * now) / 900)).toFixed(1)} 6.5 -3)`);
     }
 
-    document.addEventListener('astro:before-preparation', () => {
+    document.addEventListener('astro:before-preparation', (e) => {
+      const ev = e as Event & { from?: URL; to?: URL; navigationType?: string; direction?: string };
+      const isBack = ev.navigationType === 'traverse' && ev.direction === 'back';
+      dir = ev.from && ev.to ? walkDirection(ev.from.pathname, ev.to.pathname, isBack) : 'right';
       startAt = performance.now();
       doneAt = 0;
       if (!raf) raf = requestAnimationFrame(frame);
@@ -284,5 +318,5 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
       if (!startAt || doneAt) return; // the first load of a document has no walk to finish
       doneAt = performance.now();
     });
-  })();
+  }
 </script>
