@@ -154,7 +154,7 @@ export const POST: APIRoute = async ({ request }) => {
 - **Blocklist rule**: before adding a word, check it against common words in ALL community languages after normalisation (the „mal" incident).
 - **Daily limits**: four buckets of 5 per rolling 24 h (forum kinds together, events, listings, news) via `checkDailyLimit()` (`src/lib/limits/dailyLimit.ts`); an organisation may carry an admin-set `dailyLimit`. **Admins are exempt** from limits and from the whole moderation pipeline (not from the marketplace contact relay's check).
 - **Reports**: members can report every content type; a self-delete KEEPS the report (`flaggedContent.contentDeleted: true`).
-- **Strikes**: 3 strikes = automatic ban, enforced at login and on all content-write APIs incl. own deletes (403 `account_banned`, `src/lib/auth/banGuard.ts`). An admin account never collects a strike (2026-11-24, `c0e626c8`). There is NO unban route or button; lifting a ban is a hand edit of the user doc.
+- **Strikes**: 3 strikes = automatic ban, enforced at login and on all content-write APIs incl. own deletes (403 `account_banned`, `src/lib/auth/banGuard.ts`). An admin account never collects a strike (2026-11-24, `c0e626c8`). There is NO unban route or button; lifting a ban is a hand edit of the user doc (an „Entsperren" button on `/admin/mitglieder` is deferred, owner 2026-11-24).
 - **Review**: shared `processReviewAction()` in `src/lib/reviewAction.ts` (single + bulk, max 50); admin queue `/admin/moderation`, official announcements `/admin/announcements` — UI notes in `src/components/admin/CLAUDE.md`.
 - Full notes (every incident and probe): `docs/reference/content-moderation.md`.
 
