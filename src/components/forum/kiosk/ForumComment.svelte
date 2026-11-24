@@ -26,6 +26,7 @@
   import KioskReportModal from './KioskReportModal.svelte';
   import { t, tStr } from '../../../lib/kiosk-i18n';
   import { COMMENT_MAX_LEN } from '../../../lib/forum/commentLimits';
+  import { showToast } from '../../../utils/toast';
 
   let {
     comment,
@@ -171,13 +172,7 @@
       // to handle by passing the body — parent sees the rejection via the
       // server response. But we already know it'll fail, so short-circuit.
       cancelEdit();
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('app:toast', {
-            detail: { type: 'warning', message: $t['comment.toast.edit.window'] }
-          })
-        );
-      }
+      showToast($t['comment.toast.edit.window'], { type: 'warning' });
       return;
     }
     saving = true;
