@@ -423,3 +423,4 @@ Spec `docs/superpowers/specs/2026-10-03-kiez-brief-newsletter-design.md`; code `
 - Compose image uploads (`uploadPendingFiles`) shrink each file in the browser first via `shrinkForUpload()` (`src/lib/images/`), 4 MB cap — see root CLAUDE.md „Uploads vs Vercel's 4.5 MB body cap“.
 
 - **2026-11-24 — page-change loader reads the nav order:** `src/lib/loader/walkDirection.ts` mirrors `FORUM_MATCH`/`CALENDAR_MATCH` and the nav bar order of `KioskNav.svelte`; change them together. Details: root `CLAUDE.md` → „Page-change loader".
+- **2026-11-24 — ladybird on the logo disc** (`7f781d73`): an inline SVG inside the disc `<span>` in `KioskNav.svelte`, sized and placed in % of the disc; it scales with the disc's hover. Keep the two placements (below `lg` / from `lg`) and the halo mask together when touching the logo. Summary: root `CLAUDE.md` → „Page-change loader".
