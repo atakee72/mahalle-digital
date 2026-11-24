@@ -23,7 +23,12 @@
 
 const GROUND = 72; // y of the street in the 320 × 100 scene
 const HOUSES_W = 360; // width of the house row; it repeats seamlessly
-const FRONT_W = 300; // width of the front row (ground line, trees, lamp, mast)
+const FRONT_W = 420; // width of the front row (ground line, trees, lamp, mast)
+// The beetle stands at x = 160 and a normal page change shows about 80 px of street (1.4 s).
+// Keep x = 126 … 271 of the front row FREE of anything tall: at the start the tree and the lamp
+// are already behind the beetle, the next tree is far ahead, so the eye finds the beetle on open
+// street (owner, 2026-11-24: a tree right behind it „makes it difficult to differentiate, and
+// the opportunity is gone"). Trees pass the beetle only on longer loads.
 
 type House = { x: number; w: number; h: number; fill: string; roof: 'flat' | 'gable' | 'step'; cols: number; rows: number };
 const CREAM = '#f1dfba';
@@ -61,7 +66,8 @@ function windows(h: House): { x: number; y: number }[] {
   return out;
 }
 
-// The door replaces the lowest window of one column when the house is tall enough for it.
+// One door per house, at the right. It wears the house's own colour with the ink outline only
+// (owner, 2026-11-24: solid ink doors „compete for the eye" with the beetle).
 const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
 ---
 
@@ -77,29 +83,30 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
               {windows(h).map((w) => (
                 <rect x={w.x.toFixed(1)} y={w.y} width="6" height="8" fill="#fbf6ea" stroke-width="1" />
               ))}
-              <rect x={doorX(h).toFixed(1)} y={GROUND - 11} width="7" height="11" fill="currentColor" stroke="none" />
+              <rect x={doorX(h).toFixed(1)} y={GROUND - 11} width="7" height="11" fill={h.fill} stroke-width="1.1" />
             </g>
           ))
         }
       </g>
       <g id="kl-front" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-        <!-- the street: hand-drawn, a little uneven, seamless over FRONT_W -->
-        <path d="M0,72 C25,70.6 45,73 75,72 S125,70.6 150,71.6 S200,73.4 225,72.2 S275,73.4 300,72" stroke-width="1.8" />
-        <!-- tree -->
-        <path d="M38,72 V52" stroke-width="1.7" />
-        <circle cx="38" cy="45" r="9.5" fill="#7f9a5e" stroke-width="1.3" />
-        <!-- street lamp -->
-        <path d="M118,72 V38 q0,-5 6,-5" stroke-width="1.5" />
-        <circle cx="125.5" cy="34.5" r="2.6" fill="#f2c14e" stroke-width="1.1" />
+        <!-- the street: hand-drawn, a little uneven, seamless over FRONT_W (420) -->
+        <path d="M0,72 C25,70.6 45,73 75,72 S125,70.6 150,71.6 S200,73.4 225,72.2 S275,73.4 300,72 S345,70.8 365,71.8 S400,73.2 420,72" stroke-width="1.8" />
+        <!-- tree (already behind the beetle at the start) -->
+        <path d="M40,72 V52" stroke-width="1.7" />
+        <circle cx="40" cy="45" r="9.5" fill="#7f9a5e" stroke-width="1.3" />
+        <!-- street lamp (just behind the beetle at the start) -->
+        <path d="M96,72 V38 q0,-5 6,-5" stroke-width="1.5" />
+        <circle cx="103.5" cy="34.5" r="2.6" fill="#f2c14e" stroke-width="1.1" />
+        <!-- x = 126 … 271 stays open, see the frontmatter -->
         <!-- taller tree -->
-        <path d="M192,72 V48" stroke-width="1.7" />
-        <ellipse cx="192" cy="38" rx="8" ry="12" fill="#5f8f6d" stroke-width="1.3" />
+        <path d="M302,72 V48" stroke-width="1.7" />
+        <ellipse cx="302" cy="38" rx="8" ry="12" fill="#5f8f6d" stroke-width="1.3" />
         <!-- mast -->
-        <path d="M252,72 V26 M245,31 H259 M247,36.5 H257" stroke-width="1.5" />
+        <path d="M352,72 V26 M345,31 H359 M347,36.5 H357" stroke-width="1.5" />
         <!-- a flower, as on the flyers -->
-        <path d="M282,72 V63" stroke-width="1.2" />
-        <circle cx="282" cy="61" r="2.8" fill="#fffdf6" stroke-width="1" />
-        <circle cx="282" cy="61" r="0.9" fill="#f2c14e" stroke="none" />
+        <path d="M392,72 V63" stroke-width="1.2" />
+        <circle cx="392" cy="61" r="2.8" fill="#fffdf6" stroke-width="1" />
+        <circle cx="392" cy="61" r="0.9" fill="#f2c14e" stroke="none" />
       </g>
     </defs>
 
@@ -109,11 +116,11 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
     </g>
     <g class="kl-mid">
       <use href="#kl-front" />
-      <use href="#kl-front" x="300" />
-      <use href="#kl-front" x="600" />
+      <use href="#kl-front" x="420" />
+      <use href="#kl-front" x="840" />
     </g>
     <!-- same street line once more, invisible: the script reads the ground height under the beetle from it -->
-    <path class="kl-ground" visibility="hidden" fill="none" d="M0,72 C25,70.6 45,73 75,72 S125,70.6 150,71.6 S200,73.4 225,72.2 S275,73.4 300,72" />
+    <path class="kl-ground" visibility="hidden" fill="none" d="M0,72 C25,70.6 45,73 75,72 S125,70.6 150,71.6 S200,73.4 225,72.2 S275,73.4 300,72 S345,70.8 365,71.8 S400,73.2 420,72" />
 
     <g class="kl-bug" transform="translate(160 71.1) scale(2.3) translate(0 -3.35)">
       <g fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round">
@@ -190,7 +197,7 @@ const doorX = (h: House) => h.x + h.w - (h.w - h.cols * 6) / (h.cols + 1) - 7;
     const FADE_OUT_MS = 280;
     const GIVE_UP_MS = 20000; // a navigation that never reports back
     const HOUSES_W = 360; // must match the frontmatter
-    const FRONT_W = 300;
+    const FRONT_W = 420;
     const FRONT_SPEED = 55; // px per second: the street under the beetle — a calm walk
     const BACK_SPEED = 30; // the houses, further away, pass more slowly
     const BUG_X = 160; // where the beetle stands
