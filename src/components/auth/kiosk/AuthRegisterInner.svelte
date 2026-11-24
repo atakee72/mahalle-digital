@@ -200,7 +200,7 @@
       </span>
     </label>
 
-    <AuthPrimaryBtn loading={status === 'loading'}>
+    <AuthPrimaryBtn loading={status === 'loading'} ladybird>
       {status === 'loading' ? $t['auth.register.ctaLoading'] : $t['auth.register.cta']}
     </AuthPrimaryBtn>
   </form>

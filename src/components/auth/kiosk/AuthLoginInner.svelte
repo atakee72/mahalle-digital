@@ -237,7 +237,7 @@
           <a href="/forgot-password" class="font-dmmono no-underline kiosk-tap" style="font-size:11px; color:var(--k-ink-soft); border-bottom:1px dashed var(--k-ink-mute);">{$t['auth.login.forgot']}</a>
         </div>
       </div>
-      <AuthPrimaryBtn loading={status === 'loading'} disabled={locked}>
+      <AuthPrimaryBtn loading={status === 'loading'} disabled={locked} ladybird>
         {status === 'loading' ? $t['auth.login.ctaLoading'] : status === 'success' ? $t['auth.login.ctaDone'] : $t['auth.login.cta']}
       </AuthPrimaryBtn>
     </form>
