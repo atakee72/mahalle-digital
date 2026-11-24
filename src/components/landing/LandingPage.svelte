@@ -224,12 +224,46 @@
   }
 </script>
 
+<!-- The Mahalle ladybird (2026-11-24): the print mascot, same drawing as the page-change loader
+     and the masthead logo (root CLAUDE.md → „Page-change loader"). Three places on this page and
+     no more (owner: „dont overdo it"): on the wordmark's M, on the logo disc of the six miniature
+     mastheads (they are faithful copies of the real bar), and one standing on the top edge of
+     the closing call-to-action button (a first try on the dashed line above that section ran into
+     the promise ticker's text). `halo` = a paper outline for coloured ground; `maskId` hides that
+     outline where the beetle overlaps the logo disc (see KioskNav.svelte for the geometry). -->
+{#snippet ladybird(cls: string, halo: boolean, maskId: string | null)}
+  <svg class={cls} aria-hidden="true" viewBox="-7.5 -9.5 21 14" style="color: var(--k-ink); overflow: visible;">
+    {#if halo}
+      {#if maskId}
+        <mask id={maskId} maskUnits="userSpaceOnUse" x="-40" y="-40" width="80" height="80">
+          <rect x="-40" y="-40" width="80" height="80" fill="#fff" />
+          <circle cx="0" cy="12.45" r="14.5" fill="#000" />
+        </mask>
+      {/if}
+      <g mask={maskId ? `url(#${maskId})` : undefined} fill="var(--k-paper)" stroke="var(--k-paper)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M-3,0 L-5,2.5 M0,0.5 L0,3 M3,0 L5,2.5 M6,-3.5 Q9,-8 10,-8 M7,-2.5 Q11,-5 12,-4.5" fill="none" />
+        <circle cx="6.2" cy="-2" r="2.6" />
+        <path d="M-6,0 A6,5 0 0 1 6,0 Z" />
+      </g>
+    {/if}
+    <path d="M-3,0 L-5,2.5 M0,0.5 L0,3 M3,0 L5,2.5 M6,-3.5 Q9,-8 10,-8 M7,-2.5 Q11,-5 12,-4.5" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="6.2" cy="-2" r="2.6" fill="currentColor" />
+    <path d="M-6,0 A6,5 0 0 1 6,0 Z" fill="#DB472D" stroke="currentColor" stroke-width="0.75" stroke-linejoin="round" />
+    <path d="M0,0 L0,-5" fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round" />
+    <g fill="currentColor">
+      <circle cx="-3" cy="-2" r="0.95" />
+      <circle cx="2.6" cy="-2.8" r="0.95" />
+      <circle cx="3.3" cy="-0.8" r="0.7" />
+    </g>
+  </svg>
+{/snippet}
+
 {#snippet bar(key: SectionKey)}
   {@const S = SECTION[key]}
   {@const de = $locale === 'de'}
   <div class="lnd-sf-repbar border-b-2 border-ink" style="background: {S.lines}, var(--k-bar-wash), var(--k-bar-shade), linear-gradient({S.tint}, {S.tint})" aria-hidden="true">
     <div class="px-4 py-2 flex items-center justify-between">
-      <span class="w-9 h-9 rounded-full bg-wine text-paper flex items-center justify-center font-bricolage font-bold text-xl leading-none" style="box-shadow: 0 0 0 2px var(--k-paper), inset 0 -0.25px 0 1.75px var(--k-wine), inset 0 0 0 2px var(--k-ink)">m</span>
+      <span class="relative w-9 h-9 rounded-full bg-wine text-paper flex items-center justify-center font-bricolage font-bold text-xl leading-none" style="box-shadow: 0 0 0 2px var(--k-paper), inset 0 -0.25px 0 1.75px var(--k-wine), inset 0 0 0 2px var(--k-ink)">m{@render ladybird('lnd-bug-disc', true, `lnd-bug-halo-${key}`)}</span>
       <span class="flex items-center gap-2">
         <span class="inline-flex items-center h-[25px] rounded-full border-2 border-paper font-dmmono text-[11px] uppercase tracking-[0.12em] bg-ink"><span class="inline-flex items-center justify-center h-[21px] px-2.5 leading-none rounded-l-full {de ? 'bg-paper text-ink' : 'bg-ink text-paper'}">DE</span><span class="inline-flex items-center justify-center h-[21px] px-2.5 leading-none rounded-r-full {de ? 'bg-ink text-paper' : 'bg-paper text-ink'}">EN</span></span>
         <span class="w-9 h-9 rounded-full border-2 border-paper bg-paper text-ink flex items-center justify-center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg></span>
@@ -706,7 +740,7 @@
 
   <!-- masthead -->
   <header class="lnd-masthead">
-    <h1 class="font-bricolage">M<span class="font-instrument lnd-a">a</span>halle</h1>
+    <h1 class="font-bricolage"><span class="lnd-m">M{@render ladybird('lnd-bug-m', false, null)}</span><span class="font-instrument lnd-a">a</span>halle</h1>
     <p class="font-instrument lnd-manifest">{$t['lnd.manifest']}</p>
   </header>
   <div class="lnd-rule"><div class="lnd-rule-thick"></div><div class="lnd-rule-thin"></div></div>
@@ -786,7 +820,7 @@
       <h2 class="font-bricolage">{$t['lnd.demo.h']}</h2>
       <p class="font-bricolage lnd-demo-p">{$t['lnd.demo.p']}</p>
       <div class="lnd-demo-btns">
-        <button type="button" class="lnd-cta-btn font-bricolage" disabled={demoPending !== null} onclick={() => startDemoRole('member')}>{$t['lnd.demo.member']}</button>
+        <button type="button" class="lnd-cta-btn font-bricolage" disabled={demoPending !== null} onclick={() => startDemoRole('member')}>{$t['lnd.demo.member']}{@render ladybird('lnd-bug-cta', false, null)}</button>
         <button type="button" class="lnd-cta-btn lnd-cta-btn--outline font-bricolage" disabled={demoPending !== null} onclick={() => startDemoRole('admin')}>{$t['lnd.demo.admin']}</button>
       </div>
       {#if demoFailed}<div class="lnd-meta font-dmmono lnd-demo-fail" role="alert">{$t['auth.demo.fail']}</div>{/if}
@@ -800,7 +834,7 @@
   {:else}
   <div class="lnd-cta" id="mitmachen">
     <h2 class="font-bricolage">{$t['lnd.cta.h']}</h2>
-    <a href="/register" class="lnd-cta-btn font-bricolage">{$t['lnd.cta.btn']}</a>
+    <a href="/register" class="lnd-cta-btn font-bricolage">{$t['lnd.cta.btn']}{@render ladybird('lnd-bug-cta', false, null)}</a>
     <div class="lnd-meta font-dmmono lnd-cta-sub">{$t['lnd.cta.sub']}</div>
     <div class="font-instrument lnd-slogan">{$t['lnd.cta.slogan']}</div>
   </div>
@@ -852,6 +886,15 @@
   .lnd-masthead { text-align: center; padding: 10px 48px 6px; }
   .lnd-masthead h1 { font-size: 96px; font-weight: 800; letter-spacing: -0.045em; line-height: 0.95; margin: 0; color: var(--k-ink); }
   .lnd-a { font-style: italic; font-weight: 400; letter-spacing: 0; }
+  /* Ladybird, three places. All are pinned by the middle foot (35.7 % / 89.3 % of the drawing). */
+  .lnd-m { position: relative; display: inline-block; }
+  /* on the wordmark: standing on the M's right shoulder, facing the rest of the word */
+  .lnd-bug-m { position: absolute; width: 0.34em; height: auto; left: calc(100% - 0.13em); top: 0.155em; transform-origin: 35.7% 89.3%; transform: translate(-35.7%, -89.3%); pointer-events: none; }
+  /* on the miniature mastheads: the phone placement of the real bar (KioskNav.svelte) */
+  :global(.lnd-bug-disc) { position: absolute; width: 80%; height: auto; left: 85.5%; top: 43.7%; transform-origin: 35.7% 89.3%; transform: translate(-35.7%, -89.3%) rotate(80deg) scaleX(-1); pointer-events: none; }
+  /* on the call-to-action button: standing on its top edge near the right end, facing the label */
+  .lnd-cta-btn { position: relative; }
+  .lnd-bug-cta { position: absolute; width: 32px; height: auto; right: 34px; top: 1px; transform-origin: 35.7% 89.3%; transform: translate(0, -89.3%) scaleX(-1); pointer-events: none; }
   .lnd-manifest { font-style: italic; font-size: 23px; color: var(--k-ink-soft); margin: 5px 0 0; }
   .lnd-rule { padding: 0 48px; margin-bottom: 2px; }
   .lnd-rule-thick { height: 3px; background: var(--k-ink); }
@@ -933,6 +976,7 @@
     .lnd-sf-pausebtn { min-height: 44px; margin: -10px 0; }
     .lnd-promises { min-height: 40px; padding: 0 6px; font-size: 16px; letter-spacing: 0.38em; text-indent: 0.38em; }
     .lnd-cta { padding: 26px 18px; }
+    .lnd-bug-cta { width: 28px; right: 30px; }
     .lnd-cta h2 { font-size: 26px; }
     .lnd-cta-btn { font-size: 15px; padding: 13px 26px; }
     .lnd-slogan { font-size: 18px; }
