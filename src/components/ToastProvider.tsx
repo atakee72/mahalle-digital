@@ -1,5 +1,5 @@
 import { Toaster, toast } from 'sonner';
-import { useEffect } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import ConfirmDialog from './ConfirmDialog';
 
 // sonner injects its own CSS (the toaster's `position: fixed`, the stacking maths) as a <style>
@@ -20,11 +20,22 @@ if (typeof document !== 'undefined') {
   });
 }
 
+// sonner's own default; stated here so the time band and the toast agree.
+const DEFAULT_DURATION_MS = 4000;
+
 export default function ToastProvider() {
   useEffect(() => {
     const handler = (e: Event) => {
       const { type, message, description, duration, action } = (e as CustomEvent).detail;
-      const opts = { description, duration, action };
+      // Time fill (2026-11-24): a tint in the type's colour fills the toast and drains over
+      // its lifetime (a background layer on `.kiosk-toast` in global.css). The CSS needs the
+      // real duration; a toast that never closes by itself gets no fill.
+      const ms = duration ?? DEFAULT_DURATION_MS;
+      const vars: Record<string, string> = Number.isFinite(ms)
+        ? { '--kt-dur': `${ms}ms` }
+        : { '--kt-band-h': '0px' };
+      const style = vars as CSSProperties;
+      const opts = { description, duration, action, style };
       switch (type) {
         case 'success': toast.success(message, opts); break;
         case 'error':   toast.error(message, opts); break;
@@ -49,6 +60,7 @@ export default function ToastProvider() {
         offset={{ bottom: '24px' }}
         mobileOffset={{ bottom: '80px' }}
         toastOptions={{
+          duration: DEFAULT_DURATION_MS,
           unstyled: true,
           classNames: {
             toast: 'kiosk-toast',

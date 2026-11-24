@@ -569,10 +569,39 @@ option:disabled {
   font-size: 13px;
   color: var(--k-ink-mute);
 }
-.kiosk-toast--success { box-shadow: 4px 4px 0 var(--k-success); }
-.kiosk-toast--info    { box-shadow: 4px 4px 0 var(--k-wine); }
-.kiosk-toast--warning { box-shadow: 4px 4px 0 var(--k-warn); }
-.kiosk-toast--error   { box-shadow: 4px 4px 0 var(--k-danger); }
+/* Time fill (2026-11-24, owner's choice after two trials): every toast wears the
+   ink print shadow, and the type's colour is a light tint that fills the WHOLE
+   toast and drains from right to left over the toast's lifetime (was: a coloured
+   shadow per type; trial A was a 4 px strip on the bottom edge). The tint is 30 %
+   of the type colour on paper, so the ink text stays readable on both halves.
+   `--kt-dur` comes from ToastProvider.tsx per toast (`--kt-band-h: 0px` for a
+   toast that never closes by itself). It is a BACKGROUND layer on the toast, not
+   a pseudo-element: sonner owns both `::before` (swipe) and `::after` (the hover
+   bridge between stacked toasts) — a first version on `::after` turned into
+   thick blocks above every toast of a hovered stack. sonner pauses its timer
+   while the pointer is over the list (`data-expanded="true"`); the fill pauses
+   with it, so it never lies about the time left. Info (wine) and error (red)
+   are close as tints; the icon tells them apart. */
+.kiosk-toast {
+  --kt-band-tint: color-mix(in srgb, var(--kt-band-color, var(--k-ink)) 30%, var(--k-paper));
+  background-image: linear-gradient(var(--kt-band-tint), var(--kt-band-tint));
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: 100% var(--kt-band-h, 100%);
+  animation: kiosk-toast-drain var(--kt-dur, 4000ms) linear forwards;
+}
+.kiosk-toast[data-expanded='true'] { animation-play-state: paused; }
+.kiosk-toast--success { --kt-band-color: var(--k-success); }
+.kiosk-toast--info    { --kt-band-color: var(--k-wine); }
+.kiosk-toast--warning { --kt-band-color: var(--k-warn); }
+.kiosk-toast--error   { --kt-band-color: var(--k-danger); }
+@keyframes kiosk-toast-drain {
+  from { background-size: 100% var(--kt-band-h, 100%); }
+  to   { background-size: 0 var(--kt-band-h, 100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kiosk-toast { background-image: none; animation: none; }
+}
 .kiosk-toast__close {
   margin-left: auto;
   width: 22px;
