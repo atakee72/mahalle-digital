@@ -415,6 +415,8 @@ timestamps, and confusing them is the exact bug shape to watch for:
   sessionless reset page has no session to preserve).
 
 ## Account deletion (Plan B, Tasks 10–11)
+**2026-11-24 (`7f197ec2`):** the delete-account dialog was glued to the top-left like the report form — a native `<dialog>` needs `m-auto`, never `m-0`; note and probe in `src/components/forum/kiosk/CLAUDE.md` (grep „Native `<dialog>` needs"). The fix here rests on the identical class; the dialog itself was not opened in a browser afterwards.
+
 
 Two-phase: **scheduling** (Task 10, session-gated, reversible for 7 days)
 and the **day-7 anonymization pipeline** (Task 11, cron-driven,
