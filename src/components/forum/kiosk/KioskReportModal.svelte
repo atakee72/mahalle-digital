@@ -110,7 +110,7 @@
   bind:this={dialog}
   onclose={onDialogClose}
   onclick={onDialogClick}
-  class="bg-transparent p-0 m-0 max-w-none max-h-none backdrop:bg-ink/40"
+  class="bg-transparent p-0 m-auto max-w-none max-h-none backdrop:bg-ink/40"
 >
   <div
     class="bg-paper border-[1.5px] border-ink rounded-md shadow-[3px_3px_0_var(--k-wine,#b23a5b)] w-[min(92vw,520px)] mx-auto my-6 md:my-[40px] max-h-[calc(100dvh-48px)] overflow-y-auto"

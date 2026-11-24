@@ -161,7 +161,7 @@
   bind:this={dialog}
   onclose={onDialogClose}
   onclick={onDialogClick}
-  class="bg-transparent p-0 m-0 max-w-none max-h-none backdrop:bg-[rgba(27,26,23,0.45)]"
+  class="bg-transparent p-0 m-auto max-w-none max-h-none backdrop:bg-[rgba(27,26,23,0.45)]"
 >
   <div
     style="
