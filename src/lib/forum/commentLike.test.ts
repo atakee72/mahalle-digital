@@ -116,3 +116,11 @@ test('stripLikedBy: an unshaped item never keeps the id list', () => {
   assert.deepEqual(stripLikedBy({ title: 'a', likedBy: ['u1'] }), { title: 'a' });
   assert.deepEqual(stripLikedBy({ title: 'a' }), { title: 'a' });
 });
+
+test('decideCommentLike: an UNLIKE is allowed on any existing comment that is not your own (taking a like back never needs approval)', () => {
+  const me = '64b000000000000000000001', other = '64b000000000000000000002';
+  assert.equal(decideCommentLike({ author: other, moderationStatus: 'pending' }, me, 'unlike').kind, 'allowed');
+  assert.equal(decideCommentLike({ author: other, moderationStatus: 'rejected' }, me, 'unlike').kind, 'allowed');
+  assert.equal(decideCommentLike(null, me, 'unlike').kind, 'not_found');
+  assert.equal(decideCommentLike({ author: other, moderationStatus: 'pending' }, me, 'like').kind, 'not_found');
+});

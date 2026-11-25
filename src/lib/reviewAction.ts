@@ -195,6 +195,14 @@ export async function processReviewAction(
       await sendOwedMoveNotice(db, flaggedContent, hasWarning);
     }
 
+    // A rejected item leaves the page: its „gefällt dein …" bell line would quote hidden
+    // text. Best-effort, never fails the review.
+    if (isRejection) {
+      try {
+        await db.collection('notifications').deleteMany({ type: 'like', 'meta.sourceId': String(flaggedContent.contentId) });
+      } catch { /* the review itself must go through */ }
+    }
+
     // Handle strike system on rejection
     if (isRejection && flaggedContent.authorId) {
       const strikeRecord = {

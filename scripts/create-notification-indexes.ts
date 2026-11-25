@@ -63,8 +63,12 @@ async function main() {
 
   // Like rows: one doc per (recipient, liked item) — the upsert in src/lib/likeNotify.ts
   // finds its row by exactly these three keys.
+  // UNIQUE for like rows only (partial): two first likes arriving together must not
+  // create two rows — MongoDB retries the losing upsert as an update.
   await ensureIndex(db, 'notifications', { userId: 1, type: 1, 'meta.sourceId': 1 }, {
-    name: 'notifications_user_type_source',
+    name: 'notifications_like_row_unique',
+    unique: true,
+    partialFilterExpression: { type: 'like' },
   });
 
   // Retention: a REAL Mongo TTL index (unlike chronikCache's in-code check).

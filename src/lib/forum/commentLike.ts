@@ -19,10 +19,13 @@ function idString(v: unknown): string | null {
 /** Missing moderationStatus counts as approved (legacy comments). */
 export function decideCommentLike(
   comment: { author?: unknown; moderationStatus?: string } | null | undefined,
-  userId: string
+  userId: string,
+  action: 'like' | 'unlike' = 'like'
 ): CommentLikeDecision {
   if (!comment) return { kind: 'not_found' };
-  if ((comment.moderationStatus ?? 'approved') !== 'approved') return { kind: 'not_found' };
+  // Only a LIKE needs an approved comment: a member can always take their own like back
+  // (a reported comment stays on the page as „pending").
+  if (action === 'like' && (comment.moderationStatus ?? 'approved') !== 'approved') return { kind: 'not_found' };
   if (idString(comment.author) === userId) return { kind: 'own' };
   return { kind: 'allowed' };
 }

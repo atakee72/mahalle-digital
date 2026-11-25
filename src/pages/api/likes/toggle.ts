@@ -90,6 +90,28 @@ export const POST: APIRoute = async ({ request }) => {
     let commentDoc: any = null;
     let likeParent: LikeParent | null = null;
 
+    if (!ObjectId.isValid(postId)) {
+      return new Response(JSON.stringify({ error: 'Post not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Posts: a LIKE needs a post that is on the page (approved, or held but reported) —
+    // otherwise its author would get a „gefällt dein Beitrag" line for hidden content.
+    if (collectionType !== 'comments' && action === 'like') {
+      const post = await collection.findOne(
+        { _id: new ObjectId(postId) },
+        { projection: { moderationStatus: 1, isUserReported: 1 } }
+      );
+      if (!isParentVisible(post as any)) {
+        return new Response(JSON.stringify({ error: 'Post not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // Comments: must exist + be approved (404), never your own (400).
     if (collectionType === 'comments') {
       if (!ObjectId.isValid(postId)) {
@@ -103,7 +125,7 @@ export const POST: APIRoute = async ({ request }) => {
         { projection: { author: 1, moderationStatus: 1, body: 1, relevantPostId: 1, blogSlug: 1 } }
       );
       commentDoc = target;
-      const decision = decideCommentLike(target as any, userId);
+      const decision = decideCommentLike(target as any, userId, action);
       if (decision.kind === 'not_found') {
         return new Response(JSON.stringify({ error: 'Post not found' }), {
           status: 404,
@@ -132,7 +154,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     // For a comment the rules checked above are repeated in the write filter, so a
     // report or rejection landing between the check and the write cannot slip a like in.
-    const writeFilter: Record<string, unknown> = collectionType === 'comments'
+    // An unlike only needs the document itself.
+    const writeFilter: Record<string, unknown> = collectionType === 'comments' && action === 'like'
       ? {
           _id: new ObjectId(postId),
           $or: [{ moderationStatus: 'approved' }, { moderationStatus: { $exists: false } }],

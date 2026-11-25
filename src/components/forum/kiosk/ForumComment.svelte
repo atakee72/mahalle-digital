@@ -141,12 +141,13 @@
   // Heart button: logged in and not the author (the server refuses own likes too).
   // A reported comment stays visible as „pending" — the server refuses a like on it,
   // so the button is not offered there (it would fail on every tap).
+  // …unless the viewer already liked it: a like can always be taken back.
   const canLike = $derived(
-    !!currentUserId && !isAuthor && (comment.moderationStatus ?? 'approved') === 'approved'
+    !!currentUserId && !isAuthor && ((comment.moderationStatus ?? 'approved') === 'approved' || liked)
   );
-  const likeLabel = $derived(
-    (liked ? $t['comment.like.remove'] : $t['comment.like.add']) + (likeCount > 0 ? ` (${likeCount})` : '')
-  );
+  // One fixed name; the state is carried by aria-pressed (a changing name would announce it
+  // twice and break „click Like" for voice control).
+  const likeLabel = $derived($t['comment.like.word'] + (likeCount > 0 ? ` (${likeCount})` : ''));
 
   async function toggleLike() {
     if (!canLike || likeBusy) return;
@@ -422,7 +423,7 @@
           </button>
         {:else if likeCount > 0}
           <span class="inline-flex min-h-8 items-center gap-1 font-dmmono text-[10px] tracking-[0.08em] text-ink-mute">
-            <span aria-hidden="true">♥</span> {likeCount}
+            <span aria-hidden="true">♥</span><span class="sr-only">{$t['comment.like.word']}</span> {likeCount}
           </span>
         {/if}
         <TranslateControl
