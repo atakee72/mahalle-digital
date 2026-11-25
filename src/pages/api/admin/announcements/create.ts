@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { ObjectId } from 'mongodb';
 import { connectDB } from '../../../../lib/mongodb';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../../lib/publicAuthor';
+import { shapePostForViewer } from '../../../../lib/forum/commentLike';
 import { requireAdminSession } from '../../../../lib/auth';
 import { AnnouncementCreateSchema } from '../../../../schemas/forum.schema';
 import { parseRequestBody } from '../../../../schemas/validation.utils';
@@ -80,7 +81,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     return new Response(
       JSON.stringify({
-        announcement: { ...newAnnouncement, _id: result.insertedId, author: author ? toPublicAuthor(author) : userId },
+        announcement: { ...shapePostForViewer(newAnnouncement as any, userId), _id: result.insertedId, author: author ? toPublicAuthor(author) : userId },
         message: 'Official announcement published'
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }

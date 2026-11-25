@@ -6,6 +6,7 @@ import { deleteCommentsForPost } from '../../../../lib/comments/cascade';
 import { purgeNotificationsFor } from '../../../../lib/notificationPurge';
 import { AdminAnnouncementUpdateSchema } from '../../../../schemas/forum.schema';
 import { parseRequestBody } from '../../../../schemas/validation.utils';
+import { shapePostForViewer } from '../../../../lib/forum/commentLike';
 import { populateAuthors } from '../../../../lib/topicsQuery';
 import { displaceForPin } from '../../../../lib/announcements/pin';
 
@@ -82,7 +83,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
     const [populated] = await populateAuthors([updated as any]);
 
     return new Response(
-      JSON.stringify({ announcement: populated }),
+      JSON.stringify({ announcement: shapePostForViewer(populated as any, guard.userId) }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {

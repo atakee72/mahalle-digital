@@ -88,6 +88,9 @@ export function buildPushPayload(
       body = movePushBody(meta?.change, t, when, meta?.place ?? '');
       break;
     }
+    case 'like': // never pushed (quiet bell line); here only so the switch stays complete
+      body = meta?.contentKind === 'comment' ? `Jemandem gef\u00e4llt dein Kommentar: \u201a${t}\u2018` : `Jemandem gef\u00e4llt dein Beitrag: \u201a${t}\u2018`;
+      break;
     case 'moderation': {
       const noun = meta?.contentKind === 'comment' ? 'Kommentar' : 'Beitrag';
       if (meta?.outcome === 'rejected') body = `Dein ${noun} wurde abgelehnt — Details in deinem Profil`;

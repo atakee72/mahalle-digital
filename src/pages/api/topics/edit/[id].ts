@@ -11,6 +11,7 @@ import { isOwner } from '../../../../utils/authHelpers';
 import { moderateText, checkSpamWithGPT, checkImagesWithGPT, createFlaggedContentRecord, mergeModerationResults } from '../../../../lib/moderation';
 import { requireMemberSession } from '../../../../lib/auth';
 import { alertModerationFlagged } from '../../../../lib/adminAlerts';
+import { shapePostForViewer } from '../../../../lib/forum/commentLike';
 
 export const PUT: APIRoute = async ({ request, params }) => {
   try {
@@ -223,7 +224,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
     };
 
     const updatedTopic = {
-      ...updateResult,
+      ...shapePostForViewer(updateResult as any, userId),
       author
     };
 

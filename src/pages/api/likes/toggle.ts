@@ -3,7 +3,9 @@ import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { rejectIfBanned } from '../../../lib/auth/banGuard';
-import { decideCommentLike } from '../../../lib/forum/commentLike';
+import { decideCommentLike, isParentVisible, buildCommentLikePipeline } from '../../../lib/forum/commentLike';
+import { findLikeParent, type LikeParent } from '../../../lib/forum/commentLikeStore';
+import { notifyLike } from '../../../lib/likeNotify';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -62,7 +64,7 @@ export const POST: APIRoute = async ({ request }) => {
     // and any pre-existing drift self-heals on the next toggle. This replaces
     // the old $addToSet/$pull + unconditional $inc, where a double-fire would
     // bump `likes` without changing likedBy.
-    const updateOperation = action === 'like'
+    const postOperation = action === 'like'
       ? [
           { $set: { likedBy: { $setUnion: [{ $ifNull: ['$likedBy', []] }, [userId]] } } },
           { $set: { likes: { $size: { $ifNull: ['$likedBy', []] } } } },
@@ -80,6 +82,13 @@ export const POST: APIRoute = async ({ request }) => {
           },
           { $set: { likes: { $size: { $ifNull: ['$likedBy', []] } } } },
         ];
+    // Comments also keep an old plain `likes` number next to the list (legacyLikes).
+    const updateOperation = collectionType === 'comments'
+      ? buildCommentLikePipeline(action, userId)
+      : postOperation;
+
+    let commentDoc: any = null;
+    let likeParent: LikeParent | null = null;
 
     // Comments: must exist + be approved (404), never your own (400).
     if (collectionType === 'comments') {
@@ -91,8 +100,9 @@ export const POST: APIRoute = async ({ request }) => {
       }
       const target = await collection.findOne(
         { _id: new ObjectId(postId) },
-        { projection: { author: 1, moderationStatus: 1 } }
+        { projection: { author: 1, moderationStatus: 1, body: 1, relevantPostId: 1, blogSlug: 1 } }
       );
+      commentDoc = target;
       const decision = decideCommentLike(target as any, userId);
       if (decision.kind === 'not_found') {
         return new Response(JSON.stringify({ error: 'Post not found' }), {
@@ -103,6 +113,17 @@ export const POST: APIRoute = async ({ request }) => {
       if (decision.kind === 'own') {
         return new Response(JSON.stringify({ error: 'own_comment' }), {
           status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // The comment's parent must be visible (a blog post is allowed without a lookup).
+    if (collectionType === 'comments' && !commentDoc?.blogSlug) {
+      likeParent = await findLikeParent(db, commentDoc?.relevantPostId);
+      if (!likeParent || !isParentVisible(likeParent.doc)) {
+        return new Response(JSON.stringify({ error: 'Post not found' }), {
+          status: 404,
           headers: { 'Content-Type': 'application/json' }
         });
       }
@@ -126,6 +147,12 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    // Quiet bell line for the author (never throws).
+    await notifyLike({
+      action, likerId: userId, collectionType, itemId: String(postId),
+      comment: commentDoc, parent: likeParent,
+    });
 
     // Get updated post to return current like count
     const updatedPost = await collection.findOne({ _id: new ObjectId(postId) });

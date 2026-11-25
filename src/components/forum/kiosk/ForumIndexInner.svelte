@@ -166,7 +166,7 @@
     queryKey: ['forum', 'all'],
     queryFn: async () => {
       const fields =
-        '_id,title,body,description,author,tags,images,comments,date,likes,likedBy,views,moderationStatus,isUserReported,hasWarningLabel';
+        '_id,title,body,description,author,tags,images,comments,date,likes,views,moderationStatus,isUserReported,hasWarningLabel';
       const url = (type: string) =>
         `/api/${type}?fields=${fields}&sortBy=date&sortOrder=desc`;
       // allSettled mirrors the SSR resilience: a failed collection

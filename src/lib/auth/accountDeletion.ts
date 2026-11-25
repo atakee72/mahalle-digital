@@ -332,6 +332,22 @@ export async function runDeletionPipeline(
     fail('likedBy', err);
   }
 
+  // The leaving member is pulled from the `likers` of other members' like rows in the
+  // bell; the count is re-derived and a row nobody likes any more is deleted.
+  try {
+    const pulledLikers = await db.collection('notifications').updateMany(
+      { type: 'like', likers: userId },
+      [
+        { $set: { likers: { $filter: { input: { $ifNull: ['$likers', []] }, cond: { $ne: ['$$this', userId] } } } } },
+        { $set: { 'meta.count': { $size: '$likers' } } },
+      ],
+    );
+    const emptyLikeRows = await db.collection('notifications').deleteMany({ type: 'like', likers: { $size: 0 } });
+    steps.likeRowsPulled = (pulledLikers.modifiedCount ?? 0) + (emptyLikeRows.deletedCount ?? 0);
+  } catch (err) {
+    fail('likeNotifications', err);
+  }
+
   // Step 4: authored content (topics/comments/announcements/recommendations/
   // events/news) STAYS — rendered as "Ehemaliges Mitglied" via the
   // tombstone (step 6). flaggedContent by authorId: unset name/email only.

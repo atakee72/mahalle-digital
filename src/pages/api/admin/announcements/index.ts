@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../../lib/mongodb';
 import { requireAdminSession } from '../../../../lib/auth';
+import { shapePostForViewer } from '../../../../lib/forum/commentLike';
 import { populateAuthors } from '../../../../lib/topicsQuery';
 
 // GET /api/admin/announcements — list of official announcements for
@@ -20,7 +21,7 @@ export const GET: APIRoute = async ({ request }) => {
       .sort({ createdAt: -1 })
       .limit(50)
       .toArray();
-    const items = await populateAuthors(docs as any[]);
+    const items = (await populateAuthors(docs as any[])).map((d) => shapePostForViewer(d as any, guard.userId));
     return new Response(JSON.stringify({ items }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

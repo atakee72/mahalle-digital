@@ -4,6 +4,7 @@
   // Escape, dual html+body scroll-lock on mobile) with ONE deliberate
   // deviation per CD's motion spec: close is INSTANT — no 140ms exit fade.
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
+  import { likeRowVariant } from '../../../lib/likeNotifyRules';
   import { moveWhenLabel } from '../../../lib/calendar/eventMove';
   import type { NotificationItem } from '../../../types/notification';
   import { detectPushState, subscribeToPush, unsubscribeFromPush, type PushUiState } from '../../../lib/pushClient';
@@ -227,6 +228,7 @@
     forum: { g: '✦', c: 'var(--k-wine, #b23a5b)' },
     admin_hint: { g: '!', c: 'var(--k-plum, #6f2f59)' },
     event_moved: { g: '↦', c: 'var(--k-ink)' },
+    like: { g: '♥', c: 'var(--k-wine, #b23a5b)' },
   };
 
   function rowText(it: NotificationItem): string {
@@ -244,6 +246,10 @@
       }
       case 'admin_hint':
         return tStr(it.meta?.contentKind === 'comment' ? $t['nc.adminHint.comment'] : $t['nc.adminHint.post'], { title });
+      case 'like': {
+        const v = likeRowVariant(it.meta?.contentKind, it.meta?.count);
+        return tStr($t[`nc.like.${v.subject}.${v.many ? 'many' : 'one'}`], { n: String(it.meta?.count ?? 1), title });
+      }
       case 'official':
         return tStr($t['nc.official'], { title });
       case 'blog': {

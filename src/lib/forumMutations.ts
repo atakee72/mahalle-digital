@@ -90,7 +90,7 @@ export function createTopicMutation(currentUser: { id: string; name?: string; im
         images: input.images ?? [],
         comments: [],
         likes: 0,
-        likedBy: [],
+        likedByMe: false,
         views: 0,
         date: new Date().toISOString(),
         moderationStatus: 'pending',

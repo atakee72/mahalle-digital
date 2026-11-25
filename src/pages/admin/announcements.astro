@@ -8,6 +8,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import AnnounceApp from '../../components/admin/kiosk/announce/AnnounceApp.svelte';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../lib/mongodb';
+import { shapePostForViewer } from '../../lib/forum/commentLike';
 import { populateAuthors } from '../../lib/topicsQuery';
 
 const session = await getSession(Astro.request);
@@ -27,7 +28,7 @@ try {
     .sort({ createdAt: -1 })
     .limit(50)
     .toArray();
-  const populated = await populateAuthors(docs as any[]);
+  const populated = (await populateAuthors(docs as any[])).map((d) => shapePostForViewer(d as any, session.user?.id ?? null));
   initialItems = JSON.parse(JSON.stringify(populated));
 } catch (err) {
   console.error('[admin/announcements.astro] SSR officials fetch failed:', err);

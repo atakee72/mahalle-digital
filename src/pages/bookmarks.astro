@@ -17,6 +17,7 @@ import BookmarksPage from '../components/forum/kiosk/BookmarksPage.svelte';
 import { getSession } from 'auth-astro/server';
 import { connectDB } from '../lib/mongodb';
 import { buildModerationFilter, populateAuthors } from '../lib/topicsQuery';
+import { shapePostForViewer } from '../lib/forum/commentLike';
 import { POST_COLLECTIONS } from '../lib/forum/postKind';
 import { ObjectId } from 'mongodb';
 
@@ -74,7 +75,7 @@ try {
       .map((id) => populatedMap.get(id))
       .filter(Boolean)
       .map((t) => ({
-        ...t,
+        ...shapePostForViewer(t, userId ?? null),
         savedAt: savedAtMap.get(String(t._id))?.toISOString?.() ?? null,
       }));
 

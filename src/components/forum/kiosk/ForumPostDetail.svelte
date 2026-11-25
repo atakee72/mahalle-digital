@@ -242,14 +242,14 @@
   const replyCount = $derived(comments.length);
 
   // Like state — the engagement-strip heart. Initial filled state from the
-  // post's likedBy (server projects it; detail findOne returns the full doc).
+  // post's `likedByMe` (the server shapes the doc: the likedBy id list never reaches the browser).
   // Optimistic flip with rollback; the in-flight lock is the drift guard —
   // the API's $inc isn't conditioned on $addToSet actually adding, so we must
   // never fire a redundant action. Reconcile the count from the authoritative
   // response (likeCount). Mirrors toggleBookmark() below.
   // svelte-ignore state_referenced_locally
   let liked = $state(
-    !!currentUserId && (topic.likedBy ?? []).some((id: unknown) => String(id) === currentUserId)
+    !!currentUserId && topic.likedByMe === true
   );
   // svelte-ignore state_referenced_locally
   let likeCount = $state(topic.likes ?? 0);

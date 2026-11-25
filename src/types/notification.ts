@@ -1,6 +1,6 @@
 import type { ObjectId } from 'mongodb';
 
-export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention' | 'admin_hint' | 'blog' | 'forum' | 'event_moved';
+export type NotificationType = 'comment' | 'moderation' | 'official' | 'market_contact' | 'mention' | 'admin_hint' | 'blog' | 'forum' | 'event_moved' | 'like';
 
 export interface NotificationTarget {
   /** The page kind the row deep-links to (mirrors the href, not necessarily
@@ -18,7 +18,7 @@ export interface NotificationMeta {
   /** What was moderated ('topic' | 'comment' | …) — target.contentType can't carry this
    *  for comments (it points at the PARENT page the row links to). Drives the
    *  „Beitrag" vs „Kommentar" copy variants. */
-  contentKind?: string;
+  contentKind?: string; // like rows: 'comment' | 'topic' | 'announcement' | 'recommendation'
   /** mention/admin_hint: id of the post/comment that CONTAINS the mention — the idempotency
    *  key; comment („replied") rows since 2026-09-30: the comment's own id. Either way the key
    *  a delete purges by (target.contentId is the PARENT page for comments, so it cannot serve). */
@@ -44,6 +44,8 @@ export interface NotificationDoc {
   meta?: NotificationMeta;
   createdAt: Date;
   readAt: Date | null;
+  /** like rows ONLY: ids of the members who like the item. SERVER-ONLY — never returned by listNotifications(). */
+  likers?: string[];
 }
 
 /** API/client shape returned by GET /api/notifications. */

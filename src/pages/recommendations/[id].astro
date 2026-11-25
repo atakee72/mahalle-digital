@@ -11,7 +11,7 @@ import { connectDB } from '../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { buildModerationFilter, fetchRelatedForDetail, populateAuthors } from '../../lib/topicsQuery';
 import { locatePost } from '../../lib/forum/movePost';
-import { shapeCommentForViewer } from '../../lib/forum/commentLike';
+import { shapeCommentForViewer, shapePostForViewer } from '../../lib/forum/commentLike';
 import { hrefForPost } from '../../lib/forum/postKind';
 
 const { id } = Astro.params;
@@ -68,7 +68,7 @@ const comments = (await populateAuthors(rawComments as any[])).map((c) =>
   shapeCommentForViewer(c, currentUserId ?? null)
 );
 
-const initialTopic = JSON.parse(JSON.stringify(hydrated));
+const initialTopic = JSON.parse(JSON.stringify(shapePostForViewer(hydrated, currentUserId ?? null)));
 const initialComments = JSON.parse(JSON.stringify(comments));
 const related = await fetchRelatedForDetail('recommendations', doc as any);
 

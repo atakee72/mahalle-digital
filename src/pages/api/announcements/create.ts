@@ -12,6 +12,7 @@ import { parseRequestBody } from '../../../schemas/validation.utils';
 import { moderateText, checkSpamWithGPT, checkImagesWithGPT, createFlaggedContentRecord, mergeModerationResults } from '../../../lib/moderation';
 import { requireMemberSession } from '../../../lib/auth';
 import { alertContentNew, alertModerationFlagged } from '../../../lib/adminAlerts';
+import { shapePostForViewer } from '../../../lib/forum/commentLike';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -155,7 +156,7 @@ export const POST: APIRoute = async ({ request }) => {
     );
 
     const createdAnnouncement = {
-      ...newAnnouncement,
+      ...shapePostForViewer(newAnnouncement as any, userId),
       _id: result.insertedId,
       author: author ? toPublicAuthor(author) : userId // Return populated author or fallback to ID
     };

@@ -61,6 +61,12 @@ async function main() {
     name: 'notifications_user_created',
   });
 
+  // Like rows: one doc per (recipient, liked item) — the upsert in src/lib/likeNotify.ts
+  // finds its row by exactly these three keys.
+  await ensureIndex(db, 'notifications', { userId: 1, type: 1, 'meta.sourceId': 1 }, {
+    name: 'notifications_user_type_source',
+  });
+
   // Retention: a REAL Mongo TTL index (unlike chronikCache's in-code check).
   // Read and unread expire alike after 90 days; no prune script.
   await ensureIndex(db, 'notifications', { createdAt: 1 }, {

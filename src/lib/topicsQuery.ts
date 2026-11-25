@@ -11,6 +11,7 @@ import {
   parseQueryParams,
 } from './queryUtils';
 import { FORUM_QUERY_OPTIONS } from './forumQueryOptions';
+import { fieldsNeedLikeShape, shapePostForViewer } from './forum/commentLike';
 
 export interface FetchCollectionResult<T> {
   items: T[];
@@ -144,6 +145,11 @@ export async function fetchCollectionWithAuthors<T extends Document>(
   currentUserId?: string
 ): Promise<FetchCollectionResult<T>> {
   const options = parseQueryParams(url);
+  // Like state: the id list is read here (to derive `likedByMe`) and never leaves — see shapePostForViewer.
+  const shapeLikes = fieldsNeedLikeShape(options.fields as string[] | undefined);
+  if (shapeLikes && Array.isArray(options.fields) && options.fields.length > 0 && !options.fields.includes('likedBy')) {
+    options.fields = [...options.fields, 'likedBy'];
+  }
   const filter = buildFilter(options) as Filter<T>;
 
   mergeModerationFilter(filter as Record<string, any>, buildModerationFilter(currentUserId));
@@ -161,6 +167,11 @@ export async function fetchCollectionWithAuthors<T extends Document>(
     !options.fields || options.fields.length === 0 || options.fields.includes('author');
 
   const populated = shouldPopulateAuthor ? await populateAuthors(items as any[]) : items;
+  if (shapeLikes) {
+    for (let i = 0; i < populated.length; i++) {
+      populated[i] = shapePostForViewer(populated[i] as any, currentUserId ?? null) as any;
+    }
+  }
   await attachSavedCounts(populated as any[]);
   await attachLastCommentAt(populated as any[]);
 

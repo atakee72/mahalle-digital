@@ -20,7 +20,6 @@ export const FORUM_QUERY_OPTIONS = {
     'comments',
     'date',
     'likes',
-    'likedBy',
     'views',
     'moderationStatus',
     'isUserReported',
