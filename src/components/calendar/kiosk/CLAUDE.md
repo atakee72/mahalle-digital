@@ -218,3 +218,4 @@ Owner decisions: no recurring events („otherwise they add an event and forget 
 - **Probe:** `scratchpad/event-copy-move/probe.cjs` (55 checks: move through the real edit page and the API, bell rows, tag, copy form, draft survival, ownership, held edit + double review) with `db.mts seed|state|cleanup` (dev db only). Build AND start with `TELEGRAM_BOT_TOKEN= TELEGRAM_ADMIN_CHAT_ID=` in front — the probe creates two events and one flagged edit, each of which would send the admin a real Telegram line.
 - **Texts are drafts** (not yet confirmed by the owner): the bell rows, the tag, „ursprünglich", the copy notice and the edit hint.
 
+- **2026-11-25:** events no longer send their `likedBy` list to the browser (`fetchEventsWithAuthors()`, the create/edit answers, the edit page); RSVP ids still go out on purpose. See `src/components/forum/kiosk/CLAUDE.md` → „Likes on comments + the like bell line".

@@ -202,6 +202,7 @@ Server notes: `src/pages/api/news/CLAUDE.md`; UI notes: `src/components/newsboar
 
 Rules that bite:
 - **Client-visible user joins use ONE allowlist**: `PUBLIC_AUTHOR_PROJECTION` + `toPublicAuthor()` in `src/lib/publicAuthor.ts` — never `{ password: 0 }`. Author and seller identity is a read-time join, never stored.
+- **A who-liked list (`likedBy`) never reaches a browser** (2026-11-25): posts, comments and events hand out `likes` + `likedByMe` only; list fetchers strip it from every item whatever `fields` the browser asks for. Rules, the comment like button and the like bell line: `src/components/forum/kiosk/CLAUDE.md` → „Likes on comments + the like bell line".
 - **Never delete a row in prod** from `blogAnnouncements`, today's `forumDigests` or `kiezBriefIssues` — the announcement, digest or issue would go out again.
 - `verified` is strict (`=== true`) and written server-side only (admin PATCH or the vouch step).
 - Every delete path cascades comments (`deleteCommentsForPost()`) and ends with `purgeNotificationsFor()`.
