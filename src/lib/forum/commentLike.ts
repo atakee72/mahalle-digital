@@ -96,8 +96,21 @@ export function buildCommentLikePipeline(action: 'like' | 'unlike', userId: stri
   ];
 }
 
-/** A forum list fetch must run shapePostForViewer() unless its projection leaves likes and likedBy out entirely. */
+/**
+ * Whether a forum list fetch owes the viewer `likes` + `likedByMe`. The field list comes
+ * from the browser, so this is NOT the privacy gate: the caller removes `likedBy` from
+ * every item whatever this answers (see stripLikedBy). An exclusion entry („-body")
+ * means „everything else", so it counts as asking for the like fields.
+ */
 export function fieldsNeedLikeShape(fields: string[] | null | undefined): boolean {
   if (!fields || fields.length === 0) return true;
-  return fields.includes('likes') || fields.includes('likedBy');
+  if (fields.some((f) => f.startsWith('-'))) return true;
+  return fields.some((f) => f === 'likes' || f === 'likedBy' || f.startsWith('likedBy.'));
+}
+
+/** Drops the id list from an item that was not shaped — the list never leaves the server. */
+export function stripLikedBy<T extends Record<string, any>>(item: T): Omit<T, 'likedBy'> {
+  if (!item || typeof item !== 'object' || !('likedBy' in item)) return item;
+  const { likedBy: _dropped, ...rest } = item;
+  return rest as Omit<T, 'likedBy'>;
 }

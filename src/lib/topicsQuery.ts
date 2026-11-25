@@ -11,7 +11,7 @@ import {
   parseQueryParams,
 } from './queryUtils';
 import { FORUM_QUERY_OPTIONS } from './forumQueryOptions';
-import { fieldsNeedLikeShape, shapePostForViewer } from './forum/commentLike';
+import { fieldsNeedLikeShape, shapePostForViewer, stripLikedBy } from './forum/commentLike';
 
 export interface FetchCollectionResult<T> {
   items: T[];
@@ -147,7 +147,11 @@ export async function fetchCollectionWithAuthors<T extends Document>(
   const options = parseQueryParams(url);
   // Like state: the id list is read here (to derive `likedByMe`) and never leaves — see shapePostForViewer.
   const shapeLikes = fieldsNeedLikeShape(options.fields as string[] | undefined);
-  if (shapeLikes && Array.isArray(options.fields) && options.fields.length > 0 && !options.fields.includes('likedBy')) {
+  // Only a plain inclusion list gets `likedBy` added (an exclusion list already returns it).
+  if (
+    shapeLikes && Array.isArray(options.fields) && options.fields.length > 0 &&
+    !options.fields.some((f) => f.startsWith('-') || f === 'likedBy' || f.startsWith('likedBy.'))
+  ) {
     options.fields = [...options.fields, 'likedBy'];
   }
   const filter = buildFilter(options) as Filter<T>;
@@ -167,10 +171,12 @@ export async function fetchCollectionWithAuthors<T extends Document>(
     !options.fields || options.fields.length === 0 || options.fields.includes('author');
 
   const populated = shouldPopulateAuthor ? await populateAuthors(items as any[]) : items;
-  if (shapeLikes) {
-    for (let i = 0; i < populated.length; i++) {
-      populated[i] = shapePostForViewer(populated[i] as any, currentUserId ?? null) as any;
-    }
+  // The field list comes from the browser, so the id list is removed from EVERY item,
+  // shaped or not — the shaping decision must never be the privacy gate.
+  for (let i = 0; i < populated.length; i++) {
+    populated[i] = (shapeLikes
+      ? shapePostForViewer(populated[i] as any, currentUserId ?? null)
+      : stripLikedBy(populated[i] as any)) as any;
   }
   await attachSavedCounts(populated as any[]);
   await attachLastCommentAt(populated as any[]);

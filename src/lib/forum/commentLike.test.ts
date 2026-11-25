@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectId } from 'mongodb';
-import { decideCommentLike, shapeCommentForViewer, shapePostForViewer, isParentVisible, buildCommentLikePipeline, fieldsNeedLikeShape } from './commentLike';
+import { decideCommentLike, shapeCommentForViewer, shapePostForViewer, isParentVisible, buildCommentLikePipeline, fieldsNeedLikeShape, stripLikedBy } from './commentLike';
 
 const me = '64b000000000000000000001';
 const other = '64b000000000000000000002';
@@ -107,4 +107,12 @@ test('fieldsNeedLikeShape: no projection or a projection with likes/likedBy need
   assert.equal(fieldsNeedLikeShape(['title', 'likes']), true);
   assert.equal(fieldsNeedLikeShape(['title', 'likedBy']), true);
   assert.equal(fieldsNeedLikeShape(['title', 'body']), false);
+  // a field list from the browser: exclusions and dotted paths still pull the like fields in
+  assert.equal(fieldsNeedLikeShape(['-_id', '-body']), true);
+  assert.equal(fieldsNeedLikeShape(['title', 'likedBy.0']), true);
+});
+
+test('stripLikedBy: an unshaped item never keeps the id list', () => {
+  assert.deepEqual(stripLikedBy({ title: 'a', likedBy: ['u1'] }), { title: 'a' });
+  assert.deepEqual(stripLikedBy({ title: 'a' }), { title: 'a' });
 });
