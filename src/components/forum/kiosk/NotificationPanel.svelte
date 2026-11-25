@@ -4,7 +4,7 @@
   // Escape, dual html+body scroll-lock on mobile) with ONE deliberate
   // deviation per CD's motion spec: close is INSTANT — no 140ms exit fade.
   import { t, tStr, locale } from '../../../lib/kiosk-i18n';
-  import { likeRowVariant } from '../../../lib/likeNotifyRules';
+  import { likeRowCopy } from '../../../lib/likeNotifyRules';
   import { moveWhenLabel } from '../../../lib/calendar/eventMove';
   import type { NotificationItem } from '../../../types/notification';
   import { detectPushState, subscribeToPush, unsubscribeFromPush, type PushUiState } from '../../../lib/pushClient';
@@ -247,8 +247,9 @@
       case 'admin_hint':
         return tStr(it.meta?.contentKind === 'comment' ? $t['nc.adminHint.comment'] : $t['nc.adminHint.post'], { title });
       case 'like': {
-        const v = likeRowVariant(it.meta?.contentKind, it.meta?.count);
-        return tStr($t[`nc.like.${v.subject}.${v.many ? 'many' : 'one'}`], { n: String(it.meta?.count ?? 1), title });
+        // Only the author sees this row, so the newest liker is named; older rows have no name.
+        const c = likeRowCopy(it.meta?.contentKind, it.meta?.count, !!it.actorName);
+        return tStr($t[c.key as keyof typeof $t], { actor: it.actorName ?? '', n: String(c.n), title });
       }
       case 'official':
         return tStr($t['nc.official'], { title });

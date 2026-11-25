@@ -7,6 +7,7 @@ import {
   shouldDeleteLikeRow,
   buildLikeUpsertPipeline,
   buildUnlikePipeline,
+  likeRowCopy,
 } from './likeNotifyRules';
 
 test('title: first 80 chars of the text, whitespace collapsed', () => {
@@ -55,8 +56,8 @@ test('like pipeline: new liker resets createdAt and readAt, repeated one does no
   assert.ok(p.some((s) => s.$unset === '_isNew'));
   // a title starting with $ must be literal
   assert.match(text, /"\$literal":\{[^}]*"title":"\$weird"/);
-  // no actorId and no names on a like row
-  assert.doesNotMatch(text, /actorId/);
+  // the row names its newest liker (actorId) — only the author ever reads the row
+  assert.match(text, /actorId/);
 });
 
 test('unlike pipeline pulls the liker and re-derives count, never touches readAt/createdAt', () => {
@@ -65,4 +66,25 @@ test('unlike pipeline pulls the liker and re-derives count, never touches readAt
   assert.match(text, /"\$ne":\["\$\$this","u1"\]/);
   assert.match(text, /meta\.count/);
   assert.doesNotMatch(text, /readAt|createdAt/);
+});
+
+test('named copy: the newest liker is named, the rest are counted; a row without a name keeps the anonymous copy', () => {
+  assert.deepEqual(likeRowCopy('comment', 1, true), { key: 'nc.like.comment.named.one', n: 0 });
+  assert.deepEqual(likeRowCopy('comment', 2, true), { key: 'nc.like.comment.named.two', n: 1 });
+  assert.deepEqual(likeRowCopy('topic', 4, true), { key: 'nc.like.post.named.many', n: 3 });
+  assert.deepEqual(likeRowCopy('comment', 1, false), { key: 'nc.like.comment.one', n: 1 });
+  assert.deepEqual(likeRowCopy('topic', 3, false), { key: 'nc.like.post.many', n: 3 });
+});
+
+test('like pipeline names the NEW liker as the row actor and keeps the old one for a repeated liker', () => {
+  const p = buildLikeUpsertPipeline({ userId: 'a', likerId: 'l1', sourceId: 's', contentKind: 'comment', target: { contentType: 'topic', contentId: 'p', title: 't', href: '/topics/p' }, now: new Date(0) });
+  const set = (p[2] as any).$set;
+  assert.deepEqual(set.actorId, { $cond: ['$_isNew', 'l1', '$actorId'] });
+});
+
+test('unlike pipeline: when the named liker leaves the row turns anonymous, no name is taken from the list', () => {
+  const p = buildUnlikePipeline('l1');
+  const last = (p[1] as any).$set;
+  assert.deepEqual(last.actorId, { $cond: [{ $eq: ['$actorId', 'l1'] }, null, '$actorId'] });
+  assert.doesNotMatch(JSON.stringify(last.actorId), /likers/);
 });

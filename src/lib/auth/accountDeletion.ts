@@ -22,6 +22,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { deleteAllDraftsOf } from '../forum/postDraftsStore';
 import { removeMentionsOf } from '../mentions/mentionsResolve';
 import { connectDB } from '../mongodb';
+import { buildUnlikePipeline } from '../likeNotifyRules';
 import * as Sentry from '@sentry/astro';
 import { hashContactEmail } from '../listings/contactHash';
 
@@ -337,10 +338,8 @@ export async function runDeletionPipeline(
   try {
     const pulledLikers = await db.collection('notifications').updateMany(
       { type: 'like', likers: userId },
-      [
-        { $set: { likers: { $filter: { input: { $ifNull: ['$likers', []] }, cond: { $ne: ['$$this', userId] } } } } },
-        { $set: { 'meta.count': { $size: '$likers' } } },
-      ],
+      // same pipeline as an unlike: count re-derived, the row turns anonymous if the name was theirs
+      buildUnlikePipeline(userId) as any,
     );
     const emptyLikeRows = await db.collection('notifications').deleteMany({ type: 'like', likers: { $size: 0 } });
     steps.likeRowsPulled = (pulledLikers.modifiedCount ?? 0) + (emptyLikeRows.deletedCount ?? 0);

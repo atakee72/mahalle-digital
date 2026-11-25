@@ -1,7 +1,9 @@
 /**
  * Like rows in the bell — pure rules, dependency-pure (no mongodb import).
  * One row per (recipient, liked item); `likers` is server-only and never
- * leaves listNotifications(). No names, no actorId on a like row.
+ * leaves listNotifications(). Since 2026-11-26 the row's `actorId` is the NEWEST liker:
+ * the author (and only the author) reads „Ercan und 2 weiteren Nachbarn gefällt …".
+ * The name is the usual read-time join; nobody else ever sees who liked.
  */
 import type { NotificationTarget } from '../types/notification';
 
@@ -22,6 +24,19 @@ export function shouldNotifyLike(a: { likerId: string; authorId: string | null |
 /** Which of the four copy variants the panel shows. */
 export function likeRowVariant(contentKind: string | undefined, count: number | undefined): { subject: 'comment' | 'post'; many: boolean } {
   return { subject: contentKind === 'comment' ? 'comment' : 'post', many: (count ?? 1) > 1 };
+}
+
+/**
+ * i18n key + the number the panel fills in. With a name: one / two / many, n = the OTHER
+ * likers. Without a name (rows written before 2026-11-26, or a missing actor): the
+ * anonymous copy, n = all likers.
+ */
+export function likeRowCopy(contentKind: string | undefined, count: number | undefined, hasActor: boolean): { key: string; n: number } {
+  const subject = contentKind === 'comment' ? 'comment' : 'post';
+  const c = Math.max(1, count ?? 1);
+  if (!hasActor) return { key: `nc.like.${subject}.${c > 1 ? 'many' : 'one'}`, n: c };
+  const form = c === 1 ? 'one' : c === 2 ? 'two' : 'many';
+  return { key: `nc.like.${subject}.named.${form}`, n: c - 1 };
 }
 
 /** After an unlike: an empty list means the row goes. */
@@ -58,6 +73,8 @@ export function buildLikeUpsertPipeline(a: {
         'meta.sourceId': { $literal: a.sourceId },
         'meta.contentKind': a.contentKind,
         'meta.count': { $size: '$likers' },
+        // the newest liker is the one the author reads by name
+        actorId: { $cond: ['$_isNew', a.likerId, '$actorId'] },
         createdAt: { $cond: ['$_isNew', a.now, '$createdAt'] },
         readAt: { $cond: ['$_isNew', null, '$readAt'] },
       },
@@ -74,6 +91,14 @@ export function buildUnlikePipeline(likerId: string): Record<string, unknown>[] 
         likers: { $filter: { input: { $ifNull: ['$likers', []] }, cond: { $ne: ['$$this', likerId] } } },
       },
     },
-    { $set: { 'meta.count': { $size: '$likers' } } },
+    {
+      $set: {
+        'meta.count': { $size: '$likers' },
+        // The named liker left: the row falls back to the anonymous copy. Never pick a
+        // replacement name out of `likers` — it can hold people who liked while the row
+        // promised no names (before 2026-11-26).
+        actorId: { $cond: [{ $eq: ['$actorId', likerId] }, null, '$actorId'] },
+      },
+    },
   ];
 }
