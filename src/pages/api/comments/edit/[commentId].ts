@@ -4,6 +4,7 @@ import { resolveMentions, notifyMentions, findAnyCommentParent, applyBroadcast, 
 import { commentTarget } from '../../../../lib/notifications';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
+import { shapeCommentForViewer } from '../../../../lib/forum/commentLike';
 import type { Comment, FlaggedContent } from '../../../../types';
 import { CommentUpdateSchema } from '../../../../schemas/comment.schema';
 import { parseRequestBody } from '../../../../schemas/validation.utils';
@@ -204,10 +205,13 @@ export const PUT: APIRoute = async ({ request, params }) => {
         )
       : null;
 
-    const updatedComment = {
-      ...updateResult,
-      author: author ? toPublicAuthor(author) : existingComment.author
-    };
+    const updatedComment = shapeCommentForViewer(
+      {
+        ...updateResult,
+        author: author ? toPublicAuthor(author) : existingComment.author
+      },
+      session.user.id
+    );
 
     return new Response(
       JSON.stringify({

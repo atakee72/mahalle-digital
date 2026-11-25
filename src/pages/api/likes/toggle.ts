@@ -3,6 +3,7 @@ import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { rejectIfBanned } from '../../../lib/auth/banGuard';
+import { decideCommentLike } from '../../../lib/forum/commentLike';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -31,7 +32,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Validate collection type
-    const validCollections = ['topics', 'announcements', 'recommendations'];
+    const validCollections = ['topics', 'announcements', 'recommendations', 'comments'];
     if (!validCollections.includes(collectionType)) {
       return new Response(JSON.stringify({ error: 'Invalid collection type' }), {
         status: 400,
@@ -79,6 +80,33 @@ export const POST: APIRoute = async ({ request }) => {
           },
           { $set: { likes: { $size: { $ifNull: ['$likedBy', []] } } } },
         ];
+
+    // Comments: must exist + be approved (404), never your own (400).
+    if (collectionType === 'comments') {
+      if (!ObjectId.isValid(postId)) {
+        return new Response(JSON.stringify({ error: 'Post not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      const target = await collection.findOne(
+        { _id: new ObjectId(postId) },
+        { projection: { author: 1, moderationStatus: 1 } }
+      );
+      const decision = decideCommentLike(target as any, userId);
+      if (decision.kind === 'not_found') {
+        return new Response(JSON.stringify({ error: 'Post not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      if (decision.kind === 'own') {
+        return new Response(JSON.stringify({ error: 'own_comment' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
 
     const result = await collection.updateOne(
       { _id: new ObjectId(postId) },

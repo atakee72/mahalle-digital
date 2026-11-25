@@ -3,6 +3,7 @@ import { getSession } from 'auth-astro/server';
 import { connectDB } from '../../../../lib/mongodb';
 import { PUBLIC_AUTHOR_PROJECTION, toPublicAuthor } from '../../../../lib/publicAuthor';
 import { ObjectId } from 'mongodb';
+import { shapeCommentForViewer } from '../../../../lib/forum/commentLike';
 import { BLOG_SLUG_RE } from '../../../../lib/blog/blogCommentRules';
 
 export const GET: APIRoute = async ({ params, request }) => {
@@ -93,7 +94,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
     return new Response(
       JSON.stringify({
-        comments: populatedComments,
+        comments: populatedComments.map((c: any) => shapeCommentForViewer(c, currentUserId ?? null)),
         count: populatedComments.length
       }),
       {

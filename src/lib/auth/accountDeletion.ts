@@ -314,7 +314,7 @@ export async function runDeletionPipeline(
     fail('rsvps', err);
   }
 
-  // Pull this user's likes from all four likeable collections. The
+  // Pull this user's likes from all five likeable collections. The
   // denormalized `likes` counter is $inc'd in lockstep by the like
   // endpoints — a bare $pull here would drift it, so decrement together.
   try {
@@ -323,7 +323,7 @@ export async function runDeletionPipeline(
       $pull: { likedBy: userId },
       $inc: { likes: -1 },
     };
-    for (const coll of ['topics', 'announcements', 'recommendations', 'events']) {
+    for (const coll of ['topics', 'announcements', 'recommendations', 'events', 'comments']) {
       const res = await db.collection(coll).updateMany({ likedBy: userId }, likePullOp);
       pulled += res.modifiedCount ?? 0;
     }

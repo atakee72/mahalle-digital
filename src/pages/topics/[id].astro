@@ -12,6 +12,7 @@ import { connectDB } from '../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { buildModerationFilter, fetchRelatedForDetail, populateAuthors } from '../../lib/topicsQuery';
 import { locatePost } from '../../lib/forum/movePost';
+import { shapeCommentForViewer } from '../../lib/forum/commentLike';
 import { hrefForPost } from '../../lib/forum/postKind';
 
 const { id } = Astro.params;
@@ -70,7 +71,10 @@ const rawComments = await commentsCollection
   .sort({ date: -1 })
   .toArray();
 
-const comments = await populateAuthors(rawComments as any[]);
+// likedBy never leaves the server: the card gets `likes` + `likedByMe`.
+const comments = (await populateAuthors(rawComments as any[])).map((c) =>
+  shapeCommentForViewer(c, currentUserId ?? null)
+);
 
 // Date / ObjectId → string before sending across the SSR boundary.
 const initialTopic = JSON.parse(JSON.stringify(topic));

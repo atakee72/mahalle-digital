@@ -17,6 +17,7 @@
   //     labelled (admin-set; editing around moderation is blocked).
   // Trash is visible whenever the viewer is the author (no time window).
 
+  import { untrack } from 'svelte';
   import { linkifySegments, displayUrl } from '../../../lib/linkify';
   import { restoreBroadcastText } from '../../../lib/mentions/broadcast';
   import KioskAvatar from './KioskAvatar.svelte';
@@ -26,7 +27,7 @@
   import KioskReportModal from './KioskReportModal.svelte';
   import { t, tStr } from '../../../lib/kiosk-i18n';
   import { COMMENT_MAX_LEN } from '../../../lib/forum/commentLimits';
-  import { showToast } from '../../../utils/toast';
+  import { showToast, showError } from '../../../utils/toast';
 
   let {
     comment,
@@ -43,6 +44,8 @@
       author?: { name?: string; image?: string | null; _id?: string; handle?: string | null; memberType?: string } | string | null;
       date?: string | number;
       likes?: number;
+      /** Server-computed for the viewer; the `likedBy` list never reaches the browser. */
+      likedByMe?: boolean;
       editedAt?: string | Date | null;
       moderationStatus?: 'approved' | 'pending' | 'rejected';
       hasWarningLabel?: boolean;
@@ -91,7 +94,20 @@
   // so a translated string can never reach the edit form or a save path.
   let translation = $state<{ title: string | null; body: string } | null>(null);
   const body = $derived(translation?.body ?? originalBody);
-  const likeCount = $derived(comment.likes ?? 0);
+  // Like state: seeded from the server, then driven locally (optimistic flip,
+  // rollback on error, authoritative count from the answer). Re-seeded when
+  // the parent hands in a different comment copy (edit, refetch).
+  let likeCount = $state(0);
+  let liked = $state(false);
+  let likeBusy = $state(false);
+  $effect(() => {
+    const serverLikes = comment.likes ?? 0;
+    const serverLiked = !!comment.likedByMe;
+    // likeBusy is read untracked: finishing a toggle must not re-seed from the stale prop.
+    if (untrack(() => likeBusy)) return;
+    likeCount = serverLikes;
+    liked = serverLiked;
+  });
   const isEdited = $derived(!!comment.editedAt);
 
   const isAuthor = $derived(
@@ -121,6 +137,38 @@
   const canDelete = $derived(isAuthor && !!onDelete);
   // Mirrors the post-level guard in ForumPostDetail: logged in, not your own.
   const canReport = $derived(!!currentUserId && !isAuthor);
+
+  // Heart button: logged in and not the author (the server refuses own likes too).
+  const canLike = $derived(!!currentUserId && !isAuthor);
+
+  async function toggleLike() {
+    if (!canLike || likeBusy) return;
+    const next = !liked;
+    liked = next;
+    likeCount = Math.max(0, likeCount + (next ? 1 : -1));
+    likeBusy = true;
+    try {
+      const res = await fetch('/api/likes/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          postId: String(comment._id),
+          collectionType: 'comments',
+          action: next ? 'like' : 'unlike'
+        })
+      });
+      if (!res.ok) throw new Error(`like failed (${res.status})`);
+      const data = await res.json().catch(() => null);
+      if (typeof data?.likeCount === 'number') likeCount = data.likeCount; // authoritative
+    } catch {
+      liked = !next; // rollback
+      likeCount = Math.max(0, likeCount + (next ? -1 : 1));
+      showError($t['comment.like.error']);
+    } finally {
+      likeBusy = false;
+    }
+  }
 
   let reportOpen = $state(false);
   // The modal's subtitle wants a short handle on what's being reported;
@@ -221,7 +269,21 @@
       image={typeof comment.author === 'object' ? (comment.author?.image ?? null) : null}
       size="sm"
     />
-    {#if likeCount > 0}
+    {#if canLike}
+      <!-- 32x32 box via padding + negative margin: the layout footprint stays
+           the size of the old count line. -->
+      <button
+        type="button"
+        onclick={toggleLike}
+        disabled={likeBusy}
+        aria-pressed={liked}
+        aria-label={liked ? $t['comment.like.remove'] : $t['comment.like.add']}
+        class="-my-1.5 inline-flex min-h-8 min-w-8 items-center justify-center gap-0.5 font-dmmono text-[9.5px] tracking-[0.05em] transition-colors disabled:cursor-wait {liked ? 'text-wine' : 'text-ink-mute hover:text-wine'}"
+      >
+        <span aria-hidden="true" class="text-[14px] leading-none">{liked ? '♥' : '♡'}</span>
+        {#if likeCount > 0}<span>{likeCount}</span>{/if}
+      </button>
+    {:else if likeCount > 0}
       <span class="font-dmmono text-[9.5px] tracking-[0.05em] text-ink-mute flex items-center gap-0.5">
         <span aria-hidden="true">♥</span> {likeCount}
       </span>
