@@ -1,3 +1,4 @@
+import { stripLikedBy } from '../../../../lib/forum/commentLike';
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
@@ -209,7 +210,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
     if (mergedResult) {
       return new Response(
         JSON.stringify({
-          event: updatedEvent,
+          event: stripLikedBy(updatedEvent as any),
           message: mergedResult.userMessage,
           moderationStatus: 'pending'
         }),
@@ -222,7 +223,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
 
     return new Response(
       JSON.stringify({
-        event: updatedEvent,
+        event: stripLikedBy(updatedEvent as any),
         message: 'Event updated successfully'
       }),
       {

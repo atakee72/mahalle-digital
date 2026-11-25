@@ -1,3 +1,4 @@
+import { stripLikedBy } from '../../../lib/forum/commentLike';
 import type { APIRoute } from 'astro';
 import { connectDB } from '../../../lib/mongodb';
 import { checkDailyLimit, limitReachedResponse } from '../../../lib/limits/dailyLimit';
@@ -129,7 +130,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (mergedResult) {
       return new Response(
         JSON.stringify({
-          event: createdEvent,
+          event: stripLikedBy(createdEvent as any),
           message: mergedResult.userMessage,
           moderationStatus: 'pending'
         }),
@@ -142,7 +143,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     return new Response(
       JSON.stringify({
-        event: createdEvent,
+        event: stripLikedBy(createdEvent as any),
         message: 'Event created successfully'
       }),
       {

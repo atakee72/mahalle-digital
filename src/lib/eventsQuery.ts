@@ -1,3 +1,4 @@
+import { stripLikedBy } from './forum/commentLike';
 import type { Collection, Document, Filter } from 'mongodb';
 import { connectDB } from './mongodb';
 import {
@@ -70,6 +71,10 @@ export async function fetchEventsWithAuthors<T extends Document>(
     // This cut the response payload from ~316 KB → ~20 KB for a typical
     // month and halved SSR TTFB.
   }
+
+  // The calendar never reads an event's who-liked list: it stays on the server, whatever
+  // field list the browser asked for. (RSVP ids DO go out — „who is coming" is shown to members.)
+  populated = populated.map((ev) => stripLikedBy(ev));
 
   return { events: populated as T[], pagination };
 }

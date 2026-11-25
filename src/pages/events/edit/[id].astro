@@ -50,7 +50,9 @@ if (event.moderationStatus !== 'approved' || event.hasWarningLabel) {
 }
 
 // Date/ObjectId → string across the SSR boundary.
-const initialEvent = JSON.parse(JSON.stringify(event));
+// the who-liked list stays on the server
+const { likedBy: _likedBy, ...eventForClient } = event as any;
+const initialEvent = JSON.parse(JSON.stringify(eventForClient));
 
 const pageTitle = event.title
   ? `${event.title} · bearbeiten · Mahalle`
