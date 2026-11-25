@@ -139,7 +139,14 @@
   const canReport = $derived(!!currentUserId && !isAuthor);
 
   // Heart button: logged in and not the author (the server refuses own likes too).
-  const canLike = $derived(!!currentUserId && !isAuthor);
+  // A reported comment stays visible as „pending" — the server refuses a like on it,
+  // so the button is not offered there (it would fail on every tap).
+  const canLike = $derived(
+    !!currentUserId && !isAuthor && (comment.moderationStatus ?? 'approved') === 'approved'
+  );
+  const likeLabel = $derived(
+    (liked ? $t['comment.like.remove'] : $t['comment.like.add']) + (likeCount > 0 ? ` (${likeCount})` : '')
+  );
 
   async function toggleLike() {
     if (!canLike || likeBusy) return;
@@ -158,8 +165,18 @@
           action: next ? 'like' : 'unlike'
         })
       });
-      if (!res.ok) throw new Error(`like failed (${res.status})`);
       const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        liked = !next; // rollback
+        likeCount = Math.max(0, likeCount + (next ? -1 : 1));
+        // Never print the API's machine code; say what the member can do.
+        showError(
+          res.status === 401 ? $t['comment.like.login']
+          : data?.error === 'account_banned' ? $t['comment.like.banned']
+          : $t['comment.like.error']
+        );
+        return;
+      }
       if (typeof data?.likeCount === 'number') likeCount = data.likeCount; // authoritative
     } catch {
       liked = !next; // rollback
@@ -275,12 +292,13 @@
       <button
         type="button"
         onclick={toggleLike}
-        disabled={likeBusy}
+        aria-disabled={likeBusy}
         aria-pressed={liked}
-        aria-label={liked ? $t['comment.like.remove'] : $t['comment.like.add']}
-        class="-my-1.5 inline-flex min-h-8 min-w-8 items-center justify-center gap-0.5 font-dmmono text-[9.5px] tracking-[0.05em] transition-colors disabled:cursor-wait {liked ? 'text-wine' : 'text-ink-mute hover:text-wine'}"
+        aria-label={likeLabel}
+        title={liked ? $t['comment.like.remove'] : $t['comment.like.add']}
+        class="-my-1.5 inline-flex min-h-8 min-w-8 items-center justify-center gap-0.5 font-dmmono text-[10.5px] tracking-[0.05em] transition-colors {liked ? 'text-wine' : 'text-ink-soft hover:text-wine'}"
       >
-        <span aria-hidden="true" class="text-[14px] leading-none">{liked ? '♥' : '♡'}</span>
+        <span aria-hidden="true" class="text-[17px] leading-none">{liked ? '♥' : '♡'}</span>
         {#if likeCount > 0}<span>{likeCount}</span>{/if}
       </button>
     {:else if likeCount > 0}

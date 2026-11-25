@@ -108,10 +108,17 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    const result = await collection.updateOne(
-      { _id: new ObjectId(postId) },
-      updateOperation
-    );
+    // For a comment the rules checked above are repeated in the write filter, so a
+    // report or rejection landing between the check and the write cannot slip a like in.
+    const writeFilter: Record<string, unknown> = collectionType === 'comments'
+      ? {
+          _id: new ObjectId(postId),
+          $or: [{ moderationStatus: 'approved' }, { moderationStatus: { $exists: false } }],
+          author: { $nin: ObjectId.isValid(userId) ? [userId, new ObjectId(userId)] : [userId] },
+        }
+      : { _id: new ObjectId(postId) };
+
+    const result = await collection.updateOne(writeFilter, updateOperation);
 
     if (result.matchedCount === 0) {
       return new Response(JSON.stringify({ error: 'Post not found' }), {
