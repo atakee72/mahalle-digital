@@ -121,7 +121,8 @@ export const POST: APIRoute = async ({ request }) => {
     // The comment's parent must be visible (a blog post is allowed without a lookup).
     if (collectionType === 'comments' && !commentDoc?.blogSlug) {
       likeParent = await findLikeParent(db, commentDoc?.relevantPostId);
-      if (!likeParent || !isParentVisible(likeParent.doc)) {
+      // Only a LIKE needs a visible parent: a member can always take their own like back.
+      if (action === 'like' && (!likeParent || !isParentVisible(likeParent.doc))) {
         return new Response(JSON.stringify({ error: 'Post not found' }), {
           status: 404,
           headers: { 'Content-Type': 'application/json' }

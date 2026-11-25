@@ -2,8 +2,8 @@
   // Single threaded comment — Editorial Kiosk treatment.
   //   ┌─────────────────────────────────────────────────────┐
   //   │ [avatar] Lena K. [OP]   · vor 4 min · bearbeitet ✎🗑 │
-  //   │ ♥ 3                                                  │
   //   │ Body text (1-2 lines)                                │
+  //   │ ♡ Gefällt mir · 3   Übersetzung anzeigen             │
   //   └─────────────────────────────────────────────────────┘
   //
   // Actions row is author-XOR-reader: the author sees pencil + trash, any
@@ -279,33 +279,13 @@
 </script>
 
 <article id={`comment-${comment._id}`} class="flex gap-3 py-5 border-t border-dashed border-rule first:border-t-0">
-  <!-- Avatar column with heart count below -->
+  <!-- Avatar column -->
   <div class="flex flex-col items-center gap-1.5 shrink-0">
     <KioskAvatar
       name={typeof comment.author === 'object' ? (comment.author?.name ?? '·') : '·'}
       image={typeof comment.author === 'object' ? (comment.author?.image ?? null) : null}
       size="sm"
     />
-    {#if canLike}
-      <!-- 32x32 box via padding + negative margin: the layout footprint stays
-           the size of the old count line. -->
-      <button
-        type="button"
-        onclick={toggleLike}
-        aria-disabled={likeBusy}
-        aria-pressed={liked}
-        aria-label={likeLabel}
-        title={liked ? $t['comment.like.remove'] : $t['comment.like.add']}
-        class="-my-1.5 inline-flex min-h-8 min-w-8 items-center justify-center gap-0.5 font-dmmono text-[10.5px] tracking-[0.05em] transition-colors {liked ? 'text-wine' : 'text-ink-soft hover:text-wine'}"
-      >
-        <span aria-hidden="true" class="text-[17px] leading-none">{liked ? '♥' : '♡'}</span>
-        {#if likeCount > 0}<span>{likeCount}</span>{/if}
-      </button>
-    {:else if likeCount > 0}
-      <span class="font-dmmono text-[9.5px] tracking-[0.05em] text-ink-mute flex items-center gap-0.5">
-        <span aria-hidden="true">♥</span> {likeCount}
-      </span>
-    {/if}
   </div>
 
   <!-- Body column -->
@@ -427,7 +407,24 @@
       {#if comment.broadcast && isAuthor}<p class="font-dmmono text-[0.85em] text-ink-mute mb-1" data-admin-hint-token>{comment.broadcast.token}</p>{/if}
       <p class="font-bricolage text-sm text-ink leading-relaxed whitespace-pre-line"
       >{#each linkifySegments(body, comment.mentions ?? []) as seg}{#if seg.type === 'link'}<a href={seg.value} title={seg.value} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 decoration-[1.5px] break-words hover:text-wine">{displayUrl(seg.value)}<span aria-hidden="true" class="text-[0.8em] ml-0.5">↗</span></a>{:else if seg.type === 'mention'}<a href={`/nachbarn/id/${seg.userId}`} data-mention class="font-semibold text-wine hover:underline underline-offset-2">@{seg.value}</a>{:else}{seg.value}{/if}{/each}</p>
-      <div class="mt-1.5">
+      <div class="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 [&_.ktr]:mt-0">
+        {#if canLike}
+          <button
+            type="button"
+            onclick={toggleLike}
+            aria-disabled={likeBusy}
+            aria-pressed={liked}
+            aria-label={likeLabel}
+            class="inline-flex min-h-8 items-center gap-1.5 font-dmmono text-[10px] uppercase tracking-[0.08em] transition-colors {liked ? 'text-wine' : 'text-ink-soft hover:text-wine'}"
+          >
+            <span aria-hidden="true" class="text-[14px] leading-none">{liked ? '♥' : '♡'}</span>
+            <span>{$t['comment.like.word']}{likeCount > 0 ? ` · ${likeCount}` : ''}</span>
+          </button>
+        {:else if likeCount > 0}
+          <span class="inline-flex min-h-8 items-center gap-1 font-dmmono text-[10px] tracking-[0.08em] text-ink-mute">
+            <span aria-hidden="true">♥</span> {likeCount}
+          </span>
+        {/if}
         <TranslateControl
           contentType="comment"
           contentId={String(comment._id)}
