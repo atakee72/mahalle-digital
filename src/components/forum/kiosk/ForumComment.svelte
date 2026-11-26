@@ -28,6 +28,7 @@
   import { t, tStr } from '../../../lib/kiosk-i18n';
   import { COMMENT_MAX_LEN } from '../../../lib/forum/commentLimits';
   import { showToast, showError } from '../../../utils/toast';
+  import { shouldFold, foldedHeight } from '../../../lib/forum/commentFold';
 
   let {
     comment,
@@ -109,6 +110,49 @@
     liked = serverLiked;
   });
   const isEdited = $derived(!!comment.editedAt);
+
+  // Long comments fold to their first lines (2026-11-26, owner): one long answer must not
+  // push the rest of the thread far down. Measured, not counted — line breaks, links and
+  // the column width decide the height. A comment someone was SENT to (bell, shared link:
+  // `#comment-<id>`) opens unfolded.
+  let bodyEl = $state<HTMLParagraphElement | null>(null);
+  let articleEl = $state<HTMLElement | null>(null);
+  let tall = $state(false);
+  let foldPx = $state(0);
+  let unfolded = $state(
+    // read once on purpose: the hash is where the reader ARRIVED
+    untrack(() => typeof window !== 'undefined' && window.location.hash === `#comment-${comment._id}`)
+  );
+  const folded = $derived(tall && !unfolded);
+  function measureFold() {
+    const el = bodyEl;
+    if (!el) return;
+    const line = parseFloat(getComputedStyle(el).lineHeight);
+    tall = shouldFold(el.scrollHeight, line);
+    foldPx = foldedHeight(line);
+  }
+  $effect(() => {
+    body; // re-measure when the text changes (edit, translation)
+    if (!bodyEl) return;
+    measureFold();
+    // A bell row or link that points here while the reader is ALREADY on this page is a
+    // hash change, not a new page: open the comment then too.
+    const onHash = () => {
+      if (window.location.hash === `#comment-${comment._id}`) unfolded = true;
+    };
+    window.addEventListener('resize', measureFold);
+    window.addEventListener('hashchange', onHash);
+    return () => {
+      window.removeEventListener('resize', measureFold);
+      window.removeEventListener('hashchange', onHash);
+    };
+  });
+  function toggleFold() {
+    unfolded = !unfolded;
+    // Folding a long comment back: keep its head in view instead of leaving the reader
+    // somewhere below it.
+    if (!unfolded) queueMicrotask(() => articleEl?.scrollIntoView({ block: 'nearest' }));
+  }
 
   const isAuthor = $derived(
     !!currentUserId && authorIdOf(comment.author) === currentUserId
@@ -279,7 +323,7 @@
   }
 </script>
 
-<article id={`comment-${comment._id}`} class="flex gap-3 py-5 border-t border-dashed border-rule first:border-t-0">
+<article bind:this={articleEl} id={`comment-${comment._id}`} class="flex gap-3 py-5 border-t border-dashed border-rule first:border-t-0 scroll-mt-24">
   <!-- Avatar column -->
   <div class="flex flex-col items-center gap-1.5 shrink-0">
     <KioskAvatar
@@ -406,8 +450,23 @@
       </div>
     {:else}
       {#if comment.broadcast && isAuthor}<p class="font-dmmono text-[0.85em] text-ink-mute mb-1" data-admin-hint-token>{comment.broadcast.token}</p>{/if}
-      <p class="font-bricolage text-sm text-ink leading-relaxed whitespace-pre-line"
+      <p bind:this={bodyEl} id={`comment-body-${comment._id}`} class="font-bricolage text-sm text-ink leading-relaxed whitespace-pre-line {folded ? 'overflow-hidden [mask-image:linear-gradient(to_bottom,#000_calc(100%-3em),transparent)]' : ''}"
+        style={folded ? `max-height:${foldPx}px` : undefined}
+        data-folded={folded ? '' : undefined}
       >{#each linkifySegments(body, comment.mentions ?? []) as seg}{#if seg.type === 'link'}<a href={seg.value} title={seg.value} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 decoration-[1.5px] break-words hover:text-wine">{displayUrl(seg.value)}<span aria-hidden="true" class="text-[0.8em] ml-0.5">↗</span></a>{:else if seg.type === 'mention'}<a href={`/nachbarn/id/${seg.userId}`} data-mention class="font-semibold text-wine hover:underline underline-offset-2">@{seg.value}</a>{:else}{seg.value}{/if}{/each}</p>
+      {#if tall}
+        <button
+          type="button"
+          onclick={toggleFold}
+          aria-expanded={unfolded}
+          aria-controls={`comment-body-${comment._id}`}
+          data-fold-toggle
+          class="mt-1 inline-flex min-h-8 items-center gap-1 font-dmmono text-[10px] uppercase tracking-[0.08em] text-ink-soft hover:text-wine underline underline-offset-2"
+        >
+          {unfolded ? $t['comment.fold.less'] : $t['comment.fold.more']}
+          <span aria-hidden="true">{unfolded ? '▴' : '▾'}</span>
+        </button>
+      {/if}
       <div class="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 [&_.ktr]:mt-0">
         {#if canLike}
           <button

@@ -1013,7 +1013,24 @@
           unreadCount={0}
           onEditComment={handleEditComment}
           onDeleteComment={handleDeleteComment}
-        />
+        >
+          {#snippet composer()}
+            {#if currentUserId}
+              <CommentComposer
+                currentUser={{
+                  name: currentUser?.name ?? 'du',
+                  image: currentUser?.image ?? null
+                }}
+                submitting={postingComment}
+                onSubmit={submitComment}
+              />
+            {:else}
+              <p class="font-bricolage text-sm text-ink-mute">
+                <a href="/login" class="text-wine hover:underline">{$t['detail.composeLogin']}</a>
+              </p>
+            {/if}
+          {/snippet}
+        </ForumCommentList>
       {/if}
     </article>
 
@@ -1053,24 +1070,8 @@
             />
           {/if}
         {:else}
-          <!-- ◆ DEINE ANTWORT — wired CommentComposer -->
-          <section>
-            {#if currentUserId}
-              <CommentComposer
-                currentUser={{
-                  name: currentUser?.name ?? 'du',
-                  image: currentUser?.image ?? null
-                }}
-                submitting={postingComment}
-                onSubmit={submitComment}
-              />
-            {:else}
-              <p class="font-bricolage text-sm text-ink-mute">
-                <a href="/login" class="text-wine hover:underline">{$t['detail.composeLogin']}</a>
-              </p>
-            {/if}
-          </section>
-
+          <!-- The reply box lives in the thread since 2026-11-26 (ForumCommentList's
+               `composer` snippet): 199 px in this rail was too narrow to write in. -->
           <!-- ◆ WER MITREDET -->
           <section>
             <p

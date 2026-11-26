@@ -19,6 +19,7 @@
   import KioskBtn from '../KioskBtn.svelte';
   import { t } from '../../../../lib/kiosk-i18n';
   import { COMMENT_MAX_LEN, commentCounterVisible } from '../../../../lib/forum/commentLimits';
+  import { autoGrow } from '../../../../lib/autoGrow';
 
   let {
     currentUser,
@@ -71,8 +72,9 @@
         bind:this={taEl}
         onkeydown={onKey}
         placeholder={$t['detail.compose.placeholder']}
+        use:autoGrow={{ value: body, maxVh: 0.5 }}
         rows="3"
-        class="w-full appearance-none bg-paper-warm border-[1.5px] border-ink rounded-md px-3 py-2 font-bricolage text-[13px] leading-relaxed text-ink placeholder:text-ink-mute/55 outline-none focus:border-wine resize-y min-h-[72px]"
+        class="block w-full appearance-none bg-paper-warm border-[1.5px] border-ink rounded-md px-3 py-2 font-bricolage text-sm leading-relaxed text-ink placeholder:text-ink-mute/55 outline-none focus:border-wine resize-none min-h-[72px]"
         maxlength={COMMENT_MAX_LEN}
         disabled={submitting}
       ></textarea>

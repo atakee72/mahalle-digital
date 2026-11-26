@@ -6,6 +6,7 @@
   // right rail (desktop) / sticky bottom bar (mobile, ships in 5b);
   // there is no inline form here anymore.
 
+  import type { Snippet } from 'svelte';
   import ForumComment from './ForumComment.svelte';
   import { t } from '../../../lib/kiosk-i18n';
 
@@ -15,8 +16,12 @@
     currentUserId = null,
     unreadCount = 0,
     onEditComment,
-    onDeleteComment
+    onDeleteComment,
+    composer
   } = $props<{
+    /** Desktop reply box, printed under the heading at the full width of the thread
+     *  (2026-11-26; it used to sit in the 280 px side rail). Phones keep their bottom bar. */
+    composer?: Snippet;
     comments?: any[];
     topicAuthorId?: string | null;
     currentUserId?: string | null;
@@ -98,6 +103,12 @@
       </span>
     {/if}
   </header>
+
+  {#if composer}
+    <div class="hidden lg:block pt-2 pb-5 border-b border-dashed border-rule" data-thread-composer>
+      {@render composer()}
+    </div>
+  {/if}
 
   {#if total === 0}
     <p class="font-bricolage text-sm text-ink-mute py-6 text-center">
