@@ -1,6 +1,6 @@
 # Mahalle Community App
 
-A modern, performant community web application built with Astro, TypeScript, and React — live at **[mahalle.digital](https://mahalle.digital)**, serving the Schillerkiez neighborhood in Berlin-Neukölln.
+A modern, performant community web application built with Astro, Svelte, TypeScript, and MongoDB — live at **[mahalle.digital](https://mahalle.digital)**, serving the Schillerkiez neighborhood in Berlin-Neukölln.
 
 > 🔎 **For reviewers (recruiters, hiring managers):** try the read-only demo at **[demo.mahalle.digital](https://demo.mahalle.digital)** — two one-click roles (member, admin), fictional content, no sign-up. Then read **[docs/ENGINEERING.md](./docs/ENGINEERING.md)**: a 10-minute path through the architecture, five files worth reading, three postmortems, the testing and security posture, and how this project is built with AI tools.
 
@@ -9,7 +9,7 @@ A modern, performant community web application built with Astro, TypeScript, and
 ## 🚀 Tech Stack
 
 - **Framework**: Astro 5.x with Hybrid SSR/SSG
-- **UI**: React 18.2 + Svelte 5 for interactive islands
+- **UI**: Svelte 5 islands for everything interactive; React 18.2 remains only for the toast/confirm host and the e-mail templates (React Email)
 - **Styling**: Tailwind CSS 3.4 with kiosk design system (paper-warm + ink borders — migration from legacy dark-glass completed July 2026)
 - **Animation**: CSS transitions, Svelte `transition:`, Web Animations API for `is:inline` scripts, Astro View Transitions
 - **State Management**: TanStack Svelte Query for server state in the forum + calendar islands, local Svelte `$state` for UI (no Zustand/Redux)
@@ -24,7 +24,7 @@ A modern, performant community web application built with Astro, TypeScript, and
 
 ```
 src/
-├── components/       # React (.tsx) and Svelte (.svelte) components
+├── components/       # Svelte (.svelte) islands; two React files (ToastProvider, ConfirmDialog)
 ├── layouts/          # Astro layouts (KioskLayout, LandingLayout, AuthLayout, AdminLayout, blog/*)
 ├── pages/            # File-based routing
 │   ├── api/          # API routes (serverless functions)
@@ -51,7 +51,7 @@ src/
 │   ├── moderation.ts # AI moderation + profanity filters (TR/EN/DE) + leetspeak
 │   └── queryUtils.ts # Query helpers
 ├── schemas/          # Zod validation schemas
-├── styles/           # Global CSS (dark-glass utilities, carved titles)
+├── styles/           # Global CSS: kiosk design tokens, section styles, carved titles
 ├── types/            # TypeScript types
 └── utils/            # Helper functions
 ```
